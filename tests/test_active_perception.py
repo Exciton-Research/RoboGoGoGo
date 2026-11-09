@@ -6,6 +6,7 @@ import jax.numpy as jnp
 import numpy as np
 import pytest
 
+from robogogogo.active_perception import ActivePerception
 from robogogogo.perception import RecoveryObservation
 from robogogogo.planning import SphereObstacle
 from robogogogo.planning.motion import PlanningError
@@ -164,6 +165,8 @@ def test_camera_motion_reveals_support_behind_a_real_rendered_occluder():
 
     box = BoxObstacle("occluding_panel", (0.19, 0.15, 0.7), (0.14, 0.02, 0.2))
     session, m, world = setup([box])
+    # Match this isolated sensor scene rather than the contact benchmark's tables.
+    world.obstacles = [box, BoxObstacle("observed_table", (0.32, 0, 0.375), (0.2, 0.2, 0.05))]
     camera = DEMO.wrist_camera(session)
     boxes = [
         ([0.32, 0, 0.375], [0.2, 0.2, 0.05], [80, 110, 80]),
