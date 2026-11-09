@@ -153,6 +153,11 @@ export interface ManipulationState {
       max_views: number;
       camera: string | null;
       capture_after: number | null;
+      selection?: {
+        gain: number;
+        newly_visible: number;
+        probes: number;
+      } | null;
     } | null;
     camera_mode: boolean;
     perception: {

@@ -464,6 +464,22 @@ export function CoordinationPanel({
                   {manipulation.recovery.active_perception.max_views} · Camera{" "}
                   {manipulation.recovery.active_perception.camera ??
                     "not selected"}
+                  {manipulation.recovery.active_perception.selection && (
+                    <>
+                      {" "}
+                      · Predicted view gain{" "}
+                      {(
+                        manipulation.recovery.active_perception.selection.gain *
+                        100
+                      ).toFixed(1)}
+                      % ·{" "}
+                      {
+                        manipulation.recovery.active_perception.selection
+                          .newly_visible
+                      }{" "}
+                      newly visible probes
+                    </>
+                  )}
                 </span>
               )}
               {manipulation.recovery.camera_mode && (

@@ -718,11 +718,22 @@ Up to four views are tried; missing fresh images or exhausted views block recove
 without releasing the object. Grip loss, object drift, increased damage, hard force
 limits and the recovery timeout remain guards.
 
-The view score favors keeping a proprioceptive search cue in view and gaining a
-new viewing angle. It is a heuristic, not an occlusion predictor or a guarantee of
-improved images. Fixed head mounts are reported as immovable. Imported robots can
-use their actual head/camera joints; the retaining arm's wrist is not moved for
-exploration. Native pan/tilt dynamics use illustrative mass, inertia and limits.
+The next-view planner ranks single- and two-joint camera motions at two scales.
+It keeps a bounded 8 mm surface sample map from calibrated observations, tests
+candidate sight lines against observed occluders, and estimates measurement quality
+from range, surface incidence, and depth uncertainty. Synchronized reference views
+discount already-covered regions. Grasp searches prioritize segmented object
+surfaces; support searches prioritize horizontal surfaces. Nearby unknown probes
+encourage boundary exploration but never become grasp or landing proposals.
+Only positive predicted gains proceed to swept-path collision checks.
+
+This is a local next-best-view approximation, not a global optimum or a calibrated
+Bayesian uncertainty model. Unseen obstacles cannot be predicted from the surface
+map, and sampling can miss thin geometry; the independent collision guard still
+uses the robot's collision world. Missing, stale, or empty evidence blocks camera
+exploration. Fixed head mounts are reported as immovable. Imported robots can use
+their actual head/camera joints; retaining-arm joints remain protected. Native
+pan/tilt dynamics use illustrative mass, inertia and limits.
 
 Active Studio perception considers head stereo plus up to three simultaneous
 head/wrist or wrist/wrist pairings. Pairs need overlap, valid calibration and
@@ -739,4 +750,6 @@ manipulation.enable_recovery(camera_based=True, active_cameras=camera_configs)
 Run `.venv/bin/python examples/active_perception.py` to test a free wrist moving
 from a view missing one grasp flank, capturing it, and completing native two-arm
 regrasp. This uses the documented analytic RGB-D test sensor. View attempts, selected
-camera, capture time, rejection reasons and actual joint targets are recorded.
+camera, predicted gain, newly visible probe count, candidate ranking, capture time,
+rejection reasons and actual joint targets are recorded. Predicted probe counts are
+not measured grasp counts; fresh images must confirm useful surfaces.
