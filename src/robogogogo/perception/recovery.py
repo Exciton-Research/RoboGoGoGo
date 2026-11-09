@@ -205,7 +205,8 @@ def detect(cloud, *, seed=None, target_mask=None, max_grasps=24, max_supports=24
                     continue
                 patch_center = (np.array(key) + 0.5) * resolution
                 occupied_above = (
-                    (np.abs(p[:, :2] - patch_center) <= half).all(axis=1)
+                    ~mask
+                    & (np.abs(p[:, :2] - patch_center) <= half).all(axis=1)
                     & (p[:, 2] > np.median(local[:, 2]) + 2 * uncertainty + 0.005)
                     & (p[:, 2] < np.median(local[:, 2]) + 0.25)
                 )
@@ -219,7 +220,12 @@ def detect(cloud, *, seed=None, target_mask=None, max_grasps=24, max_supports=24
         cloud.timestamp,
         cloud.source,
         uncertainty,
-        tuple(grasps[:max_grasps]),
+        tuple(
+            grasps[i]
+            for i in np.linspace(
+                0, max(0, len(grasps) - 1), min(len(grasps), max_grasps), dtype=int
+            )
+        ),
         tuple(supports),
         axis,
         dict(visible_points=len(p), target_points=len(obj), unknown_landing_cells_rejected=True),

@@ -95,12 +95,13 @@ if __name__ == "__main__":
         from recovery_search import fixture, run
 
         jax.config.update("jax_enable_x64", True)
-        # Wider visible landing surfaces and a 3 mm fixture clearance permit
-        # the open fingers beside the table while retaining actual collision checks.
+        # Short fingers enclose the physical pad patches without extending below
+        # the specimen. A 5 mm clearance remains active against the wide tables.
         factory = partial(
             fixture,
-            supports=[[0.2, 0, 0.04, 0.2, 0.48], [0.48, 0, 0.04, 0.2, 0.45]],
-            clearance_m=0.003,
+            supports=[[0.2, 0, 0.12, 0.2, 0.48], [0.48, 0, 0.12, 0.2, 0.45]],
+            clearance_m=0.005,
+            finger_tip=0.205,
         )
         result = run(
             "support" if args.physical_support else "helper",

@@ -16,7 +16,7 @@ from robogogogo.planning.collision import BoxObstacle
 from robogogogo.session import Session
 
 
-def fixture(extra_obstacles=(), *, supports=None, clearance_m=0.015):
+def fixture(extra_obstacles=(), *, supports=None, clearance_m=0.015, finger_tip=0.23):
     b = sp.ModelBuilder()
     rotation = np.asarray(sp.rpy_matrix(np.array([np.pi / 2, np.pi / 2, 0.0])))
     for name, origin in [("left", (0.2, -0.09, 0.7)), ("right", (0.2, 0.25, 0.8))]:
@@ -54,7 +54,7 @@ def fixture(extra_obstacles=(), *, supports=None, clearance_m=0.015):
                     arm.name + ":finger:" + str(side),
                     arm.body,
                     (0.02, side * 0.057, 0.0),
-                    (0.23, side * 0.057, 0.0),
+                    (finger_tip, side * 0.057, 0.0),
                     0.008,
                 )
             )
