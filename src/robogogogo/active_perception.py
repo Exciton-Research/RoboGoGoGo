@@ -121,9 +121,9 @@ class ActivePerception:
                         np.deg2rad(camera.get("vertical_fov_degrees", 70) / 2 + 10)
                     ):
                         continue
-                    novelty = np.linalg.norm(center - before["position"]) + 0.15 * np.linalg.norm(
-                        rotation - before["rotation"]
-                    )
+                    novelty = np.linalg.norm(
+                        np.cross(center - before["position"], ray / distance)
+                    ) + 0.15 * np.linalg.norm(rotation - before["rotation"])
                     candidates.append(
                         (alignment + 2 * novelty - 0.1 * distance, camera["name"], target)
                     )
