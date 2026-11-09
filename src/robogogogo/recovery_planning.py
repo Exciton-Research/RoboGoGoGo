@@ -26,6 +26,7 @@ class RecoveryPath:
     support: int | None = None
     contact_start: int | None = None
     grasp_position: list | None = None
+    support_region: list | None = None
 
 
 def contact_world(world, m, helper=None, support=None):
@@ -77,8 +78,38 @@ class RecoveryPlanner:
                 model, p, r, self.bodies, q, iterations=80, joint_mask=mask
             )
         )
+        self.vision_required = False
+        self.observation = None
         self.checked = 0
         self.rejections = []
+
+    def observed(self, session):
+        observation = self.observation
+        if observation is None or not 0 <= session.elapsed - observation.timestamp <= 0.5:
+            raise PlanningError(
+                "Camera recovery requires a fresh calibrated observation (<= 0.5 s)"
+            )
+        return observation
+
+    def support_candidates(self, m, session):
+        if not self.vision_required:
+            return [(i, s) for i, s in enumerate(m.supports)]
+        observation = self.observed(session)
+        candidates = []
+        for proposal in observation.supports:
+            position = np.asarray(proposal["position"])
+            half = np.asarray(proposal["half_size"])
+            # Associate only for physical support-load verification. Candidate position
+            # and visible footprint remain camera-derived; never snap to table centers.
+            for i, surface in enumerate(m.supports):
+                if abs(position[2] - surface[4]) <= observation.uncertainty_m + 0.003 and np.all(
+                    np.abs(position[:2] - surface[:2]) + half <= surface[2:4]
+                ):
+                    candidates.append((i, np.r_[position[:2], half, position[2]]))
+                    break
+        if not candidates:
+            raise PlanningError("No observed landing patch with verifiable physical support")
+        return candidates
 
     def require_world(self, world):
         if world is None or not (
@@ -175,7 +206,13 @@ class RecoveryPlanner:
         rotations = np.asarray(pose.rotation)[list(self.bodies)]
         origin = np.asarray(m.state.position)
         axis = np.asarray(m.state.rotation)[:, 1]
-        if m.structural:
+        if self.vision_required:
+            observation = self.observed(session)
+            axis = observation.object_axis
+            if axis is None or not observation.grasps:
+                raise PlanningError("No camera grasp with observed opposing surfaces")
+            candidates = [np.asarray(g["position"]) for g in observation.grasps]
+        elif m.structural:
             cells = np.asarray(m.contact.structure.position).reshape(-1, 8, 3).mean(1)
             candidates = [cells[i] for i in (len(cells) - 2, 1, len(cells) // 2)]
         else:
@@ -198,7 +235,11 @@ class RecoveryPlanner:
                     dict(candidate=name, reason="Closing axis is not transverse to specimen")
                 )
                 continue
-            for point in candidates:
+            for candidate_index, point in enumerate(candidates):
+                if self.vision_required:
+                    proposal = observation.grasps[candidate_index]
+                    if abs(np.dot(rotations[h, :, 1], proposal["closing_axis"])) < 0.95:
+                        continue
                 if any(np.linalg.norm(point - c) < 0.085 for c in held_centers):
                     continue
                 goal = p.copy()
@@ -251,15 +292,14 @@ class RecoveryPlanner:
         moving = np.array([g["holding"] for g in m.grippers.values()])
         candidates = sorted(
             (
-                i
-                for i, s in enumerate(m.supports)
+                (i, s)
+                for i, s in self.support_candidates(m, session)
                 if min(s[2:4]) > 0.015 and np.linalg.norm(center[:2] - s[:2]) <= 0.5
             ),
-            key=lambda i: np.linalg.norm(center[:2] - m.supports[i, :2]),
-        )[:4]
+            key=lambda item: np.linalg.norm(center[:2] - item[1][:2]),
+        )[: 8 if self.vision_required else 4]
         deadline = time.monotonic() + 15
-        for index in candidates:
-            support = m.supports[index]
+        for index, support in candidates:
             goal_center = np.array([*support[:2], support[4] + extent + 0.05])
             for rise, side in ((0.06, 0.0), (0.14, 0.0), (0.10, 0.15), (0.10, -0.15)):
                 travel_z = max(center[2], goal_center[2]) + rise
@@ -277,6 +317,7 @@ class RecoveryPlanner:
                 try:
                     result = self.path(m, session, world, destinations, moving, deadline=deadline)
                     result.support = index
+                    result.support_region = support.tolist()
                     return result
                 except PlanningError as error:
                     self.rejections.append(dict(support=index, reason=str(error)))

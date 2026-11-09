@@ -46,6 +46,7 @@ class GraspRecovery:
         self.reason = None
         self.primary = self.helper = None
         self.support = None
+        self.support_region = None
         self.attempts = 0
         self.warning_time = self.dwell = 0.0
         self.verified_support_s = 0.0
@@ -75,6 +76,8 @@ class GraspRecovery:
 
     def summary(self):
         return dict(
+            camera_mode=self.planner.vision_required,
+            perception=self.planner.observation.summary() if self.planner.observation else None,
             risk_hold=self.risk_hold,
             search_checks=self.planner.checked,
             rejected_candidates=list(self.planner.rejections[-12:]),
@@ -179,9 +182,18 @@ class GraspRecovery:
 
     def begin_lowering(self, m, session):
         center = np.asarray(m.state.position)
+        # A completed observed route retains its verified landing footprint.
+        if self.route and self.route.support_region is not None and self.phase == "transporting":
+            available = [(self.route.support, np.asarray(self.route.support_region))]
+        else:
+            try:
+                available = self.planner.support_candidates(m, session)
+            except PlanningError as error:
+                self.block(m, session, str(error))
+                return
         candidates = [
-            i
-            for i, s in enumerate(m.supports)
+            (i, s)
+            for i, s in available
             if np.all(np.abs(center[:2] - s[:2]) <= s[2:4] - 0.005) and s[4] <= center[2] + 0.003
         ]
         if not candidates:
@@ -191,7 +203,7 @@ class GraspRecovery:
             else:
                 self.block(m, session, "No registered support directly below the object")
             return
-        self.support = max(candidates, key=lambda i: m.supports[i, 4])
+        self.support, self.support_region = max(candidates, key=lambda item: item[1][4])
         pose = session.poses()
         bodies = [a.body for a in m.arms.values()]
         self.positions = np.asarray(pose.position)[bodies].copy()
@@ -446,7 +458,7 @@ class GraspRecovery:
                 self.transition(m, session, "regrasped")
         elif self.phase == "lowering":
             center = np.asarray(m.state.position)
-            support = m.supports[self.support]
+            support = self.support_region
             if np.any(np.abs(center[:2] - support[:2]) > support[2:4] - 0.002):
                 self.block(m, session, "Object drifted outside the selected support")
             elif load > 0.3 * weight:

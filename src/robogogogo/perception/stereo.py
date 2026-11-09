@@ -26,6 +26,9 @@ class StereoResult:
     ground_truth: np.ndarray | None
     baseline_m: float
     focal_px: float
+    intrinsics: np.ndarray
+    position: np.ndarray
+    rotation: np.ndarray
 
 
 def intrinsic(camera):
@@ -177,6 +180,9 @@ def estimate_stereo(
         truth,
         baseline,
         float(p1[0, 0]),
+        p1[:, :3].copy(),
+        centers[0].copy(),
+        rotations[0] @ r1.T,
     )
 
 
