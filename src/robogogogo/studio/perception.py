@@ -90,37 +90,64 @@ def update_recovery_observation(workspace, observation_index):
         if any(name not in configs for name in names):
             raise ValueError("Camera recovery requires calibrated head_left/head_right RGB frames")
         cv = opencv()
-        images = []
-        for name in names:
+        images = {}
+        for name in configs:
             decoded = cv.imdecode(
                 np.frombuffer(episode.images[observation_index][name], np.uint8), cv.IMREAD_COLOR
             )
             if decoded is None:
                 raise ValueError("Invalid captured RGB frame")
-            images.append(cv.cvtColor(decoded, cv.COLOR_BGR2RGB))
+            images[name] = cv.cvtColor(decoded, cv.COLOR_BGR2RGB)
+        pairs = [names]
+        if getattr(m.recovery, "view", None) is not None:
+            wrists = [n for n in configs if n not in names]
+            pairs += [("head_left", n) for n in wrists[:2]]
+            if len(wrists) >= 2:
+                pairs.append(tuple(wrists[:2]))
+        clouds, rejected = [], []
         poses = observation["camera_poses"]
-        result = estimate_stereo(
-            *images,
-            *(configs[n] for n in names),
-            *(poses[n] for n in names),
-            num_disparities=min(64, (images[0].shape[1] // 32) * 16),
-        )
-        # One-pixel disparity uncertainty; do not advertise distant, uncertain depth
-        # as millimeter geometry. Calibration/systematic errors require separate validation.
-        uncertainty = result.depth**2 / (result.focal_px * result.baseline_m)
-        valid = np.isfinite(result.depth) & (uncertainty <= 0.02)
-        depth = np.where(valid, result.depth, np.nan)
-        sigma = max(0.003, float(uncertainty[valid].max())) if valid.any() else 0.02
-        cloud = backproject(
-            depth,
-            result.rectified_left,
-            result.intrinsics,
-            result.position,
-            result.rotation,
-            timestamp=timestamp,
-            uncertainty_m=sigma,
-            source="calibrated_rgb_stereo",
-        )
+        for pair in pairs:
+            try:
+                try:
+                    result = estimate_stereo(
+                        *(images[n] for n in pair),
+                        *(configs[n] for n in pair),
+                        *(poses[n] for n in pair),
+                        num_disparities=min(64, (images[pair[0]].shape[1] // 32) * 16),
+                    )
+                except ValueError as error:
+                    if "ordered" not in str(error):
+                        raise
+                    pair = pair[::-1]
+                    result = estimate_stereo(
+                        *(images[n] for n in pair),
+                        *(configs[n] for n in pair),
+                        *(poses[n] for n in pair),
+                        num_disparities=min(64, (images[pair[0]].shape[1] // 32) * 16),
+                    )
+                uncertainty = result.depth**2 / (result.focal_px * result.baseline_m)
+                valid = np.isfinite(result.depth) & (uncertainty <= 0.02)
+                depth = np.where(valid, result.depth, np.nan)
+                sigma = max(0.003, float(uncertainty[valid].max())) if valid.any() else 0.02
+                clouds.append(
+                    backproject(
+                        depth,
+                        result.rectified_left,
+                        result.intrinsics,
+                        result.position,
+                        result.rotation,
+                        timestamp=timestamp,
+                        uncertainty_m=sigma,
+                        source="calibrated_rgb_stereo",
+                    )
+                )
+            except ValueError as error:
+                rejected.append(dict(pair=list(pair), reason=str(error)))
+        if not clouds:
+            raise ValueError("No usable calibrated stereo pair")
+        from ..perception.recovery import fuse
+
+        cloud = fuse(clouds)
         holders = [name for name, grip in m.grippers.items() if grip["holding"]]
         seed = None
         if holders:
@@ -130,6 +157,9 @@ def update_recovery_observation(workspace, observation_index):
             body = m.arms[holders[0]].body
             seed = np.asarray(pose.position[body]) + 0.2 * np.asarray(pose.rotation[body])[:, 0]
         planner.observation = detect(cloud, seed=seed)
+        planner.observation.diagnostics.update(
+            stereo_pairs=[list(pair) for pair in pairs], rejected_pairs=rejected
+        )
     except ValueError as error:
         planner.observation = RecoveryObservation(
             timestamp, "calibrated_rgb_stereo", 0.02, (), (), None, dict(error=str(error))
