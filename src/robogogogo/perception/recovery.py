@@ -154,10 +154,15 @@ def detect(cloud, *, seed=None, target_mask=None, max_grasps=24, max_supports=24
                 lo, hi = np.quantile(lateral, [0.05, 0.95])
                 # Both visible opposing flanks, with normals parallel to jaw closure.
                 side = np.abs(n @ closing) > 0.7
-                left = section[side & (lateral < lo + 0.006)]
-                right = section[side & (lateral > hi - 0.006)]
+                left_mask = side & (lateral < lo + 0.006)
+                right_mask = side & (lateral > hi - 0.006)
+                left, right = section[left_mask], section[right_mask]
                 width = hi - lo + 2 * uncertainty
                 if len(left) < 3 or len(right) < 3 or not 0.012 < width < 0.085:
+                    continue
+                # Depth normals have consistent camera-ray orientation. Same-facing
+                # edge patches are not evidence of two opposing grasp flanks.
+                if np.median(n[left_mask] @ closing) * np.median(n[right_mask] @ closing) > -0.49:
                     continue
                 point = (np.median(left, axis=0) + np.median(right, axis=0)) / 2
                 grasps.append(

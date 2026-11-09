@@ -127,6 +127,8 @@ def update_recovery_observation(workspace, observation_index):
                     )
                 uncertainty = result.depth**2 / (result.focal_px * result.baseline_m)
                 valid = np.isfinite(result.depth) & (uncertainty <= 0.02)
+                if not valid.any():
+                    raise ValueError("No reliable metric depth in this view pair")
                 depth = np.where(valid, result.depth, np.nan)
                 sigma = max(0.003, float(uncertainty[valid].max())) if valid.any() else 0.02
                 clouds.append(
