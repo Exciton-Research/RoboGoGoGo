@@ -19,6 +19,7 @@ class SurfaceCloud:
     timestamp: float
     uncertainty_m: float
     source: str
+    views: tuple = ()
 
 
 @dataclass(frozen=True)
@@ -86,7 +87,24 @@ def backproject(
         normals, lengths[..., None], out=np.zeros_like(normals), where=good[..., None]
     )
     return SurfaceCloud(
-        points[valid], normals[valid], rgb[valid], float(timestamp), float(uncertainty_m), source
+        points[valid],
+        normals[valid],
+        rgb[valid],
+        float(timestamp),
+        float(uncertainty_m),
+        source,
+        (
+            (
+                dict(position=c.copy(), rotation=r.copy()),
+                dict(
+                    vertical_fov_degrees=float(
+                        np.rad2deg(2 * np.arctan(depth.shape[0] / (2 * k[1, 1])))
+                    ),
+                    width=depth.shape[1],
+                    height=depth.shape[0],
+                ),
+            ),
+        ),
     )
 
 
@@ -267,4 +285,5 @@ def fuse(clouds):
         min(c.timestamp for c in clouds),
         max(c.uncertainty_m for c in clouds),
         "+".join(sorted({c.source for c in clouds})),
+        tuple(view for c in clouds for view in c.views),
     )

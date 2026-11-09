@@ -15,6 +15,7 @@ class ViewEvidence:
     normals: np.ndarray
     target: np.ndarray
     uncertainty_m: float
+    views: tuple = ()
 
     @classmethod
     def from_cloud(cls, cloud, mask):
@@ -26,6 +27,7 @@ class ViewEvidence:
             cloud.normals[indices].copy(),
             mask[indices].copy(),
             float(cloud.uncertainty_m),
+            cloud.views,
         )
 
     def probes(self, support):
@@ -82,12 +84,16 @@ class ViewEvidence:
         if not measured:
             return dict(gain=0.0, newly_visible=0, visible=0, probes=0)
         old, old_visible = self.quality(before, camera, probes, normals)
+        for pose, calibration in self.views:
+            observed, observed_visible = self.quality(pose, calibration, probes, normals)
+            old = np.maximum(old, observed)
+            old_visible |= observed_visible
         new, visible = self.quality(after, camera, probes, normals)
-        # Unknown probes carry a discounted exploration value. A visibility loss
-        # subtracts value so a tiny revealed patch cannot hide a large regression.
+        # Synchronized reference views already cover some regions. Reward only
+        # incremental quality beyond their best measurement; unknown probes are discounted.
         weights = np.ones(len(probes))
         weights[measured:] = 0.35
-        gain = float(np.sum(weights * (new - old)) / weights.sum())
+        gain = float(np.sum(weights * np.maximum(new - old, 0)) / weights.sum())
         return dict(
             gain=gain,
             newly_visible=int(np.sum(visible & ~old_visible)),
