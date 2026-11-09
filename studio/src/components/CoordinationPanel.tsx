@@ -44,14 +44,26 @@ export function CoordinationPanel({
   });
   const activeMaterial = manipulation?.object.material.name;
   const activeStructural = !!manipulation?.object.structure;
+  const recoveryEnabled = !!manipulation?.recovery;
+  const cameraEnabled = !!manipulation?.recovery?.camera_mode;
+  const explorationEnabled = !!manipulation?.recovery?.active_perception;
   useEffect(() => {
     if (activeMaterial)
       setGrip((g) => ({
         ...g,
         object_material: activeMaterial,
         structural_dynamics: activeStructural,
+        recovery_behaviors: recoveryEnabled,
+        camera_recovery: cameraEnabled,
+        active_perception: explorationEnabled,
       }));
-  }, [activeMaterial, activeStructural]);
+  }, [
+    activeMaterial,
+    activeStructural,
+    recoveryEnabled,
+    cameraEnabled,
+    explorationEnabled,
+  ]);
   return (
     <section
       className="coordination-panel"
