@@ -83,9 +83,9 @@ def test_unknown_holes_and_obstacles_reject_landing_footprints():
 def test_camera_planner_uses_observed_grasps_and_rejects_stale_or_empty_views():
     session, grasp, world = RIG.fixture()
     grasp.grippers["left"]["holding"] = True
-    planner = RecoveryPlanner(session.model, grasp.arms)
-    planner.vision_required = True
-    planner.observation = detect(CAMERA.observe(), seed=[0.2, -0.09, 0.5])
+    grasp.enable_recovery(camera_based=True)
+    planner = grasp.recovery.planner
+    grasp.observe_recovery(CAMERA.observe(), seed=[0.2, -0.09, 0.5])
     route = planner.helper_path(grasp, session, world, "left")
     assert any(np.allclose(route.grasp_position, g["position"]) for g in planner.observation.grasps)
     np.testing.assert_array_equal(route.joints[-1][:3], session.state.q[:3])
