@@ -61,7 +61,8 @@ export function CameraMountEditor({
       </div>
       <p className="vla-caption">
         Demo dimensions, not hardware calibration. Edit measured mounts below,
-        then start a new episode. The demo head is a fixed mast.
+        then start a new episode. Head motion requires the pan/tilt rig or a
+        robot with movable camera joints.
       </p>
       {cameras.map((camera, index) => (
         <details key={camera.name} className="camera-mount">

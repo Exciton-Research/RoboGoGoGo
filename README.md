@@ -701,3 +701,42 @@ The placement fixture uses wide visible tables, shorter finger proxies enclosing
 the contact pads, and a 5 mm collision margin. Studio uses the captured stereo RGB
 pipeline instead. Recovery telemetry and episode observations retain the perception
 source, uncertainty, candidate counts and the exact detected proposals.
+
+### Active perception for recovery
+
+Select **Dual arms + pan/tilt head · 14 joints** for a motorized head, or use the
+existing rig's free wrist cameras. Enable **Camera-derived recovery**, then
+**Active perception**. API tasks use `active_perception: true` together with
+`camera_recovery: true` and `recovery_behaviors: true`.
+
+When grasp/support search lacks usable evidence, recovery searches bounded camera
+joint motions. It excludes the retaining arms' joints and shared ancestors, rejects
+colliding paths, moves slowly, settles for 150 ms, and requests a new synchronized
+observation. The task action chunk ends at the capture boundary so Studio captures
+again before the retry. Old frames cannot authorize a new grasp or placement.
+Up to four views are tried; missing fresh images or exhausted views block recovery
+without releasing the object. Grip loss, object drift, increased damage, hard force
+limits and the recovery timeout remain guards.
+
+The view score favors keeping a proprioceptive search cue in view and gaining a
+new viewing angle. It is a heuristic, not an occlusion predictor or a guarantee of
+improved images. Fixed head mounts are reported as immovable. Imported robots can
+use their actual head/camera joints; the retaining arm's wrist is not moved for
+exploration. Native pan/tilt dynamics use illustrative mass, inertia and limits.
+
+Active Studio perception considers head stereo plus up to three simultaneous
+head/wrist or wrist/wrist pairings. Pairs need overlap, valid calibration and
+reliable disparity; invalid pairs contribute no geometry. It never uses renderer
+depth to compensate for failed RGB stereo. External RGB-D observations can use the
+same motion/capture/retry controller:
+
+```python
+manipulation.enable_recovery(camera_based=True, active_cameras=camera_configs)
+# Keep feeding calibrated, timestamped clouds through observe_recovery().
+# A view_capture phase requests an observation after the selected camera settles.
+```
+
+Run `.venv/bin/python examples/active_perception.py` to test a free wrist moving
+from a view missing one grasp flank, capturing it, and completing native two-arm
+regrasp. This uses the documented analytic RGB-D test sensor. View attempts, selected
+camera, capture time, rejection reasons and actual joint targets are recorded.

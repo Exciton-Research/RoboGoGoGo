@@ -310,11 +310,11 @@ class Manipulation:
 
         if not self.adaptive:
             raise ValueError("Recovery requires adaptive force feedback")
+        if active_cameras is not None and not camera_based:
+            raise ValueError("Active perception requires camera-based recovery")
         self.recovery = GraspRecovery(self.model, tuple(self.arms.values()))
         self.recovery.planner.vision_required = bool(camera_based)
         if active_cameras is not None:
-            if not camera_based:
-                raise ValueError("Active perception requires camera-based recovery")
             from .active_perception import ActivePerception
 
             self.recovery.view = ActivePerception(self.model, active_cameras)

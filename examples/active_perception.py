@@ -26,7 +26,7 @@ def wrist_camera(session):
         position=[0, 0, 0],
         look_at=(r.T @ direction).tolist(),
         up=(r.T @ np.array([0.0, 0.0, 1.0])).tolist(),
-        vertical_fov_degrees=90,
+        vertical_fov_degrees=float(np.rad2deg(2 * np.arctan(240 / (2 * 220)))),
     )
 
 

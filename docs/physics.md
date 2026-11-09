@@ -554,3 +554,27 @@ Camera mode uses fresh detections exclusively. The simulation's actual payload
 state remains an independent execution/collision guard; this is intentionally not
 an end-to-end perception-only world model. Real hardware would require collision
 mapping, calibrated uncertainty, contact estimation and broader validation.
+
+### Active observation loop
+
+`ActivePerception` discovers the movable ancestors of each configured camera mount.
+Closed or retaining grippers protect their entire joint ancestry, including shared
+torso joints. Candidate increments are bounded by joint limits and scored by cue
+alignment and transverse baseline/orientation change. The selected joint-space edge
+is certified against robot/payload collision proxies; the existing simulation guard
+checks executed motion again. No camera pose is edited independently of robot FK.
+
+The controller limits exploration commands to 0.15 rad/s or 0.03 m/s and requires
+joint position/velocity settling for 150 ms. `view_capture` freezes the command and
+terminates the current action chunk. A distinct observation timestamped at or after
+settling, no older than 0.5 s, is required to retry grasp or support planning. Two
+simulation seconds without a new frame, four exhausted views, retaining-grasp loss,
+15 mm object drift, increasing damage, or the existing recovery deadline stop the
+attempt without opening a retaining gripper. Material risk pauses camera motion.
+
+This is bounded geometric exploration, not learned next-best-view optimization.
+A grasp requires opposing signed surface normals; same-facing edge normals cannot
+substitute for an occluded flank. After successful camera exploration, manipulation
+is replanned from the measured robot configuration. The optional motorized-head
+fixture adds two native revolute joints; the reference arm-only fixtures retain
+six/twelve joints and their original fixed mast.
