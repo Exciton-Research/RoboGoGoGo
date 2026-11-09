@@ -155,3 +155,53 @@ def test_motorized_studio_rig_keeps_two_arm_groups(tmp_path):
     assert workspace.session.model.home.shape == (14,)
     assert all(max(arm.joint_indices) < 12 for arm in workspace.session.arms)
     assert len(workspace.episode.cameras) == 4
+
+
+def test_camera_motion_reveals_support_behind_a_real_rendered_occluder():
+    from robogogogo.perception import detect
+    from robogogogo.planning.collision import BoxObstacle
+    from robogogogo.vla.cameras import world_camera_pose
+
+    box = BoxObstacle("occluding_panel", (0.19, 0.15, 0.7), (0.14, 0.02, 0.2))
+    session, m, world = setup([box])
+    camera = DEMO.wrist_camera(session)
+    boxes = [
+        ([0.32, 0, 0.375], [0.2, 0.2, 0.05], [80, 110, 80]),
+        (box.center, box.size, [90, 90, 90]),
+    ]
+
+    def capture():
+        pose = session.poses()
+        optical = world_camera_pose(
+            camera, dict(positions=np.asarray(pose.position), rotations=np.asarray(pose.rotation))
+        )
+        position = np.asarray(optical["position"])
+        target = position + np.asarray(optical["rotation"])[:, 2]
+        cloud = sys.modules["camera_recovery"].render_camera(
+            position, target, boxes, timestamp=session.elapsed
+        )
+        return detect(cloud, target_mask=np.zeros(len(cloud.points), bool))
+
+    assert not capture().supports
+    view = m.recovery.view
+    view.begin(m, session, world, "searching_support")
+    # This test isolates native camera motion with a static retained payload;
+    # the end-to-end grasp test separately exercises coupled contact dynamics.
+    session.contact_system = None
+    for _ in range(600):
+        target, settled = view.advance(session, float(session.model.dt) * session.substeps)
+        session.target_q = jnp.asarray(target)
+        session.advance(collision_world=world)
+        if settled:
+            break
+    assert settled
+    observation = capture()
+    assert observation.supports
+    assert all(abs(p["position"][2] - 0.4) < 0.003 for p in observation.supports)
+    recovery = m.recovery
+    recovery.phase = "view_capture"
+    recovery.view.capture_after = session.elapsed
+    recovery.target = session.state.q
+    recovery.planner.observation = observation
+    recovery.prepare(m, session, world)
+    assert recovery.phase == "searching_support"
