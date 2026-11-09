@@ -147,28 +147,25 @@ def detect(cloud, *, seed=None, target_mask=None, max_grasps=24, max_supports=24
             section, n = obj[selected], normals[mask][selected]
             if len(section) < 12:
                 continue
-            horizontal = np.cross(axis, [0.0, 0.0, 1.0])
-            if np.linalg.norm(horizontal) < 0.2:
-                continue
-            closing = horizontal / np.linalg.norm(horizontal)
-            lateral = section @ closing
-            lo, hi = np.quantile(lateral, [0.05, 0.95])
-            # Both visible opposing flanks, with normals parallel to jaw closure.
-            side = np.abs(n @ closing) > 0.7
-            left = section[side & (lateral < lo + 0.006)]
-            right = section[side & (lateral > hi - 0.006)]
-            width = hi - lo + 2 * uncertainty
-            if len(left) < 3 or len(right) < 3 or not 0.012 < width < 0.085:
-                continue
-            point = (np.median(left, axis=0) + np.median(right, axis=0)) / 2
-            grasps.append(
-                dict(
-                    position=point.tolist(),
-                    closing_axis=closing.tolist(),
-                    width_m=float(width),
-                    evidence_points=int(len(left) + len(right)),
+            for closing in vh[1:]:
+                lateral = section @ closing
+                lo, hi = np.quantile(lateral, [0.05, 0.95])
+                # Both visible opposing flanks, with normals parallel to jaw closure.
+                side = np.abs(n @ closing) > 0.7
+                left = section[side & (lateral < lo + 0.006)]
+                right = section[side & (lateral > hi - 0.006)]
+                width = hi - lo + 2 * uncertainty
+                if len(left) < 3 or len(right) < 3 or not 0.012 < width < 0.085:
+                    continue
+                point = (np.median(left, axis=0) + np.median(right, axis=0)) / 2
+                grasps.append(
+                    dict(
+                        position=point.tolist(),
+                        closing_axis=closing.tolist(),
+                        width_m=float(width),
+                        evidence_points=int(len(left) + len(right)),
+                    )
                 )
-            )
     # Height bins fit near-horizontal surfaces. Reject slope and mixed-height cells.
     planar = (~mask) & (np.abs(normals[:, 2]) > 0.985)
     planar_points = p[planar]
@@ -204,6 +201,14 @@ def detect(cloud, *, seed=None, target_mask=None, max_grasps=24, max_supports=24
                 local = surface[np.array([tuple(k) in patch for k in xy])]
                 if np.ptp(local[:, 2]) > 2 * uncertainty + 0.003:
                     continue
+                patch_center = (np.array(key) + 0.5) * resolution
+                occupied_above = (
+                    (np.abs(p[:, :2] - patch_center) <= half).all(axis=1)
+                    & (p[:, 2] > np.median(local[:, 2]) + 2 * uncertainty + 0.005)
+                    & (p[:, 2] < np.median(local[:, 2]) + 0.25)
+                )
+                if occupied_above.any():
+                    continue
                 position = [*((np.array(key) + 0.5) * resolution), float(np.median(local[:, 2]))]
                 supports.append(
                     dict(position=position, half_size=half.tolist(), evidence_points=len(local))
@@ -216,4 +221,19 @@ def detect(cloud, *, seed=None, target_mask=None, max_grasps=24, max_supports=24
         tuple(supports),
         axis,
         dict(visible_points=len(p), target_points=len(obj), unknown_is_occupied=True),
+    )
+
+
+def fuse(clouds):
+    """Fuse synchronized calibrated visible surfaces, preserving missing regions."""
+    clouds = tuple(clouds)
+    if not clouds or max(c.timestamp for c in clouds) - min(c.timestamp for c in clouds) > 0.03:
+        raise ValueError("Recovery views must be synchronized within 30 ms")
+    return SurfaceCloud(
+        np.concatenate([c.points for c in clouds]),
+        np.concatenate([c.normals for c in clouds]),
+        np.concatenate([c.colors for c in clouds]),
+        min(c.timestamp for c in clouds),
+        max(c.uncertainty_m for c in clouds),
+        "+".join(sorted({c.source for c in clouds})),
     )
