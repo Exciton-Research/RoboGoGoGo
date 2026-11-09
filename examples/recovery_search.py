@@ -86,7 +86,7 @@ def fixture(extra_obstacles=()):
     return s, m, world
 
 
-def run(scenario="helper"):
+def run(scenario="helper", camera_provider=None):
     s, m, world = fixture()
     enabled = False
     lifted = 0.0
@@ -114,6 +114,10 @@ def run(scenario="helper"):
                 m.configure_gripper("left", mu_static=0.04, mu_dynamic=0.02)
         if enabled and scenario == "helper" and m.recovery.attempts == 0:
             s.target_q = s.target_q.at[1].add(0.0003)
+        if enabled and camera_provider is not None:
+            m.recovery.planner.vision_required = True
+            if m.recovery.planner.observation is None or i % 25 == 0:
+                m.recovery.planner.observation = camera_provider(s, m)
         s.advance(collision_world=world)
         if m.failure or (m.recovery and (m.recovery.placed or m.recovery.secured)):
             break

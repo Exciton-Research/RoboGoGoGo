@@ -59,11 +59,45 @@ def observe(offset=(0.0, 0.0, 0.0)):
     return fuse(clouds)
 
 
+def physical_sensor(session, manipulation):
+    """Analytic RGB-D test sensor; simulator state is used only to render test images.
+
+    This box sensor approximates the specimen; it does not render deformed triangles.
+    Perception receives pixels/calibration and a proprioceptive selection cue only.
+    """
+    boxes = [(np.asarray(manipulation.state.position), [0.04, 0.30, 0.04], [170, 70, 140])]
+    boxes += [
+        ([cx, cy, top / 2], [2 * hx, 2 * hy, top], [80, 110, 80])
+        for cx, cy, hx, hy, top in manipulation.supports
+    ]
+    clouds = [
+        render_camera(position, [0.3, 0, 0.48], boxes, timestamp=session.elapsed)
+        for position in [(-0.3, -0.4, 0.8), (0.85, 0.4, 0.8)]
+    ]
+    holder = next(name for name, g in manipulation.grippers.items() if g["holding"])
+    poses = session.poses()
+    body = manipulation.arms[holder].body
+    seed = np.asarray(poses.position[body]) + 0.2 * np.asarray(poses.rotation[body])[:, 0]
+    return detect(fuse(clouds), seed=seed)
+
+
 if __name__ == "__main__":
-    cloud = observe()
-    result = detect(cloud, seed=[0.2, -0.09, 0.5])
-    print(
-        json.dumps(
-            dict(**result.summary(), grasps=result.grasps, supports=result.supports), indent=2
+    import argparse
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--physical-helper", action="store_true")
+    args = parser.parse_args()
+    if args.physical_helper:
+        import jax
+        from recovery_search import run
+
+        jax.config.update("jax_enable_x64", True)
+        result = run("helper", camera_provider=physical_sensor)
+        print(json.dumps({key: result[key] for key in ("time_s", "failure", "recovery")}, indent=2))
+    else:
+        result = detect(observe(), seed=[0.2, -0.09, 0.5])
+        print(
+            json.dumps(
+                dict(**result.summary(), grasps=result.grasps, supports=result.supports), indent=2
+            )
         )
-    )

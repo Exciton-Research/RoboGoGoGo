@@ -56,6 +56,8 @@ def backproject(
         or not np.allclose(r.T @ r, np.eye(3), atol=1e-5)
         or not np.isclose(np.linalg.det(r), 1, atol=1e-5)
         or not np.allclose(k[2], [0, 0, 1])
+        or abs(k[0, 1]) > 1e-10
+        or abs(k[1, 0]) > 1e-10
         or k[0, 0] <= 0
         or k[1, 1] <= 0
         or not np.isfinite(timestamp)
@@ -220,7 +222,7 @@ def detect(cloud, *, seed=None, target_mask=None, max_grasps=24, max_supports=24
         tuple(grasps[:max_grasps]),
         tuple(supports),
         axis,
-        dict(visible_points=len(p), target_points=len(obj), unknown_is_occupied=True),
+        dict(visible_points=len(p), target_points=len(obj), unknown_landing_cells_rejected=True),
     )
 
 
