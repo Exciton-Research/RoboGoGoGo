@@ -642,3 +642,62 @@ Elevated and lateral detours are tested; this is not a complete motion planner o
 vision-based support discovery. It requires an object still retained by a gripper
 and does not catch falling/fractured objects. If no checked route is available,
 recovery reports the reason and does not authorize release.
+
+### Camera-derived recovery (experimental)
+
+Enable **Camera-derived recovery** under Coordinated recovery in Studio, or set
+`camera_recovery: true` in a manipulation task request. Each captured head stereo
+RGB pair is rectified and reconstructed in world coordinates. Renderer ground-truth
+depth, object meshes, material colors and predefined grasp sites are not detection
+inputs. The holding tool supplies only a proprioceptive seed for classical RGB/3D
+region growing. A segmentation model can supply a visible-point mask through the
+Python API instead.
+
+Grasp proposals require visible opposing surfaces and a compatible jaw width.
+Landing proposals require a contiguous observed horizontal patch, space for the
+visible object footprint plus margins, and no observed obstruction above it.
+Unknown depth and holes are rejected. Camera mode never falls back to the old
+model-derived grasp sites or table centers. Low-texture stereo or occluded surfaces
+can therefore produce **no proposal**; additional calibrated views or an RGB-D
+sensor may be necessary.
+
+For external calibrated depth cameras (optical Z in meters):
+
+```python
+from robogogogo.perception import backproject, fuse
+
+manipulation.enable_adaptive_grasp(initial_force_n=16, damage_force_n=40)
+manipulation.enable_recovery(camera_based=True)
+cloud = backproject(depth, rgb, K, camera_position, camera_rotation,
+                    timestamp=session.elapsed, uncertainty_m=0.005, source="rgbd")
+# Fuse multiple synchronized views when the second grasp surface is occluded.
+observation = manipulation.observe_recovery(fuse([cloud]), seed=tool_selection_point)
+session.advance(collision_world=world)
+```
+
+Refresh observations during control; candidate search requires frames at most
+0.5 simulation seconds old. Fused views must be within 30 ms. Studio masks stereo
+pixels whose one-pixel disparity uncertainty exceeds 20 mm. This is an illustrative
+uncertainty gate, not a calibrated error guarantee.
+
+The existing robot/environment collision model remains the motion guard. Detected
+landing patches are associated with physical surfaces only to verify support load;
+their image-derived coordinates are not snapped to registered table centers.
+Physics still needs environment geometry. This is not SLAM, unknown-scene collision
+mapping, arbitrary-object grasp synthesis, or validated hardware autonomy.
+
+Run the sensor and contact demos:
+
+```bash
+.venv/bin/python examples/camera_recovery.py
+.venv/bin/python examples/camera_recovery.py --physical-helper
+.venv/bin/python examples/camera_recovery.py --physical-support
+.venv/bin/pytest tests/test_camera_recovery.py -q
+```
+
+The demos use an analytic two-camera RGB-D test renderer; the physical sensor
+approximates the specimen with a box rather than rendering deformed triangles.
+The placement fixture uses wide visible tables, shorter finger proxies enclosing
+the contact pads, and a 5 mm collision margin. Studio uses the captured stereo RGB
+pipeline instead. Recovery telemetry and episode observations retain the perception
+source, uncertainty, candidate counts and the exact detected proposals.

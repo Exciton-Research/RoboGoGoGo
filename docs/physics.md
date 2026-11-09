@@ -526,3 +526,31 @@ loads, checked edge count, route progress, selected grasp and candidate rejectio
 that override the original planner during recovery, plus all recovery/grasp events.
 These are simulated contact reactions and internal material estimates, not calibrated
 hardware sensing or a universal guarantee against damage during recovery.
+
+### Camera proposal boundary
+
+`perception.recovery` accepts calibrated visible surfaces without a dynamics model.
+Backprojection uses optical camera-to-world calibration; stereo exports its rectified
+intrinsics and camera rotation so rectified Z is never transformed with the original
+unrectified pose. Surface normals come from neighboring valid depth samples, with
+large depth discontinuities rejected. Multi-view fusion requires synchronized frames.
+
+Classical target selection grows a color-consistent connected 3D region from a
+proprioceptive tool cue. PCA and adaptive longitudinal slices propose jaw centers
+only where opposing flanks are visible. The current detector is intended for elongated
+specimens and fixed-orientation parallel-jaw tools. It does not infer hidden thickness
+or synthesize dexterous grasps. Optional segmentation masks must label camera points,
+not simulator IDs. A failed or ambiguous segmentation can cause rejection.
+
+Horizontal surface points populate a 10 mm occupancy grid. A landing footprint must
+have observed cells throughout its extent; observed obstacles above it reject it.
+The selected payload itself is excluded from the obstruction check. Plane heights,
+footprint sizes and centers are measured from the cloud, not enumerated from the
+support registry. Association with an existing physical support is required for the
+native solver's measured load verification. Unknown/mismatched supports cannot
+be released onto, and a completed approach retains its selected visible footprint.
+
+Camera mode uses fresh detections exclusively. The simulation's actual payload
+state remains an independent execution/collision guard; this is intentionally not
+an end-to-end perception-only world model. Real hardware would require collision
+mapping, calibrated uncertainty, contact estimation and broader validation.

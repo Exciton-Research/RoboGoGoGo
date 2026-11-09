@@ -319,8 +319,7 @@ class TaskService:
                 damage_force_n=request.object_damage_force_n,
             )
         if request.recovery_behaviors:
-            manipulation.enable_recovery()
-            manipulation.recovery.planner.vision_required = request.camera_recovery
+            manipulation.enable_recovery(camera_based=request.camera_recovery)
         cameras = w.episode.cameras if w.episode else None
         episode = w._episode_for_state(
             "Grasp and lift the specimen without damaging it."
