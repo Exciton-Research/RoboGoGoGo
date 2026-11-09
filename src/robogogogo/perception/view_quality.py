@@ -67,7 +67,7 @@ class ViewEvidence:
         probes = np.concatenate([points] + [points + offset for offset in offsets])
         return probes, np.tile(normals, (5, 1)), len(points)
 
-    def quality(self, pose, camera, probes, normals):
+    def quality(self, pose, camera, probes, normals, *, outward=False):
         center, rotation = np.asarray(pose["position"]), np.asarray(pose["rotation"])
         rays = probes - center
         distance = np.linalg.norm(rays, axis=1)
@@ -92,7 +92,10 @@ class ViewEvidence:
                 (along > 0) & (along < distance[start:end] - 0.016) & (squared < 0.009**2)
             ).any(axis=0)
             visible[start:end] &= ~blocked
-        incidence = np.abs(np.sum(normals * directions, axis=1))
+        signed_incidence = np.sum(normals * directions, axis=1)
+        if outward:
+            visible &= signed_incidence < -0.05
+        incidence = np.abs(signed_incidence)
         incidence = np.where(np.linalg.norm(normals, axis=1) > 0.5, incidence, 0.25)
         # Conservative range/incidence noise model; not a calibrated posterior.
         sigma = self.uncertainty_m * (distance / 0.5) ** 2 / np.maximum(incidence, 0.2)
@@ -101,20 +104,23 @@ class ViewEvidence:
 
     def baseline(self, before, camera, *, support=False):
         probes, normals, measured = self.probes(support)
-        old, old_visible = self.quality(before, camera, probes, normals)
+        outward = not support and np.count_nonzero(self.target) >= 3
+        old, old_visible = self.quality(before, camera, probes, normals, outward=outward)
         for pose, calibration in self.views:
-            observed, observed_visible = self.quality(pose, calibration, probes, normals)
+            observed, observed_visible = self.quality(
+                pose, calibration, probes, normals, outward=outward
+            )
             old = np.maximum(old, observed)
             old_visible |= observed_visible
-        return probes, normals, measured, old, old_visible
+        return probes, normals, measured, old, old_visible, outward
 
     def score(self, before, after, camera, *, support=False, baseline=None):
-        probes, normals, measured, old, old_visible = (
+        probes, normals, measured, old, old_visible, outward = (
             self.baseline(before, camera, support=support) if baseline is None else baseline
         )
         if not len(probes):
             return dict(gain=0.0, newly_visible=0, visible=0, probes=0)
-        new, visible = self.quality(after, camera, probes, normals)
+        new, visible = self.quality(after, camera, probes, normals, outward=outward)
         # Synchronized reference views already cover some regions. Reward only
         # incremental quality beyond their best measurement; unknown probes are discounted.
         weights = np.ones(len(probes))
