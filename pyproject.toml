@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "robogogogo"
+version = "0.2.0"
+description = "Native Python/JAX 3D articulated robotics dynamics and research environments"
+requires-python = ">=3.11"
+dependencies = ["jax>=0.4.35", "numpy>=1.26"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "httpx>=0.28,<1", "ruff>=0.11,<1"]
+perception = ["opencv-python-headless>=4.10,<5"]
+viewer = ["matplotlib>=3.8"]
+studio = ["fastapi>=0.115,<1", "uvicorn[standard]>=0.34,<1"]
+
+[project.scripts]
+robogogogo = "robogogogo.__main__:main"
+robogogogo-studio = "robogogogo.server:main"
+
+[tool.setuptools.package-data]
+robogogogo = ["assets/*.urdf", "web/*", "web/assets/*"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]

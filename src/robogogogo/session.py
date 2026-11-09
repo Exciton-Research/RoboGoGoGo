@@ -1,0 +1,308 @@
+"""UI-independent simulation session and reproducible trajectory recorder."""
+
+import json
+from dataclasses import fields
+from datetime import datetime, timezone
+from pathlib import Path
+
+import jax
+import jax.numpy as jnp
+import numpy as np
+
+from . import control
+from . import spatial as sp
+from .embodiment import resolve_arms
+
+
+class Session:
+    """Deterministic simulation session shared by the GUI and headless runner."""
+
+    def __init__(self, model, *, scene="arm", substeps=5, arms=None):
+        self.model, self.scene, self.substeps = model, scene, substeps
+        self.payload_model = None
+        self.contact_system = None
+        self.target_q = model.home
+        self.state = sp.initial_state(model)
+        self.elapsed = 0.0
+        self.history = []
+        self.arms = resolve_arms(model, arms)
+        self.targets = {
+            arm.name: np.asarray(sp.point_position(model, model.home, arm.body))
+            for arm in self.arms
+        }
+        self.last_torque = np.zeros_like(model.home)
+        self._advance = jax.jit(lambda state, goal: self._tick(state, goal))
+        self._trace = jax.jit(self._tick_trace)
+        self._loaded_trace = jax.jit(
+            lambda state, goal, model: self._tick_trace(state, goal, model)
+        )
+        self._loaded_energy = jax.jit(sp.energy)
+        self._poses = jax.jit(lambda q: sp.forward_kinematics(model, q))
+        self._energy = jax.jit(lambda state: sp.energy(model, state))
+        self._ik = jax.jit(
+            lambda targets, q: control.inverse_kinematics_targets(
+                model, targets, tuple(arm.body for arm in self.arms), q
+            )
+        )
+        # Compile outside the animation callback, without advancing visible state.
+        compiled, _ = self._advance(self.state, self.target_q)
+        compiled.q.block_until_ready()
+        self._poses(self.state.q).position.block_until_ready()
+        self._energy(self.state).block_until_ready()
+        self._record()
+
+    def poses(self) -> sp.Pose:
+        """World poses for the current simulation state."""
+        return self._poses(self.state.q)
+
+    def mechanical_energy(self) -> float:
+        """Rigid-body/jaw kinetic plus gravity potential energy; excludes contact springs."""
+        value = float(
+            self._energy(self.state)
+            if self.payload_model is None
+            else self._loaded_energy(self.payload_model, self.state)
+        )
+        if self.contact_system is not None:
+            contact = self.contact_system
+            if contact.structural is not None:
+                nodes = contact.contact.structure
+                mass = contact.structural.node_mass
+                return value + float(
+                    0.5 * mass * np.sum(np.asarray(nodes.velocity) ** 2)
+                    - mass * np.sum(np.asarray(nodes.position) @ np.asarray(self.model.gravity))
+                    + contact.structural.elastic_energy(nodes)
+                    + 0.5 * 0.05 * np.sum(np.asarray(nodes.jaw_velocity) ** 2)
+                )
+            state, obj = contact.state, contact.object
+            inertia = np.asarray(state.rotation) @ obj.inertia @ np.asarray(state.rotation).T
+            value += float(
+                0.5 * obj.mass * np.dot(state.velocity, state.velocity)
+                + 0.5
+                * np.asarray(state.angular_velocity)
+                @ inertia
+                @ np.asarray(state.angular_velocity)
+                - obj.mass * np.dot(self.model.gravity, state.position)
+                + 0.5 * 0.05 * np.sum(np.asarray(contact.contact.width_velocity) ** 2)
+            )
+        return value
+
+    @property
+    def target(self):
+        """Compatibility alias for the first arm target."""
+        return self.targets[self.arms[0].name]
+
+    @target.setter
+    def target(self, value):
+        self.targets[self.arms[0].name] = np.asarray(value, dtype=float)
+
+    def solve_targets(self, targets=None):
+        values = self.targets if targets is None else targets
+        return self._ik(jnp.asarray([values[arm.name] for arm in self.arms]), self.state.q)
+
+    def solve_ik(self, target):
+        goals = dict(self.targets)
+        goals[self.arms[0].name] = target
+        q, errors = self.solve_targets(goals)
+        return q, errors[0]
+
+    def restart_recording(self) -> None:
+        """Begin a trajectory at the current state and task target."""
+        self.history = []
+        self._record()
+
+    def _tick(self, state, goal):
+        torque = (
+            control.computed_torque(self.model, state, goal)
+            if self.scene == "arm"
+            else jnp.zeros_like(state.q)
+        )
+        return sp.step(self.model, state, torque, substeps=self.substeps), jnp.clip(
+            torque, -self.model.effort, self.model.effort
+        )
+
+    def _tick_trace(self, state, goal, model=None):
+        model = self.model if model is None else model
+        torque = control.computed_torque(model, state, goal)
+
+        def substep(current, _):
+            following = sp.step(model, current, torque, substeps=1)
+            return following, following.q
+
+        following, positions = jax.lax.scan(substep, state, None, length=self.substeps)
+        return following, jnp.clip(torque, -model.effort, model.effort), positions
+
+    def _record(self):
+        self.history.append(
+            (
+                self.elapsed,
+                np.asarray(self.state.q).copy(),
+                np.asarray(self.state.qd).copy(),
+                self.last_torque.copy(),
+                self.target.copy(),
+                np.stack([self.targets[arm.name] for arm in self.arms]),
+            )
+        )
+
+    def advance(self, *, collision_world=None):
+        if self.contact_system is not None:
+            return self._advance_contacts(collision_world)
+        if collision_world is None:
+            if self.payload_model is None:
+                following, torque = self._advance(self.state, self.target_q)
+            else:
+                following, torque, _ = self._loaded_trace(
+                    self.state, self.target_q, self.payload_model
+                )
+        else:
+            from .planning.collision import CollisionViolation
+
+            if self.payload_model is None:
+                following, torque, positions = self._trace(self.state, self.target_q)
+            else:
+                following, torque, positions = self._loaded_trace(
+                    self.state, self.target_q, self.payload_model
+                )
+            previous = np.asarray(self.state.q)
+            for q in np.asarray(positions):
+                if not collision_world.edge_free(previous, q):
+                    clearance = collision_world.clearance(q)
+                    raise CollisionViolation(
+                        f"Predicted motion violates collision margin: {clearance.pair}"
+                    )
+                previous = q
+            # Commit only after every physics substep and connecting edge is checked.
+        if (
+            not np.isfinite(np.asarray(following.q)).all()
+            or not np.isfinite(np.asarray(following.qd)).all()
+        ):
+            raise FloatingPointError(
+                "Nonfinite state. Reset and reduce dt or controller/contact stiffness."
+            )
+        self.state = following
+        self.last_torque = np.asarray(torque)
+        self.elapsed += float(self.model.dt) * self.substeps
+        self._record()
+
+    def _advance_contacts(self, collision_world):
+        from .planning.collision import CollisionViolation
+
+        contact = self.contact_system
+        if contact.recovery:
+            contact.recovery.prepare(contact, self, collision_world)
+            collision_world = contact.recovery.guarded_world(collision_world, contact)
+        following, traces = contact.predict_tick(self)
+        robot, object_state, _ = following
+        if not all(np.isfinite(np.asarray(v)).all() for v in jax.tree.leaves(following)):
+            raise FloatingPointError("Nonfinite contact state; reduce contact timestep/stiffness")
+        if collision_world is not None:
+            previous = np.asarray(self.state.q)
+            segment = contact.object_segment()
+            for q, current_segment in zip(np.asarray(traces[0]), np.asarray(traces[1])):
+                if not collision_world.edge_free(
+                    previous, q, object_start=segment, object_end=current_segment
+                ):
+                    clearance = collision_world.clearance(q, current_segment)
+                    if contact.recovery and contact.recovery.active:
+                        contact.recovery.block(
+                            contact, self, "Collision guard rejected recovery motion"
+                        )
+                    raise CollisionViolation(
+                        f"Predicted contact motion violates collision margin: {clearance.pair}"
+                    )
+                previous, segment = q, current_segment
+        self.state = robot
+        self.last_torque = np.asarray(traces[3][-1])
+        self.elapsed += float(self.model.dt) * self.substeps
+        contact.commit_tick(following, traces, self)
+        self._record()
+
+    def reset(self):
+        self.payload_model = None
+        self.contact_system = None
+        self.state = sp.initial_state(self.model)
+        self.elapsed = 0.0
+        self.last_torque = np.zeros_like(self.model.home)
+        self.target_q = self.model.home
+        self.targets = {
+            arm.name: np.asarray(sp.point_position(self.model, self.model.home, arm.body))
+            for arm in self.arms
+        }
+        self.history = []
+        self._record()
+
+    def set_target(self, target, arm=None):
+        name = arm or self.arms[0].name
+        if name not in self.targets:
+            raise ValueError(f"Unknown arm: {name}")
+        target = np.asarray(target, dtype=float)
+        if target.shape != (3,) or not np.isfinite(target).all():
+            raise ValueError("target must be three finite coordinates")
+        targets = dict(self.targets)
+        targets[name] = target
+        q, errors = self.solve_targets(targets)
+        if not np.isfinite(np.asarray(q)).all():
+            raise ValueError("IK failed to produce a finite configuration")
+        self.target_q, self.targets = q, targets
+        return float(jnp.max(errors))
+
+    def set_joints(self, q, arm=None):
+        q = np.asarray(q, dtype=float)
+        if arm is not None:
+            group = next((group for group in self.arms if group.name == arm), None)
+            if group is None:
+                raise ValueError(f"Unknown arm: {arm}")
+            if q.shape != (len(group.joint_indices),) or not np.isfinite(q).all():
+                raise ValueError("joint goal must match the selected arm degrees of freedom")
+            full = np.asarray(self.target_q).copy()
+            full[list(group.joint_indices)] = q
+            q = full
+        if q.shape != self.model.home.shape or not np.isfinite(q).all():
+            raise ValueError("joint goal must match model degrees of freedom")
+        self.target_q = jnp.clip(jnp.asarray(q), self.model.lower, self.model.upper)
+        self.targets = {
+            group.name: np.asarray(sp.point_position(self.model, self.target_q, group.body))
+            for group in self.arms
+        }
+
+    def export(self, destination):
+        """Lossless NPZ history and complete model arrays; no pickle required.
+
+        Row 0 is the initial state, torque row i is applied during (i-1, i).
+        Export contains post-step q/qd plus targets in world coordinates.
+        """
+        path = Path(destination)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        metadata = dict(
+            format="robogogogo-trajectory-v1",
+            scene=self.scene,
+            arms=[arm.to_dict() for arm in self.arms],
+            substeps=self.substeps,
+            integrator="semi-implicit-euler-implicit-damping-stops",
+            created_utc=datetime.now(timezone.utc).isoformat(),
+            parents=self.model.parents,
+            kinds=self.model.kinds,
+            indices=self.model.indices,
+            names=self.model.names,
+            jax_version=jax.__version__,
+            dtype=str(self.state.q.dtype),
+        )
+        times, q, qd, torque, target, arm_targets = zip(*self.history)
+        arrays = {
+            f"model_{f.name}": np.asarray(getattr(self.model, f.name))
+            for f in fields(self.model)
+            if f.name not in ("parents", "kinds", "indices", "names")
+        }
+        # File handle preserves the requested path instead of silently adding .npz.
+        with path.open("wb") as output:
+            np.savez_compressed(
+                output,
+                metadata=np.array(json.dumps(metadata)),
+                time=np.array(times),
+                q=np.stack(q),
+                qd=np.stack(qd),
+                torque=np.stack(torque),
+                target=np.stack(target),
+                arm_targets=np.stack(arm_targets),
+                **arrays,
+            )
+        return path.resolve()

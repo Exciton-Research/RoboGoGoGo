@@ -1,0 +1,2 @@
+recursive-include src/robogogogo/web *
+recursive-include src/robogogogo/assets *.urdf

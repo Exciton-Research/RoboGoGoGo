@@ -205,6 +205,12 @@ cython_debug/
 # Temporary file for partial code execution
 tempCodeRunnerFile.py
 
+# Local Studio dependencies, generated assets, and experiment checkpoints
+node_modules/
+*.tsbuildinfo
+src/robogogogo/web/
+runs/
+
 # Ruff stuff:
 .ruff_cache/
 
@@ -218,3 +224,5 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+.next/
+studio/out/
