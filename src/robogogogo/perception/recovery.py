@@ -8,6 +8,8 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
+from .view_quality import ViewEvidence
+
 
 @dataclass(frozen=True)
 class SurfaceCloud:
@@ -28,6 +30,7 @@ class RecoveryObservation:
     supports: tuple
     object_axis: np.ndarray | None
     diagnostics: dict = field(default_factory=dict)
+    view_evidence: ViewEvidence | None = field(default=None, repr=False, compare=False)
 
     def summary(self):
         return dict(
@@ -248,6 +251,7 @@ def detect(cloud, *, seed=None, target_mask=None, max_grasps=24, max_supports=24
         tuple(supports),
         axis,
         dict(visible_points=len(p), target_points=len(obj), unknown_landing_cells_rejected=True),
+        ViewEvidence.from_cloud(cloud, mask),
     )
 
 

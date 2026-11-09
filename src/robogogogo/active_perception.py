@@ -1,6 +1,6 @@
 """Bounded, collision-checked camera exploration using actual articulated joints.
 
-View scores are geometric heuristics, not predicted occlusion guarantees. Success
+Views maximize predicted measurement gain using observed surface occlusion. Success
 requires a new measured observation after the camera has settled.
 """
 
@@ -46,6 +46,8 @@ class ActivePerception:
         self.rejections = []
         self.reference_object = None
         self.resume = None
+        self.selection = None
+        self.ranking = []
 
     def summary(self):
         return dict(
@@ -53,6 +55,8 @@ class ActivePerception:
             max_views=self.max_views,
             camera=self.selected_camera,
             capture_after=self.capture_after,
+            selection=self.selection,
+            ranking=self.ranking[:8],
             rejections=self.rejections[-8:],
         )
 
@@ -91,11 +95,13 @@ class ActivePerception:
             if m.grippers[n]["holding"] or m.grippers[n]["command"] == "closed"
             for j in a.joint_indices
         }
-        pose = session.poses()
-        holder = m.arms[holders[0]].body
-        cue = np.asarray(pose.position[holder]) + 0.2 * np.asarray(pose.rotation[holder])[:, 0]
-        if resume == "searching_support":
-            cue = cue + [0.1, 0.0, -0.15]
+        observation = m.recovery.planner.observation
+        evidence = observation.view_evidence if observation is not None else None
+        if evidence is None or not len(evidence.points):
+            raise PlanningError("Active perception needs measured surface evidence")
+        if not 0 <= session.elapsed - observation.timestamp <= 0.5:
+            raise PlanningError("Active perception needs fresh surface evidence")
+        self.ranking = []
         q = np.asarray(session.state.q)
         bound = m.object_segment()
         candidates = []
@@ -115,39 +121,42 @@ class ActivePerception:
                 )
                 continue
             before = self.pose(camera, q)
+            # Single-axis and coordinated two-axis proposals at two scales.
+            # This bounded local search optimizes measured utility, not motion novelty.
+            axes = []
             for joint in sorted(movable):
                 link = self.model.indices.index(joint)
                 step = 0.06 if self.model.kinds[link] == "prismatic" else 0.3
-                for delta in (-step, step):
-                    target = q.copy()
-                    target[joint] = np.clip(
-                        q[joint] + delta, self.model.lower[joint], self.model.upper[joint]
-                    )
-                    if abs(target[joint] - q[joint]) < step / 2:
+                direction = np.zeros_like(q)
+                direction[joint] = step
+                axes.append(direction)
+            directions = [sign * axis for axis in axes for sign in (-1, 1)]
+            directions += [
+                a + sign * b for i, a in enumerate(axes) for b in axes[i + 1 :] for sign in (-1, 1)
+            ]
+            directions += [-d for d in directions[len(axes) * 2 :]]
+            for direction in directions:
+                for scale in (0.5, 1.0):
+                    target = np.clip(q + scale * direction, self.model.lower, self.model.upper)
+                    if np.linalg.norm(target - q) < 0.015:
                         continue
                     if any(np.linalg.norm(target - old) < 0.015 for old in self.visited):
                         continue
                     after = self.pose(camera, target)
-                    center, rotation = np.asarray(after["position"]), np.asarray(after["rotation"])
-                    ray = cue - center
-                    distance = np.linalg.norm(ray)
-                    if distance < 0.08:
-                        continue
-                    alignment = np.dot(rotation[:, 2], ray / distance)
-                    # Keep the cue within the vertical viewing cone, allowing a small search margin.
-                    if alignment < np.cos(
-                        np.deg2rad(camera.get("vertical_fov_degrees", 70) / 2 + 10)
-                    ):
-                        continue
-                    novelty = np.linalg.norm(
-                        np.cross(center - before["position"], ray / distance)
-                    ) + 0.15 * np.linalg.norm(rotation - before["rotation"])
-                    candidates.append(
-                        (alignment + 2 * novelty - 0.1 * distance, camera["name"], target)
+                    quality = evidence.score(
+                        before, after, camera, support=resume == "searching_support"
                     )
-        for _, name, target in sorted(candidates, key=lambda c: -c[0]):
+                    cost = 0.002 * np.linalg.norm(scale * direction)
+                    score = quality["gain"] - cost
+                    report = dict(camera=camera["name"], score=float(score), **quality)
+                    if score <= 1e-6:
+                        continue
+                    candidates.append((score, camera["name"], target, report))
+        self.ranking = [c[3] for c in sorted(candidates, key=lambda c: -c[0])]
+        for _, name, target, report in sorted(candidates, key=lambda c: -c[0]):
             if world.edge_free(q, target, object_start=bound, object_end=bound):
                 self.goal, self.selected_camera, self.resume = target, name, resume
+                self.selection = report
                 self.command = q.copy()
                 self.reference_object = np.asarray(m.state.position).copy()
                 self.attempts += 1
@@ -157,7 +166,9 @@ class ActivePerception:
             self.rejections.append(
                 dict(camera=name, reason="View motion violates collision clearance")
             )
-        raise PlanningError("No reachable camera view without moving a retaining grasp")
+        raise PlanningError(
+            "No reachable camera view with positive information gain without moving a retaining grasp"
+        )
 
     def advance(self, session, dt):
         q = np.asarray(session.state.q)
