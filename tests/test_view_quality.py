@@ -1,6 +1,7 @@
 """Visibility and uncertainty tests independent of the robot's collision model."""
 
 import numpy as np
+import pytest
 
 from robogogogo.perception import SurfaceCloud, detect
 from robogogogo.perception.view_quality import ViewEvidence
@@ -52,3 +53,19 @@ def test_synchronized_reference_camera_discounts_already_observed_view():
     covered = ViewEvidence(point, normal, np.ones(1, bool), 0.005, ((pose(z=0.5), {}),))
     assert fresh.score(pose(), pose(z=0.5), {})["gain"] > 0
     assert covered.score(pose(), pose(z=0.5), {})["gain"] == 0
+
+
+@pytest.mark.parametrize("uncertainty", [0.0, float("nan"), float("inf"), 0.1])
+def test_invalid_surface_uncertainty_is_rejected(uncertainty):
+    cloud = SurfaceCloud(
+        np.zeros((1, 3)), np.zeros((1, 3)), np.zeros((1, 3)), 0.0, uncertainty, "test"
+    )
+    with pytest.raises(ValueError, match="surface cloud"):
+        detect(cloud)
+
+
+def test_provisional_envelope_faces_are_not_visible_from_behind():
+    point, outward = np.array([[0.0, 0, 1]]), np.array([[0.0, 0, 1]])
+    evidence = ViewEvidence(point, outward, np.ones(1, bool), 0.005)
+    _, visible = evidence.quality(pose(), {}, point, outward, outward=True)
+    assert not visible[0]

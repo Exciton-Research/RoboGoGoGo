@@ -149,7 +149,15 @@ def detect(cloud, *, seed=None, target_mask=None, max_grasps=24, max_supports=24
     occupied planar grid cells; holes/occlusions cannot become landing area.
     """
     p, normals = np.asarray(cloud.points), np.asarray(cloud.normals)
-    if p.ndim != 2 or p.shape[1:] != (3,) or normals.shape != p.shape or not np.isfinite(p).all():
+    if (
+        p.ndim != 2
+        or p.shape[1:] != (3,)
+        or normals.shape != p.shape
+        or not np.isfinite(p).all()
+        or not np.isfinite(normals).all()
+        or not np.isfinite(cloud.timestamp)
+        or not 0 < cloud.uncertainty_m <= 0.02
+    ):
         raise ValueError("Invalid surface cloud")
     if target_mask is None:
         target_mask = foreground(cloud, seed) if seed is not None else np.zeros(len(p), bool)
