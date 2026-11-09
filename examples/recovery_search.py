@@ -16,7 +16,7 @@ from robogogogo.planning.collision import BoxObstacle
 from robogogogo.session import Session
 
 
-def fixture(extra_obstacles=()):
+def fixture(extra_obstacles=(), *, supports=None, clearance_m=0.015):
     b = sp.ModelBuilder()
     rotation = np.asarray(sp.rpy_matrix(np.array([np.pi / 2, np.pi / 2, 0.0])))
     for name, origin in [("left", (0.2, -0.09, 0.7)), ("right", (0.2, 0.25, 0.8))]:
@@ -36,7 +36,8 @@ def fixture(extra_obstacles=()):
                 effort=150.0,
             )
     s = Session(b.build(), arms=[dict(name=n, tool=f"{n}_2") for n in ("left", "right")])
-    supports = [[0.2, 0, 0.03, 0.17, 0.48], [0.48, 0, 0.03, 0.17, 0.45]]
+    if supports is None:
+        supports = [[0.2, 0, 0.03, 0.17, 0.48], [0.48, 0, 0.03, 0.17, 0.45]]
     m = Manipulation(
         s.model, s.arms, [0.2, 0, 0.5], supports, material="soft_elastomer", structural=True
     )
@@ -76,6 +77,7 @@ def fixture(extra_obstacles=()):
     world = CollisionWorld(
         s.model,
         capsules,
+        margin=clearance_m,
         obstacles=[*obstacles, *extra_obstacles],
         excluded_capsule_pairs=[
             ("payload", c.name) for c in capsules if c.name.startswith("left:finger:")
@@ -86,8 +88,8 @@ def fixture(extra_obstacles=()):
     return s, m, world
 
 
-def run(scenario="helper", camera_provider=None):
-    s, m, world = fixture()
+def run(scenario="helper", camera_provider=None, fixture_factory=fixture):
+    s, m, world = fixture_factory()
     enabled = False
     lifted = 0.0
     traveled = 0.0

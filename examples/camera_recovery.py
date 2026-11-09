@@ -86,13 +86,27 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--physical-helper", action="store_true")
+    parser.add_argument("--physical-support", action="store_true")
     args = parser.parse_args()
-    if args.physical_helper:
+    if args.physical_helper or args.physical_support:
+        from functools import partial
+
         import jax
-        from recovery_search import run
+        from recovery_search import fixture, run
 
         jax.config.update("jax_enable_x64", True)
-        result = run("helper", camera_provider=physical_sensor)
+        # Wider visible landing surfaces and a 3 mm fixture clearance permit
+        # the open fingers beside the table while retaining actual collision checks.
+        factory = partial(
+            fixture,
+            supports=[[0.2, 0, 0.04, 0.2, 0.48], [0.48, 0, 0.04, 0.2, 0.45]],
+            clearance_m=0.003,
+        )
+        result = run(
+            "support" if args.physical_support else "helper",
+            camera_provider=physical_sensor,
+            fixture_factory=factory if args.physical_support else fixture,
+        )
         print(json.dumps({key: result[key] for key in ("time_s", "failure", "recovery")}, indent=2))
     else:
         result = detect(observe(), seed=[0.2, -0.09, 0.5])
