@@ -17,6 +17,24 @@ class ActivePerception:
             raise ValueError("Active perception requires 1–8 bounded view attempts")
         self.model = model
         self.cameras = [dict(c) for c in cameras]
+        if not 1 <= len(self.cameras) <= 8:
+            raise ValueError("Active perception requires one to eight calibrated cameras")
+        names = [c.get("name") for c in self.cameras]
+        if any(not isinstance(n, str) or not n for n in names) or len(set(names)) != len(names):
+            raise ValueError("Active camera names must be nonempty and unique")
+        for camera in self.cameras:
+            if camera.get("mount") is not None and camera["mount"] not in model.names:
+                raise ValueError("Unknown active camera mount")
+            try:
+                pose = self.pose(camera, model.home)
+                if (
+                    not np.isfinite(pose["position"]).all()
+                    or not np.isfinite(pose["rotation"]).all()
+                    or not 1 < camera.get("vertical_fov_degrees", 70) < 179
+                ):
+                    raise ValueError("Invalid active camera calibration")
+            except (KeyError, TypeError, IndexError) as error:
+                raise ValueError("Invalid active camera calibration") from error
         self.max_views = max_views
         self.attempts = 0
         self.selected_camera = None

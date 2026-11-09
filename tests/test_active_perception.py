@@ -205,3 +205,16 @@ def test_camera_motion_reveals_support_behind_a_real_rendered_occluder():
     recovery.planner.observation = observation
     recovery.prepare(m, session, world)
     assert recovery.phase == "searching_support"
+
+
+def test_invalid_camera_configuration_preserves_existing_controller():
+    session, m, _ = setup()
+    previous = m.recovery
+    with pytest.raises(ValueError, match="calibrated cameras"):
+        m.enable_recovery(camera_based=True, active_cameras=[])
+    assert m.recovery is previous
+    camera = DEMO.wrist_camera(session)
+    with pytest.raises(ValueError, match="unique"):
+        ActivePerception(session.model, [camera, camera])
+    with pytest.raises(ValueError, match="mount"):
+        ActivePerception(session.model, [dict(camera, mount="missing_head")])
