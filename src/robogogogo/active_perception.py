@@ -121,6 +121,7 @@ class ActivePerception:
                 )
                 continue
             before = self.pose(camera, q)
+            baseline = evidence.baseline(before, camera, support=resume == "searching_support")
             # Single-axis and coordinated two-axis proposals at two scales.
             # This bounded local search optimizes measured utility, not motion novelty.
             axes = []
@@ -144,7 +145,11 @@ class ActivePerception:
                         continue
                     after = self.pose(camera, target)
                     quality = evidence.score(
-                        before, after, camera, support=resume == "searching_support"
+                        before,
+                        after,
+                        camera,
+                        support=resume == "searching_support",
+                        baseline=baseline,
                     )
                     cost = 0.002 * np.linalg.norm(scale * direction)
                     score = quality["gain"] - cost

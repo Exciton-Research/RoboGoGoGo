@@ -79,15 +79,21 @@ class ViewEvidence:
         quality = visible / (1 + (sigma / 0.005) ** 2)
         return quality, visible
 
-    def score(self, before, after, camera, *, support=False):
+    def baseline(self, before, camera, *, support=False):
         probes, normals, measured = self.probes(support)
-        if not measured:
-            return dict(gain=0.0, newly_visible=0, visible=0, probes=0)
         old, old_visible = self.quality(before, camera, probes, normals)
         for pose, calibration in self.views:
             observed, observed_visible = self.quality(pose, calibration, probes, normals)
             old = np.maximum(old, observed)
             old_visible |= observed_visible
+        return probes, normals, measured, old, old_visible
+
+    def score(self, before, after, camera, *, support=False, baseline=None):
+        probes, normals, measured, old, old_visible = (
+            self.baseline(before, camera, support=support) if baseline is None else baseline
+        )
+        if not measured:
+            return dict(gain=0.0, newly_visible=0, visible=0, probes=0)
         new, visible = self.quality(after, camera, probes, normals)
         # Synchronized reference views already cover some regions. Reward only
         # incremental quality beyond their best measurement; unknown probes are discounted.
