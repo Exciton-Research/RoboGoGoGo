@@ -93,7 +93,7 @@ class ActivePerception:
             j
             for n, a in m.arms.items()
             if m.grippers[n]["holding"] or m.grippers[n]["command"] == "closed"
-            for j in a.joint_indices
+            for j in self.ancestry(a.body)
         }
         observation = m.recovery.planner.observation
         evidence = observation.view_evidence if observation is not None else None

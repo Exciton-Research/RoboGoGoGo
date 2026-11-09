@@ -229,3 +229,26 @@ def test_invalid_camera_configuration_preserves_existing_controller():
         ActivePerception(session.model, [camera, camera])
     with pytest.raises(ValueError, match="mount"):
         ActivePerception(session.model, [dict(camera, mount="missing_head")])
+
+
+def test_camera_search_requires_fresh_nonempty_evidence():
+    session, m, world = setup()
+    observation = m.recovery.planner.observation
+    m.recovery.planner.observation = None
+    with pytest.raises(PlanningError, match="measured surface"):
+        m.recovery.view.begin(m, session, world, "searching_helper")
+    m.recovery.planner.observation = observation
+    session.elapsed = 0.6
+    with pytest.raises(PlanningError, match="fresh surface"):
+        m.recovery.view.begin(m, session, world, "searching_helper")
+    assert m.recovery.view.attempts == 0
+    assert m.grippers["left"]["command"] == "closed"
+
+
+def test_selected_camera_has_best_feasible_predicted_gain():
+    session, m, world = setup()
+    m.recovery.view.begin(m, session, world, "searching_helper")
+    view = m.recovery.view
+    assert view.selection["gain"] > 0
+    assert view.selection["score"] <= view.ranking[0]["score"]
+    assert view.summary()["selection"] == view.selection

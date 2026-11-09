@@ -44,3 +44,11 @@ def test_empty_evidence_and_unknown_probes_never_create_action_proposals():
     assert observation.view_evidence.score(pose(), pose(x=0.2), {})["gain"] == 0
     assert not observation.grasps and not observation.supports
     assert "view_evidence" not in observation.summary()
+
+
+def test_synchronized_reference_camera_discounts_already_observed_view():
+    point, normal = np.array([[0.0, 0, 1]]), np.array([[0.0, 0, 1]])
+    fresh = ViewEvidence(point, normal, np.ones(1, bool), 0.005)
+    covered = ViewEvidence(point, normal, np.ones(1, bool), 0.005, ((pose(z=0.5), {}),))
+    assert fresh.score(pose(), pose(z=0.5), {})["gain"] > 0
+    assert covered.score(pose(), pose(z=0.5), {})["gain"] == 0

@@ -723,8 +723,8 @@ It keeps a bounded 8 mm surface sample map from calibrated observations, tests
 candidate sight lines against observed occluders, and estimates measurement quality
 from range, surface incidence, and depth uncertainty. Synchronized reference views
 discount already-covered regions. Grasp searches prioritize segmented object
-surfaces; support searches prioritize horizontal surfaces. Nearby unknown probes
-encourage boundary exploration but never become grasp or landing proposals.
+surfaces; support searches prioritize horizontal surfaces. Provisional object-envelope faces and nearby unknown probes
+encourage missing-flank and boundary exploration but never become grasp or landing proposals.
 Only positive predicted gains proceed to swept-path collision checks.
 
 This is a local next-best-view approximation, not a global optimum or a calibrated
