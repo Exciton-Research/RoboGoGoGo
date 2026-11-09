@@ -37,6 +37,26 @@ class ViewEvidence:
             # A scene with no recognized target can still expose boundaries of
             # observed occluders. It cannot supply a fabricated target location.
             points, normals = self.points, self.normals
+        if not support and np.any(self.target) and len(points) >= 3:
+            # Observed extent supplies provisional envelope faces, not asserted
+            # object geometry. Opposing faces let grasp searches value a missing
+            # flank instead of repeatedly improving an already visible top face.
+            center = np.median(points, axis=0)
+            _, _, axes = np.linalg.svd(points - center, full_matrices=False)
+            local = (points - center) @ axes.T
+            lower, upper = np.quantile(local, [0.02, 0.98], axis=0)
+            samples, directions = [], []
+            for axis in range(3):
+                others = [j for j in range(3) if j != axis]
+                u, v = np.meshgrid(np.linspace(0.1, 0.9, 7), np.linspace(0.1, 0.9, 7))
+                for side in (0, 1):
+                    face = np.zeros((u.size, 3))
+                    face[:, axis] = (lower if side == 0 else upper)[axis]
+                    for j, coordinate in zip(others, (u.ravel(), v.ravel())):
+                        face[:, j] = lower[j] + coordinate * (upper[j] - lower[j])
+                    samples.append(face @ axes + center)
+                    directions.append(np.tile(axes[axis] * (2 * side - 1), (u.size, 1)))
+            return np.concatenate(samples), np.concatenate(directions), 0
         indices = np.linspace(0, len(points) - 1, min(160, len(points)), dtype=int)
         points, normals = points[indices], normals[indices]
         offsets = (
@@ -92,7 +112,7 @@ class ViewEvidence:
         probes, normals, measured, old, old_visible = (
             self.baseline(before, camera, support=support) if baseline is None else baseline
         )
-        if not measured:
+        if not len(probes):
             return dict(gain=0.0, newly_visible=0, visible=0, probes=0)
         new, visible = self.quality(after, camera, probes, normals)
         # Synchronized reference views already cover some regions. Reward only
