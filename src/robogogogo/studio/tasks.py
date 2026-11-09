@@ -133,6 +133,14 @@ class TaskService:
                 latest["joint_position"], np.asarray(s.state.q)
             ):
                 raise ValueError("Capture the current state before stepping the task")
+            if (
+                self.manipulation
+                and self.manipulation.recovery
+                and self.manipulation.recovery.planner.vision_required
+            ):
+                from .perception import update_recovery_observation
+
+                update_recovery_observation(w, observation_index)
             event_start = len(self.manipulation.events) if self.manipulation else 0
             recovery_start = (
                 len(self.manipulation.recovery.records)
@@ -312,6 +320,7 @@ class TaskService:
             )
         if request.recovery_behaviors:
             manipulation.enable_recovery()
+            manipulation.recovery.planner.vision_required = request.camera_recovery
         cameras = w.episode.cameras if w.episode else None
         episode = w._episode_for_state(
             "Grasp and lift the specimen without damaging it."
@@ -354,6 +363,7 @@ class TaskService:
         episode.task_plan["structural_dynamics"] = request.structural_dynamics
         episode.task_plan["recovery_behaviors"] = dict(
             enabled=request.recovery_behaviors,
+            camera_proposals=request.camera_recovery,
             regrasp="collision-checked helper approach and force-verified regrasp",
             put_down="checked nearby support transport and load-verified descent",
             support_weight_fraction=0.8,

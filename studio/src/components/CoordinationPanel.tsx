@@ -33,6 +33,7 @@ export function CoordinationPanel({
     object_material: "rigid_reference",
     structural_dynamics: false,
     recovery_behaviors: true,
+    camera_recovery: false,
     adaptive_grasp: true,
     initial_grip_force_n: 24,
     object_damage_force_n: 55,
@@ -195,6 +196,7 @@ export function CoordinationPanel({
                 setGrip({
                   ...grip,
                   adaptive_grasp: e.target.checked,
+                  camera_recovery: e.target.checked && grip.camera_recovery,
                   recovery_behaviors:
                     e.target.checked && grip.recovery_behaviors,
                 })
@@ -207,7 +209,11 @@ export function CoordinationPanel({
               disabled={!grip.adaptive_grasp || disabled}
               checked={grip.recovery_behaviors && grip.adaptive_grasp}
               onChange={(e) =>
-                setGrip({ ...grip, recovery_behaviors: e.target.checked })
+                setGrip({
+                  ...grip,
+                  recovery_behaviors: e.target.checked,
+                  camera_recovery: e.target.checked && grip.camera_recovery,
+                })
               }
             />{" "}
             Coordinated recovery
@@ -217,6 +223,25 @@ export function CoordinationPanel({
             support. Grip and support loads are verified before release. A new
             contact configuration requires replanning.
           </small>
+          <label>
+            <input
+              type="checkbox"
+              checked={grip.camera_recovery}
+              disabled={!grip.recovery_behaviors || disabled}
+              onChange={(e) =>
+                setGrip({ ...grip, camera_recovery: e.target.checked })
+              }
+            />
+            Camera-derived recovery (experimental)
+          </label>
+          {grip.camera_recovery && (
+            <small>
+              Uses calibrated head stereo RGB on each observation. Uncertain
+              depth, unseen grasp surfaces and incomplete landing patches are
+              rejected. No fallback to predefined sites. Additional views may be
+              required.
+            </small>
+          )}
           {grip.adaptive_grasp && (
             <>
               <label>
@@ -389,6 +414,16 @@ export function CoordinationPanel({
                 {manipulation.recovery.reason?.replaceAll("_", " ") ??
                   "Monitoring grip and material risk"}
               </span>
+              {manipulation.recovery.camera_mode && (
+                <span>
+                  Camera proposals:{" "}
+                  {manipulation.recovery.perception?.grasp_count ?? 0} grasps ·{" "}
+                  {manipulation.recovery.perception?.support_count ?? 0} landing
+                  patches
+                  {manipulation.recovery.perception?.diagnostics.error &&
+                    ` · ${manipulation.recovery.perception.diagnostics.error}`}
+                </span>
+              )}
               <span>
                 Attempts {manipulation.recovery.attempts} · Helper{" "}
                 {manipulation.recovery.helper ?? "none"}

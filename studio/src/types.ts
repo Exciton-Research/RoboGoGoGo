@@ -126,6 +126,7 @@ export interface ObjectMaterialState {
   risk?: number;
 }
 export interface GripParameters {
+  camera_recovery: boolean;
   recovery_behaviors: boolean;
   structural_dynamics: boolean;
   object_material: ObjectMaterialName;
@@ -146,6 +147,14 @@ export interface ManipulationState {
     support_index: number | null;
     attempts: number;
     support_verified_s: number;
+    camera_mode: boolean;
+    perception: {
+      source: string;
+      grasp_count: number;
+      support_count: number;
+      uncertainty_m: number;
+      diagnostics: { error?: string };
+    } | null;
     risk_hold: boolean;
     search_checks: number;
     route_waypoints: number;

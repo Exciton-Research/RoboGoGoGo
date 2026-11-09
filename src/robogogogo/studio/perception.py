@@ -74,3 +74,69 @@ def analyze_stereo(workspace, request):
         convention="Rectified left-camera optical Z, meters; dark pixels are invalid",
         method="StereoSGBM + left/right consistency + texture mask",
     )
+
+
+def update_recovery_observation(workspace, observation_index):
+    """Camera-mode task input: RGB stereo only; renderer ground-truth depth is excluded."""
+    from ..perception.recovery import RecoveryObservation, backproject, detect
+
+    m, session, episode = workspace.task_service.manipulation, workspace.session, workspace.episode
+    planner = m.recovery.planner
+    observation = episode.observations[observation_index]
+    configs = {c["name"]: c for c in episode.cameras}
+    timestamp = observation["time"]
+    try:
+        names = ("head_left", "head_right")
+        if any(name not in configs for name in names):
+            raise ValueError("Camera recovery requires calibrated head_left/head_right RGB frames")
+        cv = opencv()
+        images = []
+        for name in names:
+            decoded = cv.imdecode(
+                np.frombuffer(episode.images[observation_index][name], np.uint8), cv.IMREAD_COLOR
+            )
+            if decoded is None:
+                raise ValueError("Invalid captured RGB frame")
+            images.append(cv.cvtColor(decoded, cv.COLOR_BGR2RGB))
+        poses = observation["camera_poses"]
+        result = estimate_stereo(
+            *images,
+            *(configs[n] for n in names),
+            *(poses[n] for n in names),
+            num_disparities=min(64, (images[0].shape[1] // 32) * 16),
+        )
+        # One-pixel disparity uncertainty; do not advertise distant, uncertain depth
+        # as millimeter geometry. Calibration/systematic errors require separate validation.
+        uncertainty = result.depth**2 / (result.focal_px * result.baseline_m)
+        valid = np.isfinite(result.depth) & (uncertainty <= 0.02)
+        depth = np.where(valid, result.depth, np.nan)
+        sigma = max(0.003, float(uncertainty[valid].max())) if valid.any() else 0.02
+        cloud = backproject(
+            depth,
+            result.rectified_left,
+            result.intrinsics,
+            result.position,
+            result.rotation,
+            timestamp=timestamp,
+            uncertainty_m=sigma,
+            source="calibrated_rgb_stereo",
+        )
+        holders = [name for name, grip in m.grippers.items() if grip["holding"]]
+        seed = None
+        if holders:
+            # Proprioception supplies only an object-selection cue near the fingers.
+            # No object pose, structural nodes, material color or support registry is read.
+            pose = session.poses()
+            body = m.arms[holders[0]].body
+            seed = np.asarray(pose.position[body]) + 0.2 * np.asarray(pose.rotation[body])[:, 0]
+        planner.observation = detect(cloud, seed=seed)
+    except ValueError as error:
+        planner.observation = RecoveryObservation(
+            timestamp, "calibrated_rgb_stereo", 0.02, (), (), None, dict(error=str(error))
+        )
+    # Store the exact camera-derived decision inputs alongside the captured observation.
+    observation["recovery_perception"] = dict(
+        **planner.observation.summary(),
+        grasps=list(planner.observation.grasps),
+        supports=list(planner.observation.supports),
+    )

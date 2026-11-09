@@ -75,6 +75,7 @@ class NewEpisode(Payload):
 
 
 class PlanTask(Payload):
+    camera_recovery: bool = False
     structural_dynamics: bool = False
     recovery_behaviors: bool = False
     object_material: Literal["rigid_reference", "soft_foam", "soft_elastomer", "fragile_shell"] = (
@@ -92,6 +93,10 @@ class PlanTask(Payload):
 
     @model_validator(mode="after")
     def validate_friction(self):
+        if self.camera_recovery and not self.recovery_behaviors:
+            raise ValueError("Camera recovery requires coordinated recovery")
+        if self.camera_recovery and self.kind == "inspection":
+            raise ValueError("Camera recovery requires a manipulation task")
         if self.recovery_behaviors and not self.adaptive_grasp:
             raise ValueError("Recovery requires adaptive force feedback")
         if self.structural_dynamics and self.object_material == "rigid_reference":
