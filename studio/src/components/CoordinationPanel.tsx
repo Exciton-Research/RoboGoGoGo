@@ -34,6 +34,7 @@ export function CoordinationPanel({
     structural_dynamics: false,
     recovery_behaviors: true,
     camera_recovery: false,
+    active_perception: false,
     adaptive_grasp: true,
     initial_grip_force_n: 24,
     object_damage_force_n: 55,
@@ -71,7 +72,11 @@ export function CoordinationPanel({
               e.target.value as "inspection" | "handover" | "material_grasp",
             );
             if (e.target.value === "inspection")
-              setGrip({ ...grip, camera_recovery: false });
+              setGrip({
+                ...grip,
+                camera_recovery: false,
+                active_perception: false,
+              });
           }}
         >
           <option value="material_grasp">Material grasp → lift</option>
@@ -197,6 +202,7 @@ export function CoordinationPanel({
               onChange={(e) =>
                 setGrip({
                   ...grip,
+                  active_perception: e.target.checked && grip.active_perception,
                   adaptive_grasp: e.target.checked,
                   camera_recovery: e.target.checked && grip.camera_recovery,
                   recovery_behaviors:
@@ -213,6 +219,7 @@ export function CoordinationPanel({
               onChange={(e) =>
                 setGrip({
                   ...grip,
+                  active_perception: e.target.checked && grip.active_perception,
                   recovery_behaviors: e.target.checked,
                   camera_recovery: e.target.checked && grip.camera_recovery,
                 })
@@ -231,11 +238,33 @@ export function CoordinationPanel({
               checked={grip.camera_recovery}
               disabled={!grip.recovery_behaviors || disabled}
               onChange={(e) =>
-                setGrip({ ...grip, camera_recovery: e.target.checked })
+                setGrip({
+                  ...grip,
+                  camera_recovery: e.target.checked,
+                  active_perception: e.target.checked && grip.active_perception,
+                })
               }
             />
             Camera-derived recovery (experimental)
           </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={grip.active_perception}
+              disabled={!grip.camera_recovery || disabled}
+              onChange={(e) =>
+                setGrip({ ...grip, active_perception: e.target.checked })
+              }
+            />
+            Active perception
+          </label>
+          {grip.active_perception && (
+            <small>
+              Move a motorized head or free wrist camera, settle, and capture
+              again. Retaining arms stay fixed. Up to four checked views; fixed
+              mast cameras cannot move.
+            </small>
+          )}
           {grip.camera_recovery && (
             <small>
               Uses calibrated head stereo RGB on each observation. Uncertain
@@ -416,6 +445,15 @@ export function CoordinationPanel({
                 {manipulation.recovery.reason?.replaceAll("_", " ") ??
                   "Monitoring grip and material risk"}
               </span>
+              {manipulation.recovery.active_perception && (
+                <span>
+                  View attempts{" "}
+                  {manipulation.recovery.active_perception.attempts}/
+                  {manipulation.recovery.active_perception.max_views} · Camera{" "}
+                  {manipulation.recovery.active_perception.camera ??
+                    "not selected"}
+                </span>
+              )}
               {manipulation.recovery.camera_mode && (
                 <span>
                   Camera proposals:{" "}

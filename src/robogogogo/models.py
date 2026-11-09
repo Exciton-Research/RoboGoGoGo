@@ -135,3 +135,47 @@ def with_camera_mast(model, visuals):
         dict(body=body, shape="box", dimensions=[0.1, 0.16, 0.07], origin=[0, 0, 0], rpy=[0, 0, 0]),
     ]
     return model, visuals
+
+
+def with_pan_tilt_head(model, visuals):
+    """Optional two-DOF camera head with native dynamics; arm groups stay unchanged."""
+    from dataclasses import replace
+
+    import jax.numpy as jnp
+
+    model, visuals = with_camera_mast(model, visuals)
+    pan, pitch, joint = len(model.names) - 1, len(model.names), len(model.home)
+    arrays = {}
+    values = dict(
+        origin=[0, 0, 0],
+        orientation=np.eye(3),
+        axis=[0, 1, 0],
+        mass=0.15,
+        com=[0.02, 0, 0],
+        inertia=np.eye(3) * 0.001,
+    )
+    for name, value in values.items():
+        array = getattr(model, name)
+        if name == "axis":
+            array = array.at[pan].set(jnp.array([0.0, 0.0, 1.0]))
+        elif name == "mass":
+            array = array.at[pan].set(0.2)
+        elif name == "inertia":
+            array = array.at[pan].set(jnp.eye(3) * 0.002)
+        arrays[name] = jnp.concatenate((array, jnp.asarray(value, dtype=model.home.dtype)[None]))
+    for name, value in dict(
+        home=[0, 0], lower=[-0.7, -0.45], upper=[0.7, 0.45], damping=[0.1, 0.1], effort=[5.0, 5.0]
+    ).items():
+        arrays[name] = jnp.concatenate(
+            (getattr(model, name), jnp.asarray(value, dtype=model.home.dtype))
+        )
+    model = replace(
+        model,
+        names=model.names[:-1] + ("head_pan", "head"),
+        parents=model.parents + (pan,),
+        kinds=model.kinds[:-1] + ("revolute", "revolute"),
+        indices=model.indices[:-1] + (joint, joint + 1),
+        **arrays,
+    )
+    visuals = [dict(v, body=pitch) if v["body"] == pan else v for v in visuals]
+    return model, visuals

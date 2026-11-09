@@ -52,13 +52,13 @@ class Studio:
             self.episode_service.start_episode(NewEpisode(camera_preset="head_wrists"))
 
     def _replace_session(self, scene, xml=None, dt=0.002, substeps=5, arms=None):
-        if scene == "dual_arm":
+        if scene in ("dual_arm", "dual_arm_head"):
             xml = models.multi_arm_urdf(2)
             arms = [
                 {"name": "left_arm", "tool": "left_tool"},
                 {"name": "right_arm", "tool": "right_tool"},
             ]
-        if scene in ("urdf", "dual_arm"):
+        if scene in ("urdf", "dual_arm", "dual_arm_head"):
             if not xml:
                 raise ValueError("URDF content is required")
             try:
@@ -67,7 +67,7 @@ class Studio:
                 raise ValueError(f"Invalid URDF: {error}") from error
             model, label = robot.model, robot.name
             visuals = list(robot.visuals)
-            if scene == "dual_arm":
+            if scene in ("dual_arm", "dual_arm_head"):
                 model = replace(model, home=jnp.tile(models.arm6(dt=dt).home, 2))
         elif scene == "arm":
             arms = arms or [{"name": "arm", "tool": "tool"}]
@@ -79,7 +79,10 @@ class Studio:
             model, label, visuals = models.slider(dt=dt), "Guided sphere", []
         else:
             raise ValueError("Unknown scene")
-        if scene in ("arm", "dual_arm"):
+        if scene == "dual_arm_head":
+            model, visuals = models.with_pan_tilt_head(model, visuals)
+            label += " + Pan/Tilt Head"
+        elif scene in ("arm", "dual_arm"):
             model, visuals = models.with_camera_mast(model, visuals)
         if model.home.size > 48 or len(model.parents) > 128:
             raise ValueError("Studio currently supports up to 48 moving joints and 128 links")

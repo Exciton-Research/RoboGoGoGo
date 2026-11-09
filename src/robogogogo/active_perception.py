@@ -130,6 +130,7 @@ class ActivePerception:
         for _, name, target in sorted(candidates, key=lambda c: -c[0]):
             if world.edge_free(q, target, object_start=bound, object_end=bound):
                 self.goal, self.selected_camera, self.resume = target, name, resume
+                self.command = q.copy()
                 self.reference_object = np.asarray(m.state.position).copy()
                 self.attempts += 1
                 self.visited.extend([q.copy(), target.copy()])
@@ -146,7 +147,8 @@ class ActivePerception:
         for kind, index in zip(self.model.kinds, self.model.indices):
             if index >= 0 and kind == "prismatic":
                 rates[index] = 0.03
-        target = q + np.clip(self.goal - q, -rates * dt, rates * dt)
+        self.command += np.clip(self.goal - self.command, -rates * dt, rates * dt)
+        target = self.command.copy()
         quiet = (
             np.max(np.abs(q - self.goal)) < 0.002
             and np.max(np.abs(np.asarray(session.state.qd))) < 0.025

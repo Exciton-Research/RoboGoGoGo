@@ -17,7 +17,7 @@ export interface Visual {
 }
 export interface RobotModel {
   name: string;
-  scene: "arm" | "dual_arm" | "drop" | "urdf";
+  scene: "arm" | "dual_arm" | "dual_arm_head" | "drop" | "urdf";
   dof: number;
   arms: ArmGroup[];
   camera_presets: Record<string, CameraConfig[]>;
@@ -126,6 +126,7 @@ export interface ObjectMaterialState {
   risk?: number;
 }
 export interface GripParameters {
+  active_perception: boolean;
   camera_recovery: boolean;
   recovery_behaviors: boolean;
   structural_dynamics: boolean;
@@ -147,6 +148,12 @@ export interface ManipulationState {
     support_index: number | null;
     attempts: number;
     support_verified_s: number;
+    active_perception: {
+      attempts: number;
+      max_views: number;
+      camera: string | null;
+      capture_after: number | null;
+    } | null;
     camera_mode: boolean;
     perception: {
       source: string;

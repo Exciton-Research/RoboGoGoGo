@@ -91,6 +91,9 @@ export function WorkspaceSidebar() {
               >
                 <option value="arm">Single arm · 6 joints</option>
                 <option value="dual_arm">Dual arms · 12 joints</option>
+                <option value="dual_arm_head">
+                  Dual arms + pan/tilt head · 14 joints
+                </option>
                 {model?.scene === "urdf" && (
                   <option value="urdf">Imported multi-arm robot</option>
                 )}
