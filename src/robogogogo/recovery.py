@@ -15,6 +15,8 @@ from .recovery_planning import RecoveryPlanner, contact_world
 
 class GraspRecovery:
     ACTIVE = {
+        "view_moving",
+        "view_capture",
         "searching_helper",
         "approaching_helper",
         "helper_closing",
@@ -34,6 +36,7 @@ class GraspRecovery:
     def __init__(self, model, arms):
         self.planner = RecoveryPlanner(model, {a.name: a for a in arms})
         self.world = None
+        self.view = None
         self.route = None
         self.route_index = 1
         self.route_alpha = 0.0
@@ -76,6 +79,7 @@ class GraspRecovery:
 
     def summary(self):
         return dict(
+            active_perception=self.view.summary() if self.view else None,
             camera_mode=self.planner.vision_required,
             perception=self.planner.observation.summary() if self.planner.observation else None,
             risk_hold=self.risk_hold,
@@ -189,7 +193,8 @@ class GraspRecovery:
             try:
                 available = self.planner.support_candidates(m, session)
             except PlanningError as error:
-                self.block(m, session, str(error))
+                if not self.seek_view(m, session, "searching_support"):
+                    self.block(m, session, str(error))
                 return
         candidates = [
             (i, s)
@@ -254,10 +259,70 @@ class GraspRecovery:
                 result = contact_world(result, m, name)
         return result
 
+    def seek_view(self, m, session, resume):
+        if self.view is None:
+            return False
+        try:
+            self.view.begin(m, session, self.guarded_world(self.world, m), resume)
+            self.extended = True
+            self.target = session.state.q
+            self.transition(m, session, "view_moving")
+        except PlanningError as error:
+            self.block(m, session, str(error))
+        return True
+
+    def prepare_view(self, m, session):
+        dt = float(session.model.dt) * session.substeps
+        material = m.material_status()
+        if (
+            not any(g["holding"] for g in m.grippers.values())
+            or np.linalg.norm(np.asarray(m.state.position) - self.view.reference_object) > 0.015
+            or material.get("damage_fraction", 0.0) > self.initial_damage + 1e-4
+        ):
+            self.block(m, session, "Retaining grasp or material changed during camera exploration")
+            return
+        if material.get("risk", 0.0) > 0.55:
+            self.target = session.state.q
+        elif self.phase == "view_moving":
+            target, settled = self.view.advance(session, dt)
+            self.target = jnp.asarray(target)
+            if settled:
+                self.view.capture_after = session.elapsed
+                self.view.previous_observation = self.planner.observation
+                self.transition(m, session, "view_capture")
+        else:
+            observation = self.planner.observation
+            fresh = (
+                observation is not None
+                and observation is not self.view.previous_observation
+                and self.view.capture_after <= observation.timestamp <= session.elapsed
+                and session.elapsed - observation.timestamp <= 0.5
+            )
+            if fresh:
+                proposals = (
+                    observation.grasps
+                    if self.view.resume == "searching_helper"
+                    else observation.supports
+                )
+                if proposals:
+                    self.transition(m, session, self.view.resume)
+                else:
+                    self.seek_view(m, session, self.view.resume)
+            elif session.elapsed - self.changed > 2.0:
+                self.block(m, session, "Fresh settled-camera observation did not arrive")
+        session.target_q = m.hold_target = self.target
+        self.records.append(
+            dict(time=session.elapsed, phase=self.phase, target_q=np.asarray(self.target).tolist())
+        )
+        self.records = self.records[-10000:]
+
     def prepare(self, m, session, world=None):
         if world is not None:
             self.world = world
         if not self.active:
+            return
+        if self.phase in ("view_moving", "view_capture"):
+            self.prepare_view(m, session)
             return
         if self.phase in ("searching_helper", "searching_support"):
             try:
@@ -277,6 +342,8 @@ class GraspRecovery:
                 self.transition(m, session, phase)
             except PlanningError as error:
                 self.planner.rejections.append(dict(reason=str(error)))
+                if self.seek_view(m, session, self.phase):
+                    return
                 if self.phase == "searching_helper":
                     self.helper = None
                     self.begin_lowering(m, session)

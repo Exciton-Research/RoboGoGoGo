@@ -319,7 +319,12 @@ class TaskService:
                 damage_force_n=request.object_damage_force_n,
             )
         if request.recovery_behaviors:
-            manipulation.enable_recovery(camera_based=request.camera_recovery)
+            manipulation.enable_recovery(
+                camera_based=request.camera_recovery,
+                active_cameras=(w.episode.cameras if w.episode else [])
+                if request.active_perception
+                else None,
+            )
         cameras = w.episode.cameras if w.episode else None
         episode = w._episode_for_state(
             "Grasp and lift the specimen without damaging it."
@@ -363,6 +368,7 @@ class TaskService:
         episode.task_plan["recovery_behaviors"] = dict(
             enabled=request.recovery_behaviors,
             camera_proposals=request.camera_recovery,
+            active_perception=request.active_perception,
             regrasp="collision-checked helper approach and force-verified regrasp",
             put_down="checked nearby support transport and load-verified descent",
             support_weight_fraction=0.8,
@@ -467,7 +473,11 @@ class TaskService:
         return bool(
             self.manipulation
             and self.manipulation.recovery
-            and (self.manipulation.recovery.placed or self.manipulation.recovery.secured)
+            and (
+                self.manipulation.recovery.placed
+                or self.manipulation.recovery.secured
+                or self.manipulation.recovery.phase == "view_capture"
+            )
         )
 
     def start_handover_operation(self):

@@ -75,6 +75,7 @@ class NewEpisode(Payload):
 
 
 class PlanTask(Payload):
+    active_perception: bool = False
     camera_recovery: bool = False
     structural_dynamics: bool = False
     recovery_behaviors: bool = False
@@ -93,6 +94,8 @@ class PlanTask(Payload):
 
     @model_validator(mode="after")
     def validate_friction(self):
+        if self.active_perception and not self.camera_recovery:
+            raise ValueError("Active perception requires camera-based recovery")
         if self.camera_recovery and not self.recovery_behaviors:
             raise ValueError("Camera recovery requires coordinated recovery")
         if self.camera_recovery and self.kind == "inspection":

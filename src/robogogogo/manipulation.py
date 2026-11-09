@@ -305,13 +305,19 @@ class Manipulation:
         safety = GripSafety(initial_force_n=initial_force_n, damage_force_n=damage_force_n)
         self.adaptive = {name: AdaptiveGrip(safety) for name in self.names}
 
-    def enable_recovery(self, *, camera_based=False):
+    def enable_recovery(self, *, camera_based=False, active_cameras=None):
         from .recovery import GraspRecovery
 
         if not self.adaptive:
             raise ValueError("Recovery requires adaptive force feedback")
         self.recovery = GraspRecovery(self.model, tuple(self.arms.values()))
         self.recovery.planner.vision_required = bool(camera_based)
+        if active_cameras is not None:
+            if not camera_based:
+                raise ValueError("Active perception requires camera-based recovery")
+            from .active_perception import ActivePerception
+
+            self.recovery.view = ActivePerception(self.model, active_cameras)
 
     def observe_recovery(self, cloud, *, seed=None, target_mask=None):
         """Supply calibrated visible surfaces; no object-state segmentation fallback."""
