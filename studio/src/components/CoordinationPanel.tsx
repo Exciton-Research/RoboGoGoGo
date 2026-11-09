@@ -66,11 +66,13 @@ export function CoordinationPanel({
           aria-label="Task recipe"
           disabled={disabled}
           value={kind}
-          onChange={(e) =>
+          onChange={(e) => {
             setKind(
               e.target.value as "inspection" | "handover" | "material_grasp",
-            )
-          }
+            );
+            if (e.target.value === "inspection")
+              setGrip({ ...grip, camera_recovery: false });
+          }}
         >
           <option value="material_grasp">Material grasp → lift</option>
           <option value="handover">Pick → hand over → place</option>

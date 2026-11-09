@@ -121,3 +121,72 @@ def test_synchronization_and_camera_configuration_guards():
         fuse([cloud, late])
     with pytest.raises(ValueError, match="coordinated recovery"):
         PlanTask(camera_recovery=True)
+
+
+def test_studio_uses_rgb_only_and_records_the_proposals():
+    from types import SimpleNamespace
+
+    cv = pytest.importorskip("cv2")
+    from robogogogo.studio.perception import update_recovery_observation
+
+    image = np.random.default_rng(19).integers(0, 256, (96, 192, 3), dtype=np.uint8)
+    right = np.zeros_like(image)
+    right[:, :-24] = image[:, 24:]
+    cameras = [
+        dict(name=n, width=192, height=96, vertical_fov_degrees=60.0)
+        for n in ("head_left", "head_right")
+    ]
+    poses = {
+        n: dict(position=[x, 0, 0], rotation=np.eye(3).tolist())
+        for n, x in [("head_left", 0.0), ("head_right", 0.064)]
+    }
+    frames = {
+        n: cv.imencode(".png", cv.cvtColor(img, cv.COLOR_RGB2BGR))[1].tobytes()
+        for n, img in [("head_left", image), ("head_right", right)]
+    }
+    observation = dict(time=0.0, camera_poses=poses)
+    # Deliberately no renderer depths, material, object state, or support registry.
+    planner = SimpleNamespace(observation=None)
+    m = SimpleNamespace(recovery=SimpleNamespace(planner=planner), grippers={})
+    workspace = SimpleNamespace(
+        task_service=SimpleNamespace(manipulation=m),
+        session=None,
+        episode=SimpleNamespace(cameras=cameras, images=[frames], observations=[observation]),
+    )
+    update_recovery_observation(workspace, 0)
+    assert planner.observation.source == "calibrated_rgb_stereo"
+    assert planner.observation.diagnostics["visible_points"] > 0
+    assert observation["recovery_perception"]["supports"]
+    assert not planner.observation.grasps
+    workspace.episode.cameras = []
+    update_recovery_observation(workspace, 0)
+    assert not planner.observation.supports
+    assert "head_left" in planner.observation.diagnostics["error"]
+
+
+def test_rectified_stereo_extrinsics_backproject_in_world_coordinates():
+    pytest.importorskip("cv2")
+    from robogogogo.perception.recovery import backproject
+    from robogogogo.perception.stereo import estimate_stereo
+
+    camera = dict(width=192, height=96, vertical_fov_degrees=60.0)
+    rotation = np.array([[0, 0, 1.0], [1.0, 0, 0], [0, 1.0, 0]])
+    center = np.array([0.1, 0.2, 0.3])
+    poses = [
+        dict(position=(center + rotation @ [x, 0, 0]).tolist(), rotation=rotation.tolist())
+        for x in (0.0, 0.064)
+    ]
+    image = np.random.default_rng(8).integers(0, 256, (96, 192, 3), dtype=np.uint8)
+    right = np.zeros_like(image)
+    right[:, :-24] = image[:, 24:]
+    result = estimate_stereo(image, right, camera, camera, *poses, num_disparities=32)
+    cloud = backproject(
+        result.depth,
+        result.rectified_left,
+        result.intrinsics,
+        result.position,
+        result.rotation,
+        timestamp=0.0,
+    )
+    expected_depth = result.focal_px * result.baseline_m / 24
+    assert np.median(cloud.points[:, 0]) == pytest.approx(0.1 + expected_depth, abs=0.003)
