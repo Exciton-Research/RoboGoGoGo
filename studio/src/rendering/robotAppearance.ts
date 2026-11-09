@@ -11,7 +11,10 @@ type AddMesh = (
 
 /** Presentation geometry follows existing link frames; it is not collision geometry. */
 export function addResearchRobotDetails(model: RobotModel, add: AddMesh) {
-  const builtIn = model.scene === "arm" || model.scene === "dual_arm";
+  const builtIn =
+    model.scene === "arm" ||
+    model.scene === "dual_arm" ||
+    model.scene === "dual_arm_head";
   if (!builtIn) return;
   const graphite = "#22313d",
     metal = "#8799a6",
@@ -114,12 +117,18 @@ export function addResearchRobotDetails(model: RobotModel, add: AddMesh) {
     }
   });
   const root =
-    model.scene === "dual_arm"
+    model.scene === "dual_arm" || model.scene === "dual_arm_head"
       ? model.names.indexOf("world")
       : model.names.indexOf("pedestal");
   box(
     root,
-    [0.38, model.scene === "dual_arm" ? 1.12 : 0.38, 0.055],
+    [
+      0.38,
+      model.scene === "dual_arm" || model.scene === "dual_arm_head"
+        ? 1.12
+        : 0.38,
+      0.055,
+    ],
     graphite,
     [-0.07, 0, 0.028],
     0.025,

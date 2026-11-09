@@ -196,7 +196,10 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
         bodyMaterials.push({ body, material: mat });
         return mesh;
       };
-      const builtIn = model.scene === "arm" || model.scene === "dual_arm";
+      const builtIn =
+        model.scene === "arm" ||
+        model.scene === "dual_arm" ||
+        model.scene === "dual_arm_head";
       for (const visual of model.visuals) {
         const linkName = model.names[visual.body];
         if (
