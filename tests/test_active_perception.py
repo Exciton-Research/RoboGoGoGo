@@ -29,6 +29,7 @@ def setup(extra=()):
     m.grippers["left"]["holding"] = True
     m.enable_recovery(camera_based=True, active_cameras=[DEMO.wrist_camera(session)])
     m.recovery.world = world
+    m.recovery.planner.observation = DEMO.observe(session, m, DEMO.wrist_camera(session))
     return session, m, world
 
 
@@ -57,7 +58,7 @@ def test_settled_capture_rejects_stale_images_then_resumes_from_fresh_evidence()
     session, m, world = setup()
     recovery = m.recovery
     recovery.phase = "searching_helper"
-    old = RecoveryObservation(0.0, "test", 0.002, (), (), None)
+    old = m.recovery.planner.observation
     recovery.planner.observation = old
     assert recovery.seek_view(m, session, "searching_helper")
     session.state = session.state._replace(q=jnp.asarray(recovery.view.goal))
@@ -124,6 +125,12 @@ def test_motorized_head_moves_with_native_dynamics_and_preserves_arm_joints():
     m.enable_recovery(
         camera_based=True, active_cameras=mounted_rig(model, session.arms, wrists=False)
     )
+    cloud = sys.modules["camera_recovery"].render_camera(
+        [0.85, 0.4, 0.8], cue, [(cue, [0.04, 0.30, 0.04], [170, 70, 140])]
+    )
+    from robogogogo.perception import detect
+
+    m.recovery.planner.observation = detect(cloud, target_mask=np.ones(len(cloud.points), bool))
     head = model.names.index("head")
     world = CollisionWorld(
         model,
@@ -185,7 +192,8 @@ def test_camera_motion_reveals_support_behind_a_real_rendered_occluder():
         )
         return detect(cloud, target_mask=np.zeros(len(cloud.points), bool))
 
-    assert not capture().supports
+    m.recovery.planner.observation = capture()
+    assert not m.recovery.planner.observation.supports
     view = m.recovery.view
     view.begin(m, session, world, "searching_support")
     # This test isolates native camera motion with a static retained payload;
