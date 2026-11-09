@@ -190,3 +190,32 @@ def test_rectified_stereo_extrinsics_backproject_in_world_coordinates():
     )
     expected_depth = result.focal_px * result.baseline_m / 24
     assert np.median(cloud.points[:, 0]) == pytest.approx(0.1 + expected_depth, abs=0.003)
+
+
+@pytest.mark.parametrize("scenario,phase", [("helper", "secured"), ("support", "placed")])
+def test_camera_proposals_drive_physical_recovery(scenario, phase):
+    from functools import partial
+
+    factory = (
+        partial(
+            RIG.fixture,
+            supports=[[0.2, 0, 0.12, 0.2, 0.48], [0.48, 0, 0.12, 0.2, 0.45]],
+            clearance_m=0.005,
+            finger_tip=0.205,
+        )
+        if scenario == "support"
+        else RIG.fixture
+    )
+    result = RIG.run(scenario, camera_provider=CAMERA.physical_sensor, fixture_factory=factory)
+    assert result["failure"] is None
+    assert result["recovery"]["phase"] == phase
+    assert result["recovery"]["camera_mode"]
+    assert result["recovery"]["search_checks"] > 0
+    assert not result["object"]["material"]["fractured"]
+    if scenario == "helper":
+        assert all(g["holding"] for g in result["grippers"].values())
+    else:
+        index = result["recovery"]["support_index"]
+        assert result["support_load_n"][index + 1] > 0.8 * 0.16 * 9.81
+        assert result["object"]["material"]["damage_fraction"] == pytest.approx(0.02)
+        assert all(g["command"] == "open" for g in result["grippers"].values())

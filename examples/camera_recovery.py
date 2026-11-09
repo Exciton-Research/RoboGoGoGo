@@ -74,10 +74,12 @@ def physical_sensor(session, manipulation):
         render_camera(position, [0.3, 0, 0.48], boxes, timestamp=session.elapsed)
         for position in [(-0.3, -0.4, 0.8), (0.85, 0.4, 0.8)]
     ]
-    holder = next(name for name, g in manipulation.grippers.items() if g["holding"])
-    poses = session.poses()
-    body = manipulation.arms[holder].body
-    seed = np.asarray(poses.position[body]) + 0.2 * np.asarray(poses.rotation[body])[:, 0]
+    holder = next((name for name, g in manipulation.grippers.items() if g["holding"]), None)
+    seed = None
+    if holder is not None:
+        poses = session.poses()
+        body = manipulation.arms[holder].body
+        seed = np.asarray(poses.position[body]) + 0.2 * np.asarray(poses.rotation[body])[:, 0]
     return detect(fuse(clouds), seed=seed)
 
 
