@@ -174,7 +174,13 @@ def detect(cloud, *, seed=None, target_mask=None, max_grasps=24, max_supports=24
     resolution = 0.01
     if len(planar_points):
         bins = np.round(planar_points[:, 2] / 0.008).astype(int)
-        for height_bin in sorted(set(bins)):
+        height_order = sorted(
+            set(bins),
+            key=lambda value: (
+                abs(value * 0.008 - np.asarray(seed)[2]) if seed is not None else -value
+            ),
+        )
+        for height_bin in height_order:
             surface = planar_points[np.abs(planar_points[:, 2] - height_bin * 0.008) < 0.006]
             if len(surface) < 36:
                 continue
@@ -184,7 +190,15 @@ def detect(cloud, *, seed=None, target_mask=None, max_grasps=24, max_supports=24
             footprint = np.ptp(obj[:, :2], axis=0) if len(obj) >= 40 else np.array([0.08, 0.08])
             half = np.maximum(0.03, footprint / 2 + 0.01 + 2 * uncertainty)
             radius = np.ceil(half / resolution).astype(int)
-            for key in sorted(occupied):
+            cells = sorted(
+                occupied,
+                key=lambda key: (
+                    np.linalg.norm((np.asarray(key) + 0.5) * resolution - np.asarray(seed)[:2])
+                    if seed is not None
+                    else key
+                ),
+            )
+            for key in cells:
                 if len(supports) >= max_supports:
                     break
                 if any(

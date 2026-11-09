@@ -219,3 +219,18 @@ def test_camera_proposals_drive_physical_recovery(scenario, phase):
         assert result["support_load_n"][index + 1] > 0.8 * 0.16 * 9.81
         assert result["object"]["material"]["damage_fraction"] == pytest.approx(0.02)
         assert all(g["command"] == "open" for g in result["grippers"].values())
+
+
+def test_candidate_budget_prioritizes_nearby_plane_over_floor():
+    x, y = np.meshgrid(np.arange(-0.2, 0.201, 0.005), np.arange(-0.2, 0.201, 0.005))
+    floor = np.c_[x.ravel(), y.ravel(), np.zeros(x.size)]
+    table = floor + [0, 0, 0.45]
+    points = np.r_[floor, table]
+    cloud = SurfaceCloud(
+        points, np.tile([0, 0, 1.0], (len(points), 1)), np.zeros_like(points), 0.0, 0.002, "fixture"
+    )
+    result = detect(
+        cloud, seed=[0, 0, 0.5], target_mask=np.zeros(len(points), bool), max_supports=1
+    )
+    assert len(result.supports) == 1
+    assert result.supports[0]["position"][2] == pytest.approx(0.45)
