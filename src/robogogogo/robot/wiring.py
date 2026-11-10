@@ -109,6 +109,10 @@ def validate_wiring(wiring):
                     queue.append(node)
         return visited
 
+    expected_devices = {f"{side}_{suffix}" for side in ("left", "right") for suffix in ARM_COMPONENTS}
+    names = [device["name"] for device in wiring["devices"]]
+    if set(names) != expected_devices or len(names) != len(expected_devices):
+        errors.append("Expected exactly the fourteen arm drives")
     addresses = set()
     for device in wiring["devices"]:
         key = (device["can_bus"], device["can_id"])
@@ -117,6 +121,11 @@ def validate_wiring(wiring):
         addresses.add(key)
         side = device["can_bus"]
         drive = device["connector"]
+        suffix = device["name"].removeprefix(f"{side}_")
+        if suffix in ARM_COMPONENTS and device["voltage"] != ARM_COMPONENTS[suffix].voltage:
+            errors.append(f"Incorrect catalog supply voltage: {device['name']}")
+        if nodes.get(drive) != {"V+", "V-", "CAN_H", "CAN_L"}:
+            errors.append(f"Missing or unexpected drive terminals: {drive}")
         expected = {
             "V+": (f"{side}_distribution", f"{device['voltage']}V+"),
             "V-": (f"{side}_distribution", f"{device['voltage']}V-"),
