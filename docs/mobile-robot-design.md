@@ -74,7 +74,8 @@ robot. In particular:
   remains friction-limited. Leases do not run on wall time and are not hardware
   watchdogs. Base arena bounds stop prediction before virtual joint stops.
 - Static torso/arm goal paths are sampled for support margin, and dynamic checks
-  monitor integration. Joint acceleration requests are bounded to 0.35 rad/s².
+  monitor integration. Joint acceleration requests are bounded to 0.35 rad/s², with speed limited
+  to 0.35 rad/s and reduced near targets using a stopping-distance estimate.
   Arm self-collision paths are checked using conservative envelopes and adaptive
   subdivision. This does not certify physical hardware or environmental clearance.
 - Masses and box-approximation inertias are assumptions; there is no motor sizing,

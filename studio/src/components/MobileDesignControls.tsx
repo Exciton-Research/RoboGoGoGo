@@ -105,8 +105,11 @@ export function MobileDesignControls() {
       {state?.mobile?.collision_guard && (
         <p role="status" className="control-note">
           Self-collision: {state.mobile.collision_guard} · minimum checked
-          clearance {(state.mobile.collision_clearance_m! * 1000).toFixed(1)}{" "}
-          mm. Closest pair: {state.mobile.collision_pair?.join(" / ")}.
+          clearance{" "}
+          {state.mobile.collision_clearance_m == null
+            ? "unavailable (joint state rejected)"
+            : `${(state.mobile.collision_clearance_m * 1000).toFixed(1)} mm`}
+          . Closest pair: {state.mobile.collision_pair?.join(" / ")}.
         </p>
       )}
       <details>
