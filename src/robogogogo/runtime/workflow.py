@@ -22,7 +22,7 @@ class RobotWorkflow:
         except (BadZipFile, KeyError, TypeError) as error:
             raise ValueError("Episode archive is malformed or missing required data") from error
 
-    def snapshot(self, hardware):
+    def snapshot(self, hardware, execution=None):
         robot = self.robot.snapshot()
         selected = self.robot.backend is not None and hardware.get("backend") == self.robot.backend
         connected = selected and hardware.get("status") == "streaming"
@@ -39,6 +39,7 @@ class RobotWorkflow:
         return dict(
             robot=robot,
             physical_execution_enabled=False,
+            command_test=execution,
             hardware=dict(
                 selected=selected,
                 connected=connected,
@@ -76,8 +77,8 @@ class RobotWorkflow:
                 dict(
                     id="runtime",
                     title="Deploy to the robot",
-                    state="blocked",
-                    detail="Hardware is read-only. Command execution, watchdogs, takeover and a policy runner are not implemented.",
+                    state="partial" if execution else "blocked",
+                    detail="Coordinated command execution, watchdogs, stop and manual takeover are available with the test backend. Physical actuation and policy inference still require integration.",
                 ),
                 dict(
                     id="evaluation",

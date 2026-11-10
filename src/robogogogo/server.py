@@ -38,6 +38,11 @@ def main():
     parser.add_argument(
         "--robot-profile", type=Path, help="Single dual-arm deployment identity JSON"
     )
+    parser.add_argument(
+        "--test-execution",
+        action="store_true",
+        help="Enable coordinated command test backend; never connects physical actuators",
+    )
     args = parser.parse_args()
     from .robot.profile import RobotProfile
 
@@ -112,6 +117,7 @@ def main():
             hardware_backends=backends,
             hardware_profiles=profiles,
             robot_profile=robot_profile,
+            test_execution=args.test_execution,
         ),
         host="127.0.0.1",
         port=args.port,

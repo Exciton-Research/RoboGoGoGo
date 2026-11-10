@@ -19,6 +19,7 @@ from robogogogo.robot import HardwareService
 
 from ..runtime.workflow import RobotWorkflow
 from ..simulation.structural_lab import StructuralLab
+from .execution import router as execution_router
 from .schemas import (
     CameraObservation,
     Command,
@@ -50,6 +51,7 @@ def create_app(
     hardware_backends=None,
     hardware_profiles=None,
     robot_profile=None,
+    test_execution=False,
 ):
     directory = Path(project_dir or Path.cwd() / "runs" / "studio")
 
@@ -57,6 +59,13 @@ def create_app(
     async def lifespan(app):
         app.state.studio = await asyncio.to_thread(Studio, directory, scene=initial_scene)
         app.state.clients = 0
+        app.state.execution = None
+        if test_execution:
+            from robogogogo.robot.test_execution import TestExecutionBackend
+            from robogogogo.runtime.execution import CommandExecutor
+
+            app.state.execution = CommandExecutor(TestExecutionBackend())
+            app.state.execution.start()
         app.state.workflow = RobotWorkflow(directory, robot=robot_profile)
         app.state.hardware = HardwareService(
             hardware_backends or {},
@@ -81,16 +90,26 @@ def create_app(
                 await task
             except asyncio.CancelledError:
                 pass
-            await asyncio.to_thread(app.state.hardware.close)
+            try:
+                if app.state.execution is not None:
+                    await asyncio.to_thread(app.state.execution.close)
+            finally:
+                await asyncio.to_thread(app.state.hardware.close)
 
     app = FastAPI(title="robogogogo Studio API", version="0.1.0", lifespan=lifespan)
+    app.include_router(execution_router)
     app.add_middleware(
         TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost", "[::1]", "testserver"]
     )
 
     @app.get("/api/workflow")
     async def workflow():
-        return await asyncio.to_thread(app.state.workflow.snapshot, app.state.hardware.snapshot())
+        execution = (
+            await asyncio.to_thread(app.state.execution.snapshot) if app.state.execution else None
+        )
+        return await asyncio.to_thread(
+            app.state.workflow.snapshot, app.state.hardware.snapshot(), execution
+        )
 
     @app.post("/api/data/{identifier}/validate")
     async def validate_dataset(identifier: UUID):
