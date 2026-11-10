@@ -114,8 +114,8 @@ export function SimulationStage() {
           </div>
           {showInternals && (
             <div className="engineering-note">
-              3 internal motors per shoulder: yaw · roll · pitch. Swivel guides;
-              loom qualification pending.
+              3 internal motors per shoulder: yaw · roll · pitch. Covered
+              inter-motor looms; connector and flex qualification pending.
             </div>
           )}
           {shown ? (

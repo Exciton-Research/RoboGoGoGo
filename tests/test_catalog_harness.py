@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 
 from robogogogo import spatial as sp
-from robogogogo.robot.components import ARM_COMPONENTS, mounting_mass
+from robogogogo.robot.components import ARM_COMPONENTS
 from robogogogo.robot.harness import (
     MIN_BEND,
     harness_clearance,
@@ -31,7 +31,7 @@ def test_catalog_masses_and_continuous_ratings_are_in_dynamics(model):
             assert float(model.effort[model.indices[body]]) == spec.rated_nm
             assert float(
                 model.mass[model.names.index(f"{side}_{suffix}_actuator")]
-            ) == pytest.approx(spec.mass_kg + mounting_mass(suffix))
+            ) == pytest.approx(spec.mass_kg)
 
 
 def test_one_kg_per_hand_at_full_extension_has_static_continuous_torque_reserve(model):
@@ -83,7 +83,7 @@ def test_reference_postures_keep_loops_clear_and_rotated_base_preserves_clearanc
         q = mobile_home(model, posture)
         pose = sp.forward_kinematics(model, jnp.array(q))
         report = harness_routes(model, q, pose)
-        assert len(report) == 6 and all(route["valid"] for route in report)
+        assert len(report) == 10 and all(route["valid"] for route in report)
         before = harness_clearance(model, q, pose, world)
         assert before.distance >= world.margin
         q[:3] = [0.4, -0.3, 0.6]

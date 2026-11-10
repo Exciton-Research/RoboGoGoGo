@@ -49,7 +49,8 @@ def test_brackets_connectors_and_wrist_drives_clear_during_working_motion():
     model = loads(mobile_dual_arm_urdf()).model
     world = mobile_collision_world(model)
     parts = assembly_parts(model)
-    assert sum(p["kind"] == "connector" for p in parts) == 14
+    assert sum(p["name"].endswith("power_can_connector") for p in parts) == 14
+    assert sum("_device_port_" in p["name"] for p in parts) == 10
     home = mobile_home(model)
     # Exercise all three wrist axes together, both mirrored arms, with fittings.
     for angle in np.linspace(-0.2, 0.2, 21):
