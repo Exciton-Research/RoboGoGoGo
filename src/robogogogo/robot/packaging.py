@@ -178,7 +178,9 @@ def assembly_parts(model):
             interfaces = connector_interfaces(suffix)
             for port_index, interface in enumerate(interfaces):
                 lateral = (port_index - (len(interfaces) - 1) / 2) * 0.024
-                port = b + radial * lateral
+                port = b + (
+                    np.array([0.0, 0.0, lateral]) if suffix == "upper_roll" else radial * lateral
+                )
                 port_start, port_end = port + axis * 0.002, port + axis * 0.016
                 radius = 0.007 if port_index == 0 else 0.004
                 part(f"device_port_{port_index}", port_start, port_end, radius, "connector")
