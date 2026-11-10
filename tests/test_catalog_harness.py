@@ -76,3 +76,14 @@ def test_reference_postures_keep_loops_clear_and_rotated_base_preserves_clearanc
         q[:3] = [0.4, -0.3, 0.6]
         moved = harness_clearance(model, q, sp.forward_kinematics(model, jnp.array(q)), world)
         assert moved.distance == pytest.approx(before.distance, abs=1e-6)
+
+
+def test_external_harness_checks_floor(model):
+    world = mobile_collision_world(model)
+    q = mobile_home(model)
+    pose = sp.forward_kinematics(model, jnp.array(q))
+    routes = harness_routes(model, q, pose)
+    world.floor = 10.0
+    report = harness_clearance(model, q, pose, world, routes)
+    assert report.distance < 0
+    assert report.pair[1] == "floor"

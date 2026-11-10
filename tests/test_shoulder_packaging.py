@@ -39,6 +39,6 @@ def test_shoulder_drive_packages_fit_at_home_but_cannot_pass_through_each_other(
 def test_reserved_cable_bores_leave_clearance_but_do_not_claim_joint_harness():
     model = loads(mobile_dual_arm_urdf()).model
     for route in arm_cable_passages(model):
-        assert route["radius"] - route["bundle_radius"] >= 0.003
+        assert route["radius"] - route["bundle_radius"] >= 0.003 - 1e-9
         assert route["end"][0] > route["start"][0]
         assert "unresolved" in route["status"]

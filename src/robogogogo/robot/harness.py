@@ -120,6 +120,13 @@ def harness_clearance(model, q, pose, world, routes=None):
     best = Clearance(
         float(distances[row, col]), (routes[groups[row]]["name"], world.capsules[col].name)
     )
+    floor_distances = np.minimum(a[:, 2], b[:, 2]) - RADIUS - 0.002 - world.floor
+    floor_index = int(np.argmin(floor_distances))
+    if floor_distances[floor_index] < best.distance:
+        best = Clearance(
+            float(floor_distances[floor_index]),
+            (routes[groups[floor_index]]["name"], "floor"),
+        )
     i, j = np.triu_indices(n, 1)
     valid = groups[i] != groups[j]
     i, j = i[valid], j[valid]
