@@ -193,3 +193,32 @@ def test_command_rejection_safe_motion_and_substep_rollback(model):
     assert session.elapsed == elapsed and len(session.history) == count
     np.testing.assert_array_equal(session.drive_twist, 0)
     assert session.mobile_status["collision_guard"] == "blocked"
+
+
+def test_chest_envelopes_cover_the_rendered_shell(world):
+    from robogogogo.planning.collision import segment_distance
+
+    points = np.array(
+        [
+            [
+                0.15 * np.sin(theta) * np.cos(phi),
+                0.26 * np.sin(theta) * np.sin(phi),
+                0.14 + 0.19 * np.cos(theta),
+            ]
+            for theta in np.linspace(0, np.pi, 61)
+            for phi in np.linspace(0, 2 * np.pi, 101)
+        ]
+    )
+    distances = []
+    for capsule in world.capsules:
+        if capsule.name.startswith("chest_"):
+            distances.append(
+                segment_distance(
+                    points,
+                    points,
+                    np.broadcast_to(capsule.start, points.shape),
+                    np.broadcast_to(capsule.end, points.shape),
+                )
+                - capsule.radius
+            )
+    assert np.max(np.min(distances, axis=0)) <= 0
