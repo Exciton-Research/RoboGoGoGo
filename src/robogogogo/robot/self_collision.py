@@ -89,7 +89,7 @@ def mobile_collision_world(model):
                 part.name.startswith(f"{side}_{suffix}_")
                 for suffix in ("waist", "upper_roll", "shoulder")
             )
-            if contained and not "_harness_" in part.name:
+            if contained and "_harness_" not in part.name:
                 exclusions.append((cover["name"], part.name))
         for other in covers:
             if other["side"] == side:

@@ -134,9 +134,9 @@ def cover_specs(model):
                 "roll_transfer",
                 yaw,
                 [
-                    [-0.17, sign * 0.03, 0.055],
-                    [-0.15, sign * 0.15, 0.065],
-                    [-0.035, sign * 0.20, 0.065],
+                    [-0.17, sign * 0.03, 0.055 if sign > 0 else 0.025],
+                    [-0.15, sign * 0.15, 0.065 if sign > 0 else 0.025],
+                    [-0.035, sign * 0.20, 0.065 if sign > 0 else 0.025],
                 ],
                 0.055,
             ),
@@ -166,8 +166,8 @@ def cover_specs(model):
                 body=package["body"],
                 start=(b + axis * 0.005).tolist(),
                 end=(b + axis * 0.045).tolist(),
-                inner_radius=0.060,
-                radius=0.062,
+                inner_radius=0.056 if package["shoulder_axis"] == "pitch" else 0.060,
+                radius=0.058 if package["shoulder_axis"] == "pitch" else 0.062,
             )
         )
     return covers
