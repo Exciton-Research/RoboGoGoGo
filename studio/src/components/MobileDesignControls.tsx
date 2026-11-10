@@ -6,6 +6,9 @@ export function MobileDesignControls() {
     useWorkspace();
   const [friction, setFriction] = useState(0.7);
   if (model?.scene !== "mobile_dual_arm") return null;
+  const planActive =
+    !!state?.motion &&
+    ["ready", "running", "paused"].includes(state.motion.status);
   const bodyNames = ["torso_yaw", "torso_lower", "torso_upper", "torso"];
   return (
     <section
@@ -24,17 +27,24 @@ export function MobileDesignControls() {
             key={posture}
             className="button"
             disabled={disabled}
-            onClick={() => void command("posture", { posture })}
+            onClick={() => void command("posture", { posture, start: true })}
           >
-            Set {posture} posture
+            Move to {posture}
           </button>
         ))}
         <button
           className="button"
           disabled={disabled}
+          onClick={() => void command("reset")}
+        >
+          Reset robot
+        </button>
+        <button
+          className="button"
+          disabled={disabled}
           onClick={() => void command(state?.running ? "pause" : "run")}
         >
-          {state?.running ? "Pause motion" : "Run planned motion"}
+          {state?.running ? "Pause motion" : "Resume simulation"}
         </button>
       </div>
       <p className="control-note">
@@ -93,9 +103,14 @@ export function MobileDesignControls() {
             <button
               className="button"
               key={label}
-              disabled={disabled}
+              disabled={disabled || planActive}
               onClick={() =>
-                void command("drive", { values, duration: 3, friction })
+                void command("drive", {
+                  values,
+                  duration: 3,
+                  friction,
+                  start: true,
+                })
               }
             >
               {label} · 3 s
@@ -110,10 +125,16 @@ export function MobileDesignControls() {
           </button>
         </div>
         <p className="control-note">
-          Set a drive goal, then Run. Each goal expires after 3 simulation
-          seconds. Brake sets wheel speed to zero; traction determines stopping
-          distance. Pause freezes simulation and clears drive.
+          Drive buttons start motion immediately. Each goal expires after 3
+          simulation seconds. Brake sets wheel speed to zero; traction
+          determines stopping distance. Pause freezes simulation and clears
+          drive.
         </p>
+        {planActive && (
+          <p role="status" className="control-note">
+            Finish or cancel the arm/torso motion before driving.
+          </p>
+        )}
         {state?.mobile && (
           <p role="status" className="control-note">
             Stability: {state.mobile.guard} · margin{" "}
@@ -182,6 +203,7 @@ export function MobileDesignControls() {
           disabled={disabled}
           onClick={() =>
             void command("joints", {
+              start: true,
               values: goals.map((q, i) =>
                 bodyNames.includes(model.joints[i].name)
                   ? q
@@ -190,13 +212,13 @@ export function MobileDesignControls() {
             })
           }
         >
-          Apply body goals
+          Move torso
         </button>
       </details>
       <p className="control-note">
-        Presets plan arm/torso motion; press Run to execute. Paths are
-        simulation-checked. The separate command test fixture still has
-        seven-joint arms; base and torso hardware actuation remain unavailable.
+        Presets plan and execute arm/torso motion. Paths are simulation-checked.
+        The separate command test fixture still has seven-joint arms; base and
+        torso hardware actuation remain unavailable.
       </p>
     </section>
   );

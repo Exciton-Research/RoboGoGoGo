@@ -25,6 +25,7 @@ class Command(Payload):
         "brake",
         "cancel_plan",
     ]
+    start: bool = False
     duration: float = Field(default=3.0, gt=0, le=5)
     friction: float | None = Field(default=None, ge=0, le=1.5)
     posture: Literal["standing", "low", "reach"] | None = None

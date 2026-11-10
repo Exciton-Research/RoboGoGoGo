@@ -200,6 +200,7 @@ export function Inspector() {
                       disabled={disabled || !goals.length}
                       onClick={() =>
                         void command("joints", {
+                          start: true,
                           arm: activeArm?.name,
                           values:
                             activeArm?.joint_indices.map((i) => goals[i]) ??
@@ -212,14 +213,14 @@ export function Inspector() {
                       ) : (
                         <Check size={14} />
                       )}
-                      Apply joint goals
+                      Move arm
                     </button>
                     <button
                       className="icon-button home-button"
                       aria-label="Set all arms to home joint goals"
                       title="Set all arms to home goals"
                       disabled={disabled}
-                      onClick={() => void command("home")}
+                      onClick={() => void command("home", { start: true })}
                     >
                       <Home size={17} />
                     </button>
@@ -261,13 +262,14 @@ export function Inspector() {
                       disabled={disabled}
                       onClick={() =>
                         void command("target", {
+                          start: true,
                           arm: activeArm?.name,
                           values: target,
                         })
                       }
                     >
                       <Crosshair size={14} />
-                      Solve position IK
+                      Move to target
                       <ArrowRight size={14} />
                     </button>
                     <div className="error-chart">

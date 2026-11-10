@@ -218,6 +218,13 @@ class Studio:
     def command(self, command: Command):
         with self.lock:
             op = command.op
+            if command.start:
+                if op not in ("drive", "joints", "posture", "home", "target"):
+                    raise ValueError("Start is only valid for movement commands")
+                if self.error:
+                    raise ValueError("Reset the failed simulation before moving")
+                if len(self.session.history) >= self.max_samples:
+                    raise ValueError("Export and reset the recording before moving")
             if self.single_robot and op == "scene" and command.scene != "mobile_dual_arm":
                 raise ValueError("This workspace supports only RG Mobile Duo")
             if self.task is not None and op not in ("pause", "speed", "scene", "reset"):
@@ -324,6 +331,14 @@ class Studio:
                     raise ValueError("Speed is required")
                 self.speed = command.speed
                 self._run_wall, self._run_sim = time.perf_counter(), self.session.elapsed
+            if command.start:
+                self.running = True
+                self._run_wall, self._run_sim = time.perf_counter(), self.session.elapsed
+                self.message = (
+                    "Driving wheels; lease expires in simulation time"
+                    if op == "drive"
+                    else "Executing checked arm/torso motion"
+                )
             if self.episode and op not in ("pause", "speed", "scene"):
                 self.episode.invalidate("State changed outside the recorded VLA action loop")
             self._refresh()
