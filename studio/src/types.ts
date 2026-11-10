@@ -45,7 +45,7 @@ export interface RobotModel {
 export interface SimState {
   mobile?: {
     collision_guard?: "clear" | "blocked";
-    collision_clearance_m?: number;
+    collision_clearance_m?: number | null;
     collision_pair?: string[];
     support_margin_m: number;
     normal_loads_n: number[];

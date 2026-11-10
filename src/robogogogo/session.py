@@ -277,7 +277,9 @@ class Session:
                 self.mobile_status.update(
                     guard="blocked",
                     collision_guard="blocked",
-                    collision_clearance_m=clearance.distance,
+                    collision_clearance_m=clearance.distance
+                    if np.isfinite(clearance.distance)
+                    else None,
                     collision_pair=list(clearance.pair),
                 )
                 raise CollisionViolation(

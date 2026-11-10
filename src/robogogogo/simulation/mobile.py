@@ -106,7 +106,14 @@ class MobileDynamics:
         def substep(carry, _):
             current, previous_acc = carry
             steer_goal, wheel_speed = self.steering_targets(current, twist)
-            desired_acc = jnp.clip(8 * (goal - current.q) - 6 * current.qd, -0.35, 0.35)
+            error = goal - current.q
+            # Reserve deceleration distance before approaching a target. Clipping
+            # a position-PD acceleration alone can begin braking too late.
+            stopping_speed = jnp.sqrt(2 * 0.18 * jnp.maximum(jnp.abs(error) - 0.002, 0))
+            desired_speed = jnp.sign(error) * jnp.minimum(
+                0.35, jnp.minimum(stopping_speed, 2 * jnp.abs(error))
+            )
+            desired_acc = jnp.clip(6 * (desired_speed - current.qd), -0.35, 0.35)
             desired_acc = desired_acc.at[self.base].set(0)
             torque = sp.inverse_dynamics(model, current.q, current.qd, desired_acc)
             torque += model.damping * current.qd

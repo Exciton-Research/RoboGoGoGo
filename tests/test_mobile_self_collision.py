@@ -169,12 +169,14 @@ def test_command_rejection_safe_motion_and_substep_rollback(model):
     np.testing.assert_array_equal(session.target_q, goal_before)
     session.set_joints(mobile_home(model, "low"))
     session.set_drive([0.05, 0, 0.05], duration=0.3)
-    for _ in range(35):
+    for _ in range(1000):
         session.advance()
         assert session.mobile_status["collision_guard"] == "clear"
         assert (
             session.mobile_status["collision_clearance_m"] >= session.mobile.collision_world.margin
         )
+    torso_index = model.indices[model.names.index("torso_upper")]
+    assert abs(float(session.state.q[torso_index]) + 2.1) < 0.05
     before, elapsed, count = session.state, session.elapsed, len(session.history)
     _, diagnostics = session.mobile.tire_forces(before, 0.7, jnp.zeros(3))
     # A clear final state must not hide an unsafe intermediate physics substep.
@@ -222,3 +224,26 @@ def test_chest_envelopes_cover_the_rendered_shell(world):
                 - capsule.radius
             )
     assert np.max(np.min(distances, axis=0)) <= 0
+
+
+def test_invalid_joint_prediction_keeps_fault_telemetry_json_serializable(model):
+    import json
+
+    session = Session(model, arms=mobile_arm_definitions(), mobile=True)
+    before = session.state
+    invalid = before.q.at[model.indices[model.names.index("torso_upper")]].set(-2.4)
+    _, diagnostics = session.mobile.tire_forces(before, 0.7, jnp.zeros(3))
+    session.mobile.predict = lambda *args: (
+        before,
+        jnp.zeros(3),
+        0.2,
+        jnp.zeros_like(before.q),
+        diagnostics,
+        jnp.asarray([invalid]),
+    )
+    with pytest.raises(CollisionViolation):
+        session.advance()
+    assert session.mobile_status["collision_clearance_m"] is None
+    assert "joint_limits" in session.mobile_status["collision_pair"]
+    json.dumps(session.mobile_status, allow_nan=False)
+    assert session.state is before
