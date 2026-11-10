@@ -243,3 +243,14 @@ def test_invalid_gripper_feedback_and_uncommissioned_adapters_are_rejected():
     backend.is_test = False
     with pytest.raises(ValueError, match="commissioning"):
         CommandExecutor(backend)
+
+
+def test_delayed_arming_and_takeover_cannot_override_a_newer_stop():
+    _, _, executor = setup()
+    old_epoch = executor.snapshot()["epoch"]
+    executor.stop()
+    with pytest.raises(ValueError, match="changed"):
+        executor.arm("policy", expected_epoch=old_epoch)
+    with pytest.raises(ValueError, match="changed"):
+        executor.takeover(expected_epoch=old_epoch)
+    assert executor.snapshot()["mode"] == "stopped"

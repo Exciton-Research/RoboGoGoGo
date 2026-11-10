@@ -15,7 +15,11 @@ class StrictRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", allow_inf_nan=False, strict=True)
 
 
-class ArmRequest(StrictRequest):
+class EpochRequest(StrictRequest):
+    expected_epoch: int = Field(ge=0)
+
+
+class ArmRequest(EpochRequest):
     owner: Literal["manual", "policy"]
 
 
@@ -61,7 +65,7 @@ async def status(request: Request):
 
 @router.post("/arm")
 async def arm(body: ArmRequest, request: Request):
-    return await asyncio.to_thread(service(request).arm, body.owner)
+    return await asyncio.to_thread(service(request).arm, body.owner, body.expected_epoch)
 
 
 @router.post("/heartbeat")
@@ -93,8 +97,8 @@ async def stop(request: Request):
 
 
 @router.post("/takeover")
-async def takeover(request: Request):
-    return await asyncio.to_thread(service(request).takeover)
+async def takeover(body: EpochRequest, request: Request):
+    return await asyncio.to_thread(service(request).takeover, body.expected_epoch)
 
 
 @router.post("/reset")

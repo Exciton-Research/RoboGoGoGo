@@ -218,9 +218,11 @@ class CommandExecutor:
             token=self.token, epoch=self.epoch, heartbeat_interval_s=0.25, snapshot=self.snapshot()
         )
 
-    def arm(self, owner):
+    def arm(self, owner, expected_epoch=None):
         with self.lock:
             self._check()
+            if expected_epoch is not None and expected_epoch != self.epoch:
+                raise ValueError("Control state changed; refresh before arming")
             return self._grant(owner)
 
     def heartbeat(self, token):
@@ -235,9 +237,11 @@ class CommandExecutor:
             self.deadline = deadline
             return self.snapshot()
 
-    def takeover(self):
+    def takeover(self, expected_epoch=None):
         with self.lock:
             self._check()
+            if expected_epoch is not None and expected_epoch != self.epoch:
+                raise ValueError("Control state changed; refresh before takeover")
             if self.mode in ("closed", "fault"):
                 raise ValueError("Reset execution faults before manual takeover")
             self._halt("Manual takeover requested", fault=False)
