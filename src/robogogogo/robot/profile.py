@@ -5,6 +5,8 @@ import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+from .definition import ARM_DOF
+
 CAMERA_ROLES = ("head_left", "head_right", "wrist_left", "wrist_right")
 
 
@@ -41,6 +43,9 @@ class RobotProfile:
         joints = self.left_joints + self.right_joints
         if len(set(joints)) != len(joints):
             raise ValueError("Each arm must own distinct joints")
+        for arm in (self.left_joints, self.right_joints):
+            if arm and len(arm) != ARM_DOF:
+                raise ValueError("RG Mobile Duo requires seven mapped joints per arm")
         if self.cameras and (len(self.cameras) != 4 or len(set(self.cameras)) != 4):
             raise ValueError("Map head stereo and both wrist cameras to four distinct streams")
         if self.left_gripper is not None and self.left_gripper == self.right_gripper:

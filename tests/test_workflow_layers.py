@@ -56,6 +56,8 @@ def test_profile_requires_one_distinct_dual_arm_mapping(tmp_path):
         replace(profile, cameras=("head",))
     with pytest.raises(ValueError, match="own gripper"):
         replace(profile, left_gripper="gripper", right_gripper="gripper")
+    with pytest.raises(ValueError, match="seven mapped"):
+        replace(profile, left_joints=("l",), right_joints=("r",))
     data = asdict(profile)
     data["third_arm"] = []
     path.write_text(json.dumps(data))
@@ -67,8 +69,8 @@ def test_read_only_calibrated_telemetry_cannot_enable_physical_execution(tmp_pat
     robot = RobotProfile(
         model="test_model",
         backend="robot",
-        left_joints=("l",),
-        right_joints=("r",),
+        left_joints=tuple(f"l{i}" for i in range(7)),
+        right_joints=tuple(f"r{i}" for i in range(7)),
         left_gripper="lg",
         right_gripper="rg",
         cameras=("hl", "hr", "wl", "wr"),
@@ -77,7 +79,7 @@ def test_read_only_calibrated_telemetry_cannot_enable_physical_execution(tmp_pat
     hardware = dict(
         backend="robot",
         status="streaming",
-        joints={"names": ["l", "r"]},
+        joints={"names": list(robot.left_joints + robot.right_joints)},
         cameras=[{"name": n} for n in robot.cameras],
         perception={"state": "observing"},
     )
