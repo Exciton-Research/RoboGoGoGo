@@ -6,7 +6,12 @@ import zipfile
 from pathlib import Path
 
 from robogogogo.data.datasets import iter_transitions
-from robogogogo.robot.definition import ROBOT_ID, ROBOT_REVISION, SIMULATION_DOF
+from robogogogo.robot.definition import (
+    ROBOT_ID,
+    ROBOT_REVISION,
+    SIMULATION_DOF,
+    SIMULATION_JOINT_NAMES,
+)
 
 
 def inspect_dataset(path):
@@ -27,6 +32,8 @@ def inspect_dataset(path):
         )
     if manifest["action_spec"].get("dimensions") != SIMULATION_DOF:
         raise ValueError("RG Mobile Duo episodes require 31 simulation coordinates")
+    if tuple(manifest["action_spec"].get("names", ())) != SIMULATION_JOINT_NAMES:
+        raise ValueError("RG Mobile Duo joint ordering does not match the robot contract")
     count, sources, shape = 0, set(), None
     for transition in iter_transitions(path):
         signature = (

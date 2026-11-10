@@ -87,4 +87,4 @@ def test_standalone_structural_api_is_removed():
     from fixtures.api import create_app
 
     app = create_app()
-    assert not any(route.path.startswith("/api/structure") for route in app.routes)
+    assert not any(path.startswith("/api/structure") for path in app.openapi()["paths"])
