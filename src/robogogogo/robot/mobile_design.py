@@ -176,7 +176,7 @@ def mobile_dual_arm_urdf():
     template = ET.fromstring(
         files("robogogogo").joinpath("assets/mobile_arm_chain.urdf").read_text()
     )
-    for side, y in (("left", 0.35), ("right", -0.35)):
+    for side, y in (("left", 0.40), ("right", -0.40)):
         for child in template:
             element = deepcopy(child)
             element.set("name", f"{side}_{element.attrib['name']}")
