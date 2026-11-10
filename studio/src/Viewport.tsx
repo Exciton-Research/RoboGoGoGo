@@ -1,3 +1,4 @@
+import { createHarnessVisuals } from "./rendering/harness";
 import { addBackbone } from "./rendering/backbone";
 import { addInternalPackaging } from "./rendering/internalPackaging";
 import type { PosePreview } from "./types";
@@ -478,7 +479,9 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
         scene.add(guide);
         return { config, camera, preview, wrapper, guide };
       });
+      const harnessVisuals = createHarnessVisuals(scene);
       const applyPose = (snapshot: Snapshot) => {
+        harnessVisuals.update(snapshot.state.harness);
         const draft = current.current.posePreview;
         ghost.visible = !!draft;
         if (draft) {
@@ -509,6 +512,7 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
           });
         }
         inspectInternals(current.current.showInternals);
+        harnessVisuals.update(snapshot.state.harness);
         updateManipulation(snapshot);
         const matrix = new THREE.Matrix4();
         bodyGroups.forEach((group, i) => {
@@ -645,6 +649,7 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
           trail: points,
         } = current.current;
         inspectInternals(current.current.showInternals);
+        harnessVisuals.update(snapshot.state.harness);
         updateManipulation(snapshot);
         const state = snapshot.state;
         bodyGroups.forEach((group, i) => {
@@ -705,6 +710,7 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
       };
       render();
       return () => {
+        harnessVisuals.dispose();
         cancelAnimationFrame(animation);
         resize.disconnect();
         controls.dispose();

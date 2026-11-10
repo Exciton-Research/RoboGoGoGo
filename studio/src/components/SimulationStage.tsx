@@ -1,6 +1,7 @@
 import { Viewport } from "../Viewport";
 import {
   Activity,
+  Box,
   Camera,
   ArrowDownToLine,
   ArrowRight,
