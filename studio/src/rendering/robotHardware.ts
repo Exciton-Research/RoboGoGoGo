@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import type { CameraConfig, RobotModel } from "../types";
+import { addArmActuator } from "./armActuator";
 
 type AddMesh = (
   body: number,
@@ -20,6 +21,10 @@ export function addRobotHardware(
     dark = "#263334",
     rubber = "#202828";
   for (const joint of model.joints) {
+    if (/^(left|right)_(waist|upper_roll|shoulder|elbow)$/.test(joint.name)) {
+      addArmActuator(model, joint.body, add);
+      continue;
+    }
     if (
       !/(waist|upper_roll|shoulder|elbow|wrist_pitch|torso_lower|torso_upper|_steer)$/.test(
         joint.name,

@@ -99,6 +99,8 @@ class Studio:
             indices=list(model.indices),
             masses=np.asarray(model.mass).tolist(),
             axes=np.asarray(model.axis).tolist(),
+            joint_origins=np.asarray(model.origin).tolist(),
+            joint_orientations=np.asarray(model.orientation).tolist(),
             joints=[
                 dict(
                     name=model.names[i],

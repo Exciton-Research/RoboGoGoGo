@@ -32,6 +32,8 @@ export interface RobotModel {
   kinds: string[];
   masses: number[];
   axes: Vec3[];
+  joint_origins: Vec3[];
+  joint_orientations: number[][][];
   joints: Joint[];
   dt: number;
   substeps: number;
