@@ -116,11 +116,28 @@ class SceneMemory:
                 seen=now,
             )
         if len(self.cells) > self.capacity:
-            ordered = sorted(
-                self.cells, key=lambda k: (self.cells[k]["seen"], -self.cells[k]["variance"])
-            )
-            for key in ordered[: len(self.cells) - self.capacity]:
-                del self.cells[key]
+            current = [k for k in self.cells if self.cells[k]["seen"] == now]
+            hidden = [k for k in self.cells if self.cells[k]["seen"] < now]
+            hidden_budget = min(len(hidden), self.capacity // 4)
+            current_budget = min(len(current), self.capacity - hidden_budget)
+            hidden_budget = min(len(hidden), self.capacity - current_budget)
+            retained = []
+            for group, budget in ((current, current_budget), (hidden, hidden_budget)):
+                # Preserve spatial coverage within each class instead of truncating
+                # one end of the world; reserve space for occluded scene history.
+                targets = [k for k in group if self.cells[k]["target"]]
+                other = [k for k in group if not self.cells[k]["target"]]
+                target_budget = min(len(targets), max(budget // 2, budget - len(other)))
+                for keys_to_keep, count in (
+                    (targets, target_budget),
+                    (other, budget - target_budget),
+                ):
+                    if count:
+                        retained.extend(
+                            keys_to_keep[i]
+                            for i in np.linspace(0, len(keys_to_keep) - 1, count, dtype=int)
+                        )
+            self.cells = {k: self.cells[k] for k in retained}
         self.timestamp = now
         cells = list(self.cells.values())
         points = np.array([c["point"] for c in cells]).reshape(-1, 3)

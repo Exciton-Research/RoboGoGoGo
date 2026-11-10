@@ -108,7 +108,8 @@ def test_memory_is_bounded_and_current_observation_proposals_stay_current():
         result = memory.observe(image(1.0, index, x=index))
         assert len(memory.cells) <= 20
         assert result.timestamp == index
-    assert all(c["seen"] == 3 for c in memory.cells.values())
+    assert any(c["seen"] == 3 for c in memory.cells.values())
+    assert any(c["seen"] < 3 for c in memory.cells.values())
     with pytest.raises(ValueError):
         memory.observe(replace(image(1.0, 4), uncertainty_m=float("nan")))
     assert memory.timestamp == 3
