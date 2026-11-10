@@ -68,6 +68,9 @@ function useWorkspaceState() {
     }
   }, [snapshot]);
   useEffect(() => {
+    if (snapshot?.model.scene === "mobile_dual_arm") setInspector("control");
+  }, [snapshot?.model.scene]);
+  useEffect(() => {
     if (snapshot) setProjectName(snapshot.project.name);
   }, [snapshot?.project.id, snapshot?.project.name]);
 

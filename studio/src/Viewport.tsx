@@ -96,7 +96,9 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
       const defaultTarget =
         model.scene === "drop"
           ? new THREE.Vector3(0, 0, 0.3)
-          : new THREE.Vector3(0.3, 0, 0.62);
+          : model.scene === "mobile_dual_arm"
+            ? new THREE.Vector3(0.15, 0, 0.85)
+            : new THREE.Vector3(0.3, 0, 0.62);
       const home = (view: "perspective" | "top" | "front") => {
         controls.target.copy(defaultTarget);
         if (view === "top")
