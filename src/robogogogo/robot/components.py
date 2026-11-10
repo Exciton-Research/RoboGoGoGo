@@ -78,4 +78,6 @@ def mounting_offset(suffix):
 
 
 def mounting_sign(side, suffix):
+    if suffix == "wrist_roll":
+        return -1
     return -1 if side == "right" and suffix in ("shoulder", "elbow", "wrist_pitch") else 1

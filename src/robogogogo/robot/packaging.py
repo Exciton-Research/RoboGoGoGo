@@ -16,7 +16,7 @@ def shoulder_packages(model):
 
     result = []
     for side in ("left", "right"):
-        for suffix in ("waist", "upper_roll", "shoulder", "elbow"):
+        for suffix in ARM_COMPONENTS:
             body = model.names.index(f"{side}_{suffix}")
             part = ARM_COMPONENTS[suffix]
             axis = (
@@ -33,6 +33,7 @@ def shoulder_packages(model):
                     start=(origin + axis * offset).tolist(),
                     end=(origin + axis * (offset + part.length_m)).tolist(),
                     radius=part.diameter_m / 2,
+                    mounting_offset=offset,
                     component=part.to_dict(),
                     provenance="manufacturer external dimensions; custom mounting interfaces",
                 )

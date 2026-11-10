@@ -7,7 +7,7 @@ model. All speeds are joint rad/s and torques are joint N m after gearing.
 
 import jax.numpy as jnp
 
-ARM_ACTUATOR_REVISION = "catalog-proximal-drive-1"
+ARM_ACTUATOR_REVISION = "catalog-arm-drive-2"
 # suffix: no-load output speed, Coulomb friction torque
 ARM_DRIVES = {
     "waist": (3.0, 0.12),
@@ -26,7 +26,7 @@ def arm_drive_parameters(model):
     for side in ("left", "right"):
         for suffix, (no_load, coulomb) in ARM_DRIVES.items():
             index = model.indices[model.names.index(f"{side}_{suffix}")]
-            if suffix in ("waist", "upper_roll", "shoulder", "elbow"):
+            if suffix in ARM_DRIVES:
                 from .components import ARM_COMPONENTS
 
                 no_load = ARM_COMPONENTS[suffix].no_load_rpm * 2 * jnp.pi / 60
@@ -55,7 +55,7 @@ def arm_drive_export(model):
     return {
         "arm_actuator_revision": np.array(ARM_ACTUATOR_REVISION),
         "arm_actuator_provenance": np.array(
-            "proximal catalog speed/continuous torque; friction and wrist drives assumed; not measured"
+            "arm catalog speed/continuous torque; friction and structural inertia assumed; not measured"
         ),
         "arm_no_load_speed_rad_s": np.asarray(speed),
         "arm_coulomb_friction_nm": np.asarray(friction),

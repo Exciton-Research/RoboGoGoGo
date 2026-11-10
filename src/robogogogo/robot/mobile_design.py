@@ -197,7 +197,7 @@ def mobile_dual_arm_urdf():
                 for item in list(element.findall("visual")):
                     element.remove(item)
             if element.tag == "joint":
-                short_offsets = {"wrist_pitch": 0.04, "tool_roll": 0.03, "tool": 0.04}
+                short_offsets = {"wrist_pitch": 0.04, "tool_roll": 0.10, "tool": 0.13}
                 for suffix, offset in short_offsets.items():
                     if element.attrib["name"] == f"{side}_{suffix}_joint":
                         element.find("origin").set("xyz", f"{offset} 0 0")
@@ -206,8 +206,8 @@ def mobile_dual_arm_urdf():
                     "shoulder": (0.32, 0.075),
                     "elbow": (0.28, 0.065),
                     "wrist_roll": (0.04, 0.043),
-                    "wrist_pitch": (0.03, 0.043),
-                    "tool_roll": (0.04, 0.04),
+                    "wrist_pitch": (0.10, 0.043),
+                    "tool_roll": (0.13, 0.04),
                 }
                 for suffix, (length, radius) in segments.items():
                     if element.attrib["name"] != f"{side}_{suffix}":
@@ -264,11 +264,11 @@ def mobile_dual_arm_urdf():
         effort=10,
     )
     visual(head, "box", (0.19, 0.26, 0.18))
-    # Add complete proximal actuator masses to the structural concept links.
+    # Add complete arm actuator masses to the structural concept links.
     # Their output-side inertia uses a solid-cylinder approximation; vendor
     # rotor/gear inertia and custom bracket masses are not identified yet.
     for side in ("left", "right"):
-        for suffix in ("waist", "upper_roll", "shoulder", "elbow"):
+        for suffix in ARM_COMPONENTS:
             spec = ARM_COMPONENTS[suffix]
             item = robot.find(f"joint[@name='{side}_{suffix}_joint']")
             item.find("limit").set("effort", str(spec.rated_nm))

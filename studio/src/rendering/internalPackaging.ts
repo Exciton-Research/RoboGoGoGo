@@ -62,7 +62,7 @@ export function addInternalPackaging(model: RobotModel, add: AddMesh) {
     skin.userData.removableCover = true;
     skin.material.roughness = 0.38;
     // Custom coaxial output coupling between module and the joint carrier.
-    const distance = p.name.includes("elbow") ? 0.025 : 0.075;
+    const distance = p.mounting_offset ?? 0.025;
     segment(
       p.body,
       a.clone().addScaledVector(direction, -distance + 0.012),

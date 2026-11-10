@@ -35,8 +35,8 @@ def mobile_collision_world(model):
         add(f"{side}_forearm", f"{side}_elbow", (0.065, 0, 0), (0.215, 0, 0), 0.065)
         add(f"{side}_elbow_cap", f"{side}_elbow", (0, -0.07, 0), (0, 0.07, 0), 0.057)
         add(f"{side}_wrist_roll", f"{side}_wrist_roll", (0, 0, 0), (0.04, 0, 0), 0.044)
-        add(f"{side}_wrist_pitch", f"{side}_wrist_pitch", (0, 0, 0), (0.03, 0, 0), 0.044)
-        add(f"{side}_wrist_tip", f"{side}_tool_roll", (0, 0, 0), (0.04, 0, 0), 0.041)
+        add(f"{side}_wrist_pitch", f"{side}_wrist_pitch", (0, 0, 0), (0.10, 0, 0), 0.044)
+        add(f"{side}_wrist_tip", f"{side}_tool_roll", (0, 0, 0), (0.13, 0, 0), 0.041)
         add(f"{side}_hand", f"{side}_tool", (0.015, 0, 0), (0.12, 0, 0), 0.045)
         for name in ("chest_lower", "chest_middle", "chest_upper"):
             exclusions.append((f"{side}_socket", name))

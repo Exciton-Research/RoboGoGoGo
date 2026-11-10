@@ -16,6 +16,7 @@ export interface Visual {
   rpy: Vec3;
 }
 export interface PackagingVolume {
+  mounting_offset?: number;
   component?: {
     model: string;
     ratio: number;
