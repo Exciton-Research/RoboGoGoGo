@@ -2,11 +2,13 @@
 
 import argparse
 
-from robogogogo.datasets import iter_transitions
+from robogogogo.data.datasets import iter_transitions
+from robogogogo.learning.datasets import inspect_dataset
 
 parser = argparse.ArgumentParser(description="Validate and inspect a robogogogo VLA episode")
 parser.add_argument("episode", help="Path to an exported episode ZIP")
 args = parser.parse_args()
+print("Robot contract:", inspect_dataset(args.episode)["robot"])
 count = 0
 for transition in iter_transitions(args.episode):
     if count == 0:
