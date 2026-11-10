@@ -25,6 +25,7 @@ from .schemas import (
     NewEpisode,
     PlanTask,
     PolicyAction,
+    PosePreview,
     SaveProject,
     StereoRequest,
     TaskStep,
@@ -170,6 +171,10 @@ def create_app(
     @app.get("/api/snapshot")
     async def snapshot():
         return await asyncio.to_thread(app.state.studio.snapshot)
+
+    @app.post("/api/pose-preview")
+    async def preview_pose(body: PosePreview):
+        return await asyncio.to_thread(app.state.studio.preview_pose, body.values)
 
     @app.post("/api/command")
     async def command(body: Command):

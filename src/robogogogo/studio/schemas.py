@@ -36,6 +36,10 @@ class Command(Payload):
     speed: float | None = Field(default=None, ge=0.25, le=2.0)
 
 
+class PosePreview(Payload):
+    values: list[float] = Field(min_length=31, max_length=31)
+
+
 class ArmSpec(Payload):
     name: str = Field(pattern=r"^[A-Za-z_][A-Za-z0-9_.-]{0,79}$")
     tool: str

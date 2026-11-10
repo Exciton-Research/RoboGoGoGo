@@ -215,6 +215,40 @@ class Studio:
                     self.session.motion_plan["status"] = "blocked"
             self._refresh()
 
+    def preview_pose(self, values):
+        """Read-only draft kinematics; never changes dynamics, plans or recordings."""
+        with self.lock:
+            s = self.session
+            if s.mobile is None:
+                raise ValueError("Pose preview requires RG Mobile Duo")
+            requested = np.asarray(values, dtype=float)
+            if requested.shape != s.model.home.shape or not np.isfinite(requested).all():
+                raise ValueError("Pose requires one finite value per robot coordinate")
+            q = np.asarray(s.state.q).copy()
+            editable = sorted(
+                {j for arm in s.arms for j in arm.joint_indices}
+                | {
+                    s.model.indices[s.model.names.index(n)]
+                    for n in ("torso_yaw", "torso_lower", "torso_upper", "torso")
+                }
+            )
+            q[editable] = requested[editable]
+            if np.any(q < s.model.lower) or np.any(q > s.model.upper):
+                raise ValueError("Draft pose exceeds joint limits")
+            clearance = s.mobile.collision_world.clearance(q)
+            support = float(s.mobile.static_margin(q))
+            pose = s._poses(jnp.asarray(q))
+            return dict(
+                values=q.tolist(),
+                positions=np.asarray(pose.position).tolist(),
+                rotations=np.asarray(pose.rotation).tolist(),
+                valid=clearance.distance >= s.mobile.collision_world.margin
+                and support >= s.mobile.margin,
+                clearance_m=clearance.distance,
+                support_margin_m=support,
+                pair=list(clearance.pair),
+            )
+
     def command(self, command: Command):
         with self.lock:
             op = command.op
