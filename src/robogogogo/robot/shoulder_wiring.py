@@ -98,3 +98,95 @@ def cover_specs(model):
                            start=(b+axis*.005).tolist(), end=(b+axis*.045).tolist(),
                            inner_radius=.060, radius=.062))
     return covers
+
+
+def _cylinder_distance(points, start, end, radius):
+    """Signed point distance to a finite, solid actuator cylinder."""
+    axis = end-start
+    length = np.linalg.norm(axis)
+    axis /= length
+    delta = points-(start+end)/2
+    z = delta @ axis
+    radial = np.linalg.norm(delta-z[:, None]*axis, axis=1)-radius
+    axial = np.abs(z)-length/2
+    return np.hypot(np.maximum(radial, 0), np.maximum(axial, 0)) + np.minimum(np.maximum(radial, axial), 0)
+
+
+def internal_clearance(model, q, pose, world, routes=None):
+    """Guard-equivalent clearance; 1 mm internal installation gap.
+
+    Interior cables check solid actuator cylinders, not enclosing motor-cover
+    spheres. Cover walls are checked by containment in fixed inner cavities.
+    Every chord uses half its length as a conservative point-sampling bound.
+    Only 20 mm at a named adapter termination may contact that adapter.
+    """
+    from ..planning.collision import Clearance, segment_distance
+    from .packaging import shoulder_packages
+
+    routes = internal_routes(model, q, pose) if routes is None else routes
+    covers = cover_specs(model)
+    packages = shoulder_packages(model)
+    best = Clearance(float("inf"), ("", ""))
+    c, d = world.geometry(q)
+
+    def transformed(body, value):
+        return np.asarray(pose.position[body]) + np.asarray(pose.rotation[body]) @ value
+
+    def keep(distance, pair):
+        nonlocal best
+        report = Clearance(float(distance) + world.margin - .001, pair)
+        if report.distance < best.distance:
+            best = report
+
+    for route in routes:
+        if not route["valid"]:
+            return Clearance(-1., (route["name"], "internal_bend_twist_or_length"))
+        points = np.asarray(route["points"])
+        mid = (points[:-1]+points[1:])/2
+        bound = np.linalg.norm(np.diff(points, axis=0), axis=1)/2
+        radius = route["radius"]
+        # Each ball enclosing a chord must fit within a real cavity. Covers are
+        # fixed to link frames, never fitted to the current cable shape.
+        containment = np.full(len(mid), -np.inf)
+        for cover in covers:
+            if cover["side"] != route["side"]:
+                continue
+            a = transformed(cover["body"], cover["start"])
+            b = transformed(cover["body"], cover["end"])
+            distance = segment_distance(mid, mid, np.broadcast_to(a, mid.shape), np.broadcast_to(b, mid.shape))
+            containment = np.maximum(containment, cover["inner_radius"]-distance-radius-bound)
+        keep(np.min(containment), (route["name"], "cover_inner_wall"))
+        for package in packages:
+            a = transformed(package["body"], package["start"])
+            b = transformed(package["body"], package["end"])
+            gap = _cylinder_distance(mid, a, b, package["radius"])-radius-bound
+            keep(np.min(gap), (route["name"], package["name"]))
+        gaps = segment_distance(
+            np.repeat(points[:-1], len(c), axis=0), np.repeat(points[1:], len(c), axis=0),
+            np.tile(c, (len(mid), 1)), np.tile(d, (len(mid), 1)),
+        ).reshape(len(mid), len(c)) - radius - world.radii
+        arc = np.concatenate(([0.], np.cumsum(np.linalg.norm(np.diff(points, axis=0), axis=1))))
+        for col, capsule in enumerate(world.capsules):
+            if capsule.name.endswith("_drive_package") or capsule.name == f"{route['side']}_socket" or "_hood" in capsule.name:
+                gaps[:, col] = np.inf
+            for end, key in ((0, "source"), (1, "target")):
+                owner = route[key].removesuffix("_panel")
+                if capsule.name.startswith(owner+"_") and any(tag in capsule.name for tag in ("connector", "drive_lead")):
+                    local = arc[:-1] < .020 if end == 0 else arc[-1]-arc[1:] < .020
+                    gaps[local, col] = np.inf
+        row, col = np.unravel_index(np.argmin(gaps), gaps.shape)
+        keep(gaps[row, col], (route["name"], world.capsules[col].name))
+        keep(np.min(points[:, 2])-radius-world.floor, (route["name"], "floor"))
+    # Moving branch pairs may meet only at their declared common roll junction.
+    for i, first in enumerate(routes):
+        for second in routes[i+1:]:
+            a, b = np.asarray(first["points"]), np.asarray(second["points"])
+            gaps = segment_distance(np.repeat(a[:-1], len(b)-1, axis=0), np.repeat(a[1:], len(b)-1, axis=0),
+                                    np.tile(b[:-1], (len(a)-1, 1)), np.tile(b[1:], (len(a)-1, 1))).reshape(len(a)-1, len(b)-1)
+            gaps -= first["radius"] + second["radius"]
+            if first["target"] == second["source"]:
+                aa = np.linalg.norm((a[:-1]+a[1:])/2-a[-1], axis=1) < .025
+                bb = np.linalg.norm((b[:-1]+b[1:])/2-b[0], axis=1) < .025
+                gaps[np.ix_(aa, bb)] = np.inf
+            keep(np.min(gaps), (first["name"], second["name"]))
+    return best
