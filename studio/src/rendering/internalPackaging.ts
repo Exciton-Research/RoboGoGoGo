@@ -101,9 +101,9 @@ export function addInternalPackaging(model: RobotModel, add: AddMesh) {
     if (p.kind === "connector") {
       fitting.geometry.dispose();
       fitting.geometry = new THREE.BoxGeometry(
-        Math.min(0.014, p.radius * 1.5),
+        p.box_size?.[0] ?? Math.min(0.014, p.radius * 1.5),
         new THREE.Vector3(...p.end).distanceTo(new THREE.Vector3(...p.start)),
-        Math.min(0.01, p.radius),
+        p.box_size?.[2] ?? Math.min(0.01, p.radius),
       );
       fitting.material.metalness = 0.05;
     }

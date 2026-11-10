@@ -169,15 +169,18 @@ def assembly_parts(model):
                 "power_can_connector",
                 center - exit_axis * 0.01,
                 center + exit_axis * 0.01,
-                0.009,
+                0.013,
                 "connector",
             )
+            result[-1]["box_size"] = [0.012, 0.020, 0.022]
             result[-1]["provenance"] = (
                 "custom keyed power/CAN adapter; roll tray includes pass-through junction"
             )
             interfaces = connector_interfaces(suffix)
             for port_index, interface in enumerate(interfaces):
-                lateral = (port_index - (len(interfaces) - 1) / 2) * 0.024
+                lateral = (port_index - (len(interfaces) - 1) / 2) * (
+                    0.028 if suffix == "shoulder" else 0.024
+                )
                 port = b + (
                     np.array([0.0, 0.0, lateral]) if suffix == "upper_roll" else radial * lateral
                 )
