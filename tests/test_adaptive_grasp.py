@@ -59,7 +59,7 @@ def test_physical_friction_change_recovers_while_fixed_force_loses_grasp():
     import runpy
     from pathlib import Path
 
-    run = runpy.run_path(str(Path(__file__).parents[1] / "examples/adaptive_grasp.py"))["run"]
+    run = runpy.run_path(str(Path(__file__).parent / "fixtures/adaptive_grasp.py"))["run"]
     adaptive, fixed = run(True), run(False)
     assert adaptive["failure"] is None
     assert adaptive["height_m"] > 0.495
@@ -76,7 +76,7 @@ def test_physical_unrecoverable_slip_reports_failure():
     import runpy
     from pathlib import Path
 
-    run = runpy.run_path(str(Path(__file__).parents[1] / "examples/adaptive_grasp.py"))["run"]
+    run = runpy.run_path(str(Path(__file__).parent / "fixtures/adaptive_grasp.py"))["run"]
     result = run(True, friction=0, damage_force=12)
     assert result["failure"]
     assert result["feedback"]["arm"]["force_setpoint_n"] <= 9

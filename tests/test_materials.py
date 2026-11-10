@@ -123,7 +123,7 @@ def test_coupled_soft_grasp_deforms_without_damage_and_fragile_overgrip_stops():
     import runpy
     from pathlib import Path
 
-    run = runpy.run_path(str(Path(__file__).parents[1] / "examples/material_grasp.py"))["run"]
+    run = runpy.run_path(str(Path(__file__).parent / "fixtures/material_grasp.py"))["run"]
     soft = run("soft_foam", duration=2.0)
     assert soft["failure"] is None
     material = soft["object"]["material"]
@@ -184,7 +184,7 @@ def test_material_protection_reduces_overgrip_independently_of_force_threshold()
     import runpy
     from pathlib import Path
 
-    run = runpy.run_path(str(Path(__file__).parents[1] / "examples/material_grasp.py"))["run"]
+    run = runpy.run_path(str(Path(__file__).parent / "fixtures/material_grasp.py"))["run"]
     protected = run("fragile_shell", force=20, force_threshold=55)
     assert protected["failure"] is None
     assert protected["object"]["owner"] == "arm"
