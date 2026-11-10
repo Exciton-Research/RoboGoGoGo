@@ -1,7 +1,8 @@
 """Original articulated mobile dual-arm concept, not a vendor CAD replica.
 
 Dimensions, masses, inertias and limits are illustrative design assumptions.
-The base uses ideal planar joints; wheel-ground traction and tipping are not modeled.
+The base has planar support; the mobile session adds tire traction and a stability guard.
+Rollover and suspension are not modeled.
 """
 
 import math
@@ -12,7 +13,7 @@ from importlib.resources import files
 DESIGN = dict(
     name="RG Mobile Duo · articulated concept",
     architecture="Four steerable wheels, folding torso, two 7-DoF arms, pan/tilt head",
-    fidelity="Concept geometry and ideal planar base; no tire contact, tipping or hardware validation",
+    fidelity="Concept geometry; flat-ground tire dynamics and support guard, no rollover or hardware validation",
     wheel_radius_m=0.14,
     wheelbase_m=0.50,
     track_m=0.68,

@@ -43,6 +43,13 @@ export interface RobotModel {
   max_samples: number;
 }
 export interface SimState {
+  mobile?: {
+    support_margin_m: number;
+    normal_loads_n: number[];
+    longitudinal_slip_m_s: number[];
+    friction: number;
+    guard: "ok" | "blocked";
+  } | null;
   q: number[];
   qd: number[];
   goal: number[];
