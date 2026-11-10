@@ -66,3 +66,35 @@ def internal_routes(model, q, pose):
                            internal=True, guide_normals=[n.tolist() for n in normals],
                            swivel_angles_rad=[0., 0.], qualification="custom microloom requirements; supplier flex rating unverified"))
     return routes
+
+
+def cover_specs(model):
+    """Fixed, removable service hoods, independent of the evaluated cable pose.
+
+    Inner cavities are explicit capsule unions; 2 mm walls are represented in
+    the outer envelopes. They are not regenerated to follow a failed cable.
+    """
+    from .packaging import shoulder_packages
+
+    covers = []
+    for side, sign in (("left", 1), ("right", -1)):
+        parent = model.parents[model.names.index(f"{side}_waist")]
+        yaw = model.names.index(f"{side}_waist")
+        paths = [
+            ("yaw_transfer", parent, [[-.025, 0, .214], [-.13, 0, .20], [-.17, 0, .06]], .060),
+            ("roll_transfer", yaw, [[-.17, sign*.03, .055], [-.15, sign*.15, .065], [-.035, sign*.20, .065]], .055),
+        ]
+        for name, body, points, radius in paths:
+            for i, (a, b) in enumerate(zip(points[:-1], points[1:])):
+                covers.append(dict(name=f"{side}_{name}_hood_{i}", side=side, body=body,
+                                   start=a, end=b, inner_radius=radius, radius=radius+.002))
+    for package in shoulder_packages(model):
+        if not package["shoulder_axis"]:
+            continue
+        a, b = np.asarray(package["start"]), np.asarray(package["end"])
+        axis = (b-a) / np.linalg.norm(b-a)
+        covers.append(dict(name=package["name"].replace("drive_package", "service_hood"),
+                           side=package["name"].split("_")[0], body=package["body"],
+                           start=(b+axis*.005).tolist(), end=(b+axis*.045).tolist(),
+                           inner_radius=.060, radius=.062))
+    return covers
