@@ -100,6 +100,7 @@ def backproject(
                     vertical_fov_degrees=float(
                         np.rad2deg(2 * np.arctan(depth.shape[0] / (2 * k[1, 1])))
                     ),
+                    surface_points=points[valid],
                     width=depth.shape[1],
                     height=depth.shape[0],
                 ),

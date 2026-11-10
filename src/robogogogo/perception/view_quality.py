@@ -16,6 +16,7 @@ class ViewEvidence:
     target: np.ndarray
     uncertainty_m: float
     views: tuple = ()
+    confidence: np.ndarray | None = None
 
     @classmethod
     def from_cloud(cls, cloud, mask):
@@ -81,6 +82,8 @@ class ViewEvidence:
         )
         directions = rays / np.maximum(distance[:, None], 1e-9)
         blockers = self.points - center
+        if self.confidence is not None:
+            blockers = blockers[self.confidence >= 0.5]
         # Ray/surfel tests in small batches: surfaces can occlude, missing space
         # remains unknown. A tolerance avoids treating a probe's own surface as
         # an occluder. No collision-world/hidden-object query is made here.
@@ -112,6 +115,13 @@ class ViewEvidence:
             )
             old = np.maximum(old, observed)
             old_visible |= observed_visible
+        if self.confidence is not None and len(probes):
+            confidence = np.empty(len(probes))
+            for start in range(0, len(probes), 64):
+                distance = np.sum((probes[start : start + 64, None] - self.points) ** 2, axis=-1)
+                confidence[start : start + 64] = self.confidence[np.argmin(distance, axis=1)]
+            old *= confidence
+            old_visible &= confidence >= 0.5
         return probes, normals, measured, old, old_visible, outward
 
     def score(self, before, after, camera, *, support=False, baseline=None):
