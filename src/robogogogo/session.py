@@ -272,6 +272,7 @@ class Session:
             if clearance.distance < closest.distance:
                 closest = clearance
             if not world.edge_free(previous, q):
+                clearance = world.last_edge_clearance
                 self.stop_drive()
                 self.mobile_status.update(
                     guard="blocked",

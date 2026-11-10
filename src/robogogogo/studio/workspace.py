@@ -325,7 +325,7 @@ class Studio:
                     index = self.session.model.indices[self.session.model.names.index(name)]
                     q[index] = preset[index]
                 self.session.set_joints(q)
-                self.message = "Torso goal passed static support guard. Run to move with dynamic margin monitoring; collision avoidance is not implemented."
+                self.message = "Torso path passed support and self-collision guards. Run to move with substep clearance monitoring."
             elif op == "target":
                 if self.scene == "drop":
                     raise ValueError("Cartesian control is unavailable in the contact experiment")

@@ -150,8 +150,8 @@ class MobileDynamics:
                 raise ValueError("Torso/arm path leaves the reserved support-polygon margin")
 
         if not self.collision_world.edge_free(start, goal):
-            clearance = self.collision_world.clearance(goal)
+            clearance = self.collision_world.last_edge_clearance
             raise ValueError(
-                "Self-collision guard rejected the joint path (endpoint closest pair: "
+                "Self-collision guard rejected the joint path (closest checked pair: "
                 f"{clearance.pair[0]} / {clearance.pair[1]}); choose a different arm or torso goal"
             )

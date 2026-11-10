@@ -357,8 +357,10 @@ class CollisionWorld:
 
     def edge_free(self, start, end, *, max_depth=14, object_start=None, object_end=None):
         start, end = np.asarray(start, dtype=float), np.asarray(end, dtype=float)
-        ca = self.clearance(start, object_start).distance
-        cb = self.clearance(end, object_end).distance
+        first = self.clearance(start, object_start)
+        last = self.clearance(end, object_end)
+        self.last_edge_clearance = min((first, last), key=lambda c: c.distance)
+        ca, cb = first.distance, last.distance
         if min(ca, cb) < self.margin:
             return False
 
@@ -372,7 +374,10 @@ class CollisionWorld:
                 return False
             mid = (a + b) / 2
             om = None if oa is None else (oa + ob) / 2
-            dm = self.clearance(mid, om).distance
+            clearance = self.clearance(mid, om)
+            if clearance.distance < self.last_edge_clearance.distance:
+                self.last_edge_clearance = clearance
+            dm = clearance.distance
             return (
                 dm >= self.margin
                 and check(a, mid, da, dm, oa, om, depth - 1)

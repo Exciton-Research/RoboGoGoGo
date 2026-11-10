@@ -15,7 +15,8 @@ export function MobileDesignControls() {
       <div className="section-kicker">ARTICULATED MOBILE CONCEPT</div>
       <p className="control-note">
         Coupled wheel drive with tire slip and friction. Flat-ground model with
-        a support-polygon guard; no rollover physics or collision avoidance.
+        support-polygon and self-collision guards. Arm/body clearance reserve:
+        12 mm. No rollover physics or environment planning.
       </p>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
         {(["standing", "low", "reach"] as const).map((posture) => (
@@ -101,6 +102,13 @@ export function MobileDesignControls() {
           </p>
         )}
       </div>
+      {state?.mobile?.collision_guard && (
+        <p role="status" className="control-note">
+          Self-collision: {state.mobile.collision_guard} · minimum checked
+          clearance {(state.mobile.collision_clearance_m! * 1000).toFixed(1)}{" "}
+          mm. Closest pair: {state.mobile.collision_pair?.join(" / ")}.
+        </p>
+      )}
       <details>
         <summary style={{ margin: "14px 0", cursor: "pointer" }}>
           Torso joint goals
