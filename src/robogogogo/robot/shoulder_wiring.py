@@ -27,7 +27,7 @@ def connector_interfaces(suffix):
 def adapter_layout(suffix, sign):
     """Tray connector centre and cable exit axis in the drive's parent frame."""
     return {
-        "waist": ([-0.025, 0, 0.214], [-1, 0, 0]),
+        "waist": ([-0.025, 0, 0.226], [-1, 0, 0]),
         "upper_roll": ([-0.163, sign * 0.025, 0.025], [0, 0, 1]),
         "shoulder": ([-0.025, sign * 0.201, 0.025], [-1, 0, 0]),
     }[suffix]
@@ -42,7 +42,7 @@ def branch_specs(model):
                 "yaw_roll",
                 "waist",
                 "upper_roll",
-                [-0.035, 0, 0.214],
+                [-0.035, 0, 0.226],
                 [-0.163, sign * 0.025, 0.035],
                 [-1, 0, 0],
                 [0, 0, 1],
@@ -127,8 +127,8 @@ def cover_specs(model):
             (
                 "yaw_transfer",
                 parent,
-                [[-0.025, 0, 0.214], [-0.13, 0, 0.20], [-0.17, 0, 0.06]],
-                0.060,
+                [[-0.025, 0, 0.226], [-0.13, 0, 0.20], [-0.17, 0, 0.06]],
+                0.070,
             ),
             (
                 "roll_transfer",
