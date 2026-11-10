@@ -60,9 +60,9 @@ def mobile_collision_world(model):
     # Exempt only named local mating/containing envelopes, never the opposite
     # arm or remote body parts. Internal parts still check other drive assemblies.
     containing = {
-        "waist": ("socket", "upper_arm"),
-        "upper_roll": ("socket", "upper_arm"),
-        "shoulder": ("socket", "upper_arm"),
+        "waist": ("socket",),
+        "upper_roll": ("socket",),
+        "shoulder": ("socket",),
         "elbow": ("upper_arm", "forearm", "elbow_cap"),
         "wrist_roll": ("forearm", "wrist_roll", "wrist_pitch"),
         "wrist_pitch": ("wrist_roll", "wrist_pitch", "wrist_tip"),
