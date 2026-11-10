@@ -41,3 +41,17 @@ def delivered_torque(requested, velocity, effort, no_load_speed):
 def gearbox_friction(velocity, coulomb):
     """Passive, dissipative approximation; deliberately zero at rest (no stiction)."""
     return -coulomb * jnp.tanh(velocity / 0.02)
+
+
+def arm_drive_export(model):
+    """NPZ-safe provenance and parameters; infinity means no speed derating."""
+    import numpy as np
+
+    speed, friction = arm_drive_parameters(model)
+    return {
+        "arm_actuator_revision": np.array(ARM_ACTUATOR_REVISION),
+        "arm_actuator_provenance": np.array("assumed; not component-specified or measured"),
+        "arm_no_load_speed_rad_s": np.asarray(speed),
+        "arm_coulomb_friction_nm": np.asarray(friction),
+        "arm_friction_smoothing_rad_s": np.array(0.02),
+    }

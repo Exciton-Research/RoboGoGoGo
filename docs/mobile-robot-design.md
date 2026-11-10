@@ -245,3 +245,23 @@ active trajectory before applying a replacement pose, and let velocities settle.
 The draft cannot move base/wheel/head coordinates or modify the live robot,
 recordings, or controller state. Its outline is hidden from RGB/depth capture;
 recorded observations always depict the actual simulated robot.
+
+
+### Arm actuator assumptions
+
+The mobile integration path applies `assumed-arm-drive-1` at every physics
+substep. Requested motor torque is limited by the URDF effort cap and a linear
+motoring torque-speed envelope. Full peak torque remains available for braking;
+there is no artificial joint velocity clamp. Smooth Coulomb gearbox friction is
+an external dissipative joint force, in addition to the existing viscous damping.
+The controller does not cancel this friction. Recorded torque is delivered motor
+torque, excluding passive friction; a control sample records the last substep,
+not every intervening torque sample.
+
+Assumed output no-load speeds are 3 rad/s for shoulder axes, 3.5 for elbows and 5
+for wrists. Coulomb friction is respectively 0.12, 0.08 and 0.025 N m, smoothed over
+0.02 rad/s. These are provisional output-side values, not selected motors or
+measurements. Thermal limits, bus voltage, backlash, compliance and true stiction
+remain unmodeled. Base, torso and head retain their previous actuator models.
+Trajectory and episode NPZ exports include the revision, provenance and parameter
+arrays so data collected under these assumptions can be identified.

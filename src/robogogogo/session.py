@@ -593,6 +593,10 @@ class Session:
             for f in fields(self.model)
             if f.name not in ("parents", "kinds", "indices", "names")
         }
+        if self.mobile is not None:
+            from .robot.actuators import arm_drive_export
+
+            arrays.update(arm_drive_export(self.model))
         # File handle preserves the requested path instead of silently adding .npz.
         with path.open("wb") as output:
             np.savez_compressed(

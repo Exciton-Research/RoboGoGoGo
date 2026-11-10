@@ -252,6 +252,10 @@ class EpisodeService:
                 for f in fields(workspace.session.model)
                 if f.name not in ("parents", "kinds", "indices", "names")
             }
+            if workspace.session.mobile is not None:
+                from ..robot.actuators import arm_drive_export
+
+                arrays.update(arm_drive_export(workspace.session.model))
             return self.store.save(
                 workspace.episode, model=workspace.model_info, model_arrays=arrays
             )
