@@ -148,3 +148,19 @@ def test_motion_evidence_inflates_uncertainty_of_still_hidden_target_parts():
     hidden = [c for c in memory.cells.values() if c["seen"] == 0]
     assert hidden and min(c["variance"] for c in hidden) >= 0.02**2
     assert np.min(result.view_evidence.confidence) < 0.5
+
+
+def test_within_voxel_motion_does_not_gain_false_precision():
+    memory = SceneMemory()
+
+    def sample(x, timestamp):
+        point = np.array([[x, 0.0, 1.0]])
+        return SurfaceCloud(
+            point, np.array([[0.0, 0.0, 1.0]]), np.zeros((1, 3)), timestamp, 0.001, "test"
+        )
+
+    memory.observe(sample(0.001, 0))
+    memory.observe(sample(0.007, 0.1))
+    cell = next(iter(memory.cells.values()))
+    assert cell["point"][0] == 0.007
+    assert cell["variance"] > 0.001**2

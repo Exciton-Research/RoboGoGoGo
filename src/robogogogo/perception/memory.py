@@ -107,6 +107,12 @@ class SceneMemory:
                 point = old["point"] * (1 - weight) + point * weight
                 # Repeated views are correlated: don't claim unlimited certainty.
                 variance = max(variance * 0.5, variance * weight)
+                innovation = np.linalg.norm(cloud.points[index] - old["point"])
+                if innovation > 3 * cloud.uncertainty_m:
+                    # Even inside one voxel, inconsistent measurements must not
+                    # make a moving surface look more certain or lag behind it.
+                    point = cloud.points[index].copy()
+                    variance = max(cloud.uncertainty_m**2, (innovation / 2) ** 2)
             self.cells[key] = dict(
                 point=point,
                 normal=cloud.normals[index].copy(),
