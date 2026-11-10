@@ -10,8 +10,10 @@ from collections import Counter
 from itertools import product
 from pathlib import Path
 
+import jax.numpy as jnp
 import numpy as np
 
+from .. import spatial as sp
 from ..urdf import loads
 from .definition import ROBOT_REVISION
 from .harness import harness_clearance, harness_routes
@@ -104,6 +106,7 @@ def audit(samples=29, random_samples=128):
     }
     return dict(
         robot_revision=ROBOT_REVISION,
+        payload=payload_report(model),
         status="failed" if worst else "sampled_clear",
         certification="none; finite axis sweeps, coupled wrist corners, seeded coupled poses",
         margin_m=world.margin,
@@ -119,6 +122,37 @@ def audit(samples=29, random_samples=128):
             "vendor drive pigtail locations and intermediate shoulder branch routing",
             "cable fatigue, electrical qualification and mounting strength",
         ],
+    )
+
+
+def payload_report(model, payload_kg=1.0, reserve_target=0.15):
+    q = mobile_home(model)
+    for side in ("left", "right"):
+        for suffix in ("shoulder", "elbow", "wrist_pitch"):
+            q[model.indices[model.names.index(f"{side}_{suffix}")]] = 0.0
+    q = jnp.array(q)
+    torque = sp.inverse_dynamics(model, q, jnp.zeros_like(q), jnp.zeros_like(q))
+    for side in ("left", "right"):
+        torque += (
+            payload_kg * 9.81 * sp.point_jacobian(model, q, model.names.index(f"{side}_tool"))[2]
+        )
+    joints = {}
+    for body, name in enumerate(model.names):
+        index = model.indices[body]
+        if index >= 0 and name.startswith(("left_", "right_")):
+            effort = float(model.effort[index])
+            required = abs(float(torque[index]))
+            joints[name] = dict(
+                required_nm=required, continuous_nm=effort, reserve=1 - required / effort
+            )
+    minimum = min(j["reserve"] for j in joints.values())
+    return dict(
+        payload_kg_per_hand=payload_kg,
+        minimum_reserve=minimum,
+        target_reserve=reserve_target,
+        within_continuous_ratings=minimum >= 0,
+        reserve_target_met=minimum >= reserve_target,
+        joints=joints,
     )
 
 
