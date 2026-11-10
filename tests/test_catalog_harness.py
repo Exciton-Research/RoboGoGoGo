@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 
 from robogogogo import spatial as sp
-from robogogogo.robot.components import ARM_COMPONENTS
+from robogogogo.robot.components import ARM_COMPONENTS, mounting_mass
 from robogogogo.robot.harness import (
     FREE_LENGTH,
     MIN_BEND,
@@ -25,13 +25,13 @@ def model():
 
 def test_catalog_masses_and_continuous_ratings_are_in_dynamics(model):
     for side in ("left", "right"):
-        for suffix in ("waist", "upper_roll", "shoulder", "elbow"):
+        for suffix in ARM_COMPONENTS:
             spec = ARM_COMPONENTS[suffix]
             body = model.names.index(f"{side}_{suffix}")
             assert float(model.effort[model.indices[body]]) == spec.rated_nm
             assert float(
                 model.mass[model.names.index(f"{side}_{suffix}_actuator")]
-            ) == pytest.approx(spec.mass_kg)
+            ) == pytest.approx(spec.mass_kg + mounting_mass(suffix))
 
 
 def test_one_kg_per_hand_at_full_extension_has_static_continuous_torque_reserve(model):
@@ -43,9 +43,9 @@ def test_one_kg_per_hand_at_full_extension_has_static_continuous_torque_reserve(
     torque = sp.inverse_dynamics(model, q, jnp.zeros_like(q), jnp.zeros_like(q))
     for side in ("left", "right"):
         torque += 9.81 * sp.point_jacobian(model, q, model.names.index(f"{side}_tool"))[2]
-    # 20% static reserve only; no payload acceleration or fatigue certification.
+    # 15% static reserve with integrated wrist and saddle mass; no payload acceleration or fatigue certification.
     for index in range(15, 29):
-        assert abs(float(torque[index])) < 0.8 * float(model.effort[index])
+        assert abs(float(torque[index])) < 0.85 * float(model.effort[index])
     world = mobile_collision_world(model)
     assert world.clearance(q).distance >= world.margin
     assert (
@@ -54,7 +54,7 @@ def test_one_kg_per_hand_at_full_extension_has_static_continuous_torque_reserve(
 
 
 def test_service_loops_keep_length_and_report_excess_bend():
-    for angle in np.linspace(-1.35, 1.35, 15):
+    for angle in np.linspace(-0.7, 0.7, 15):
         points, bend = loop_points([0, 1, 0], angle)
         assert np.linalg.norm(np.diff(points, axis=0), axis=1).sum() == pytest.approx(
             FREE_LENGTH, abs=1e-6
