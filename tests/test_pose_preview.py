@@ -88,3 +88,24 @@ def test_harness_rejection_rolls_back_simulation_state(workspace, monkeypatch):
     assert session.state is before
     assert session.elapsed == elapsed and len(session.history) == samples
     assert session.mobile_status["collision_guard"] == "blocked"
+
+
+def test_draft_preview_rejects_wiring_failure_before_apply(workspace, monkeypatch):
+    workspace.command(Command(op="reset"))
+    session = workspace.session
+    before = copy.deepcopy(workspace.snapshot())
+    monkeypatch.setattr(
+        session.mobile,
+        "harness_report",
+        lambda q: dict(
+            valid=False,
+            clearance_m=-0.01,
+            pair=["left_yaw_roll_internal", "cover_inner_wall"],
+            routes=[],
+        ),
+    )
+    preview = workspace.preview_pose(np.asarray(session.state.q).copy())
+    assert not preview["valid"]
+    assert preview["pair"] == ["left_yaw_roll_internal", "cover_inner_wall"]
+    assert preview["rigid_clearance_m"] >= session.mobile.collision_world.margin
+    assert workspace.snapshot() == before

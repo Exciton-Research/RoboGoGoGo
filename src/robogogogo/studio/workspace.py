@@ -258,17 +258,25 @@ class Studio:
             if np.any(q < s.model.lower) or np.any(q > s.model.upper):
                 raise ValueError("Draft pose exceeds joint limits")
             clearance = s.mobile.collision_world.clearance(q)
+            harness = s.mobile.harness_report(q)
             support = float(s.mobile.static_margin(q))
+            pair = (
+                clearance.pair if clearance.distance <= harness["clearance_m"] else harness["pair"]
+            )
             pose = s._poses(jnp.asarray(q))
             return dict(
                 values=q.tolist(),
                 positions=np.asarray(pose.position).tolist(),
                 rotations=np.asarray(pose.rotation).tolist(),
                 valid=clearance.distance >= s.mobile.collision_world.margin
+                and harness["valid"]
                 and support >= s.mobile.margin,
-                clearance_m=clearance.distance,
+                clearance_m=min(clearance.distance, harness["clearance_m"]),
+                clearance_kind="guard-equivalent; includes internal wiring installation gaps",
+                rigid_clearance_m=clearance.distance,
+                harness_clearance_m=harness["clearance_m"],
                 support_margin_m=support,
-                pair=list(clearance.pair),
+                pair=list(pair),
             )
 
     def command(self, command: Command):
