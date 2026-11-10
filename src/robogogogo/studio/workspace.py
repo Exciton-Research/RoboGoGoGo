@@ -99,7 +99,11 @@ class Studio:
         if model.home.size > 48 or len(model.parents) > 128:
             raise ValueError("Studio currently supports up to 48 moving joints and 128 links")
         candidate = Session(
-            model, scene="drop" if scene == "drop" else "arm", substeps=substeps, arms=arms
+            model,
+            scene="drop" if scene == "drop" else "arm",
+            substeps=substeps,
+            arms=arms,
+            mobile=scene == "mobile_dual_arm",
         )
         self.session, self.scene, self.xml = candidate, scene, xml
         self.episode = None
@@ -185,6 +189,7 @@ class Studio:
             else None,
             project=dict(id=self.project_id, name=self.project_name),
             state=dict(
+                mobile=self.session.mobile_status,
                 q=np.asarray(s.state.q).tolist(),
                 qd=np.asarray(s.state.qd).tolist(),
                 goal=np.asarray(s.target_q).tolist(),
@@ -265,6 +270,7 @@ class Studio:
                 self._run_wall, self._run_sim = time.perf_counter(), self.session.elapsed
                 self.message = "Simulation running"
             elif op == "pause":
+                self.session.stop_drive()
                 self.running = False
                 self.message = "Simulation paused"
             elif op == "step":
@@ -278,8 +284,25 @@ class Studio:
                 self.epoch += 1
                 self.error = None
                 self.message = "Reset to home. A new recording has started."
+            elif op == "drive":
+                if command.values is None:
+                    raise ValueError("Drive velocities are required")
+                self.session.set_drive(
+                    command.values, duration=command.duration, friction=command.friction
+                )
+                self.message = "Wheel drive goal set; Run to move. Lease uses simulation time."
+            elif op == "brake":
+                if self.session.mobile is None:
+                    raise ValueError("Wheel braking requires the mobile scene")
+                self.session.stop_drive()
+                self.message = "Wheel speed target zero; friction-limited braking while running"
             elif op == "home":
-                self.session.set_joints(self.session.model.home)
+                q = np.asarray(self.session.model.home).copy()
+                if self.session.mobile is not None:
+                    q[self.session.mobile.driven] = np.asarray(self.session.state.q)[
+                        self.session.mobile.driven
+                    ]
+                self.session.set_joints(q)
                 self.message = "Home goal applied. Run to move the robot."
             elif op == "joints":
                 if command.values is None:
@@ -297,9 +320,7 @@ class Studio:
                     index = self.session.model.indices[self.session.model.names.index(name)]
                     q[index] = preset[index]
                 self.session.set_joints(q)
-                self.message = (
-                    "Torso posture goal set. Run to move; collision and tipping are not validated."
-                )
+                self.message = "Torso goal passed static support guard. Run to move with dynamic margin monitoring; collision avoidance is not implemented."
             elif op == "target":
                 if self.scene == "drop":
                     raise ValueError("Cartesian control is unavailable in the contact experiment")

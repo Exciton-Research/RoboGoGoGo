@@ -11,8 +11,21 @@ class Payload(BaseModel):
 
 class Command(Payload):
     op: Literal[
-        "run", "pause", "step", "reset", "home", "joints", "target", "scene", "speed", "posture"
+        "run",
+        "pause",
+        "step",
+        "reset",
+        "home",
+        "joints",
+        "target",
+        "scene",
+        "speed",
+        "posture",
+        "drive",
+        "brake",
     ]
+    duration: float = Field(default=3.0, gt=0, le=5)
+    friction: float | None = Field(default=None, ge=0, le=1.5)
     posture: Literal["standing", "low", "reach"] | None = None
     arm: str | None = None
     values: list[float] | None = None

@@ -19,7 +19,10 @@ class MobileDynamics:
 
     def __init__(self, model, substeps):
         self.model, self.substeps = model, substeps
-        index = lambda name: model.indices[model.names.index(name)]
+
+        def index(name):
+            return model.indices[model.names.index(name)]
+
         self.base = jnp.array([index(n) for n in ("base_x", "base_y", "base_link")])
         prefixes = ["front_left", "front_right", "rear_left", "rear_right"]
         self.steer = jnp.array([index(n + "_steer") for n in prefixes])

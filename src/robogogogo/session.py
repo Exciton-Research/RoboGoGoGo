@@ -17,8 +17,18 @@ from .embodiment import resolve_arms
 class Session:
     """Deterministic simulation session shared by the GUI and headless runner."""
 
-    def __init__(self, model, *, scene="arm", substeps=5, arms=None):
+    def __init__(self, model, *, scene="arm", substeps=5, arms=None, mobile=False):
         self.model, self.scene, self.substeps = model, scene, substeps
+        self.mobile = None
+        if mobile:
+            from .simulation.mobile import MobileDynamics
+
+            self.mobile = MobileDynamics(model, substeps)
+        self.drive_twist = np.zeros(3)
+        self.drive_until = 0.0
+        self.tire_mu = 0.7
+        self.com_acceleration = jnp.zeros(3)
+        self.mobile_status = None
         self.payload_model = None
         self.contact_system = None
         self.target_q = model.home
@@ -149,6 +159,14 @@ class Session:
         )
 
     def advance(self, *, collision_world=None):
+        if self.mobile is not None:
+            if (
+                collision_world is not None
+                or self.contact_system is not None
+                or self.payload_model is not None
+            ):
+                raise ValueError("Mobile driving does not yet support payload/contact task models")
+            return self._advance_mobile()
         if self.contact_system is not None:
             return self._advance_contacts(collision_world)
         if collision_world is None:
@@ -188,6 +206,59 @@ class Session:
         self.elapsed += float(self.model.dt) * self.substeps
         self._record()
 
+    def set_drive(self, twist, *, duration=3.0, friction=None):
+        if self.mobile is None:
+            raise ValueError("Wheel driving requires the mobile robot scene")
+        value = np.asarray(twist, dtype=float)
+        if value.shape != (3,) or not np.isfinite(value).all():
+            raise ValueError("Drive twist requires three finite body-frame velocities")
+        if np.linalg.norm(value[:2]) > 0.5 or abs(value[2]) > 0.6:
+            raise ValueError("Drive limits: translation 0.5 m/s, yaw 0.6 rad/s")
+        if not np.isfinite(duration) or not 0 < duration <= 5:
+            raise ValueError("Drive lease must be in (0, 5] simulation seconds")
+        if friction is not None:
+            if not np.isfinite(friction) or not 0 <= friction <= 1.5:
+                raise ValueError("Tire friction must be in [0, 1.5]")
+            self.tire_mu = float(friction)
+        self.drive_twist = value
+        self.drive_until = self.elapsed + duration
+
+    def stop_drive(self):
+        self.drive_twist = np.zeros(3)
+        self.drive_until = self.elapsed
+
+    def _advance_mobile(self):
+        twist = self.drive_twist if self.elapsed < self.drive_until else np.zeros(3)
+        following, acc, margin, torque, diagnostics = self.mobile.step(
+            self.state, self.target_q, jnp.asarray(twist), self.tire_mu, self.com_acceleration
+        )
+        if not all(
+            np.isfinite(np.asarray(v)).all() for v in (following.q, following.qd, acc, margin)
+        ):
+            self.stop_drive()
+            raise FloatingPointError("Nonfinite mobile prediction; state was not committed")
+        self.mobile_status = dict(
+            support_margin_m=float(margin),
+            normal_loads_n=np.asarray(diagnostics[1]).tolist(),
+            zmp_body_m=np.asarray(diagnostics[2]).tolist(),
+            tire_forces_n=np.asarray(diagnostics[3]).tolist(),
+            longitudinal_slip_m_s=np.asarray(diagnostics[4]).tolist(),
+            lateral_slip_m_s=np.asarray(diagnostics[5]).tolist(),
+            friction=self.tire_mu,
+            guard="ok",
+        )
+        if float(margin) < self.mobile.margin:
+            self.stop_drive()
+            self.mobile_status["guard"] = "blocked"
+            raise ValueError(
+                "Stability guard rejected predicted motion; simulation frozen before support margin violation"
+            )
+        self.state, self.com_acceleration = following, acc
+        self.target_q = self.target_q.at[self.mobile.driven].set(following.q[self.mobile.driven])
+        self.last_torque = np.asarray(jnp.clip(torque, -self.model.effort, self.model.effort))
+        self.elapsed += float(self.model.dt) * self.substeps
+        self._record()
+
     def _advance_contacts(self, collision_world):
         from .planning.collision import CollisionViolation
 
@@ -222,6 +293,10 @@ class Session:
         self._record()
 
     def reset(self):
+        self.drive_twist = np.zeros(3)
+        self.drive_until = 0.0
+        self.com_acceleration = jnp.zeros(3)
+        self.mobile_status = None
         self.payload_model = None
         self.contact_system = None
         self.state = sp.initial_state(self.model)
@@ -247,6 +322,8 @@ class Session:
         q, errors = self.solve_targets(targets)
         if not np.isfinite(np.asarray(q)).all():
             raise ValueError("IK failed to produce a finite configuration")
+        if self.mobile is not None:
+            self.mobile.validate_goal(np.asarray(self.state.q), np.asarray(q))
         self.target_q, self.targets = q, targets
         return float(jnp.max(errors))
 
@@ -263,7 +340,10 @@ class Session:
             q = full
         if q.shape != self.model.home.shape or not np.isfinite(q).all():
             raise ValueError("joint goal must match model degrees of freedom")
-        self.target_q = jnp.clip(jnp.asarray(q), self.model.lower, self.model.upper)
+        q = np.asarray(jnp.clip(jnp.asarray(q), self.model.lower, self.model.upper))
+        if self.mobile is not None:
+            self.mobile.validate_goal(np.asarray(self.state.q), q)
+        self.target_q = jnp.asarray(q)
         self.targets = {
             group.name: np.asarray(sp.point_position(self.model, self.target_q, group.body))
             for group in self.arms
