@@ -288,3 +288,31 @@ Run the frame checks with
 The mobile dynamics tests also verify zero-effort gravity response, inability of
 position commands to move unpowered motors directly, bounded powered gravity
 holding, tire traction and coordinated reaching.
+
+### Internal packaging reservations
+
+The rear torso grille was removed: it had no cooling or electronics function.
+Studio's **Toggle internal packaging** button now exposes backend-defined motor
+(copper), reducer (silver), rigid cable-passage (blue) and bundle (amber) volumes.
+These are dimensioned reservations, not selected motors, functional gearbox
+teeth, or manufacturing CAD. RGB/depth observations always retain normal covers;
+the inspection display does not change recorded images or physical geometry.
+
+Each shoulder axis reserves a 30 mm axial drive stack starting 50 mm from its
+joint center, with a 46 mm reducer diameter and 40 mm motor diameter. A conservative
+capsule surrounds the complete stack and fits within the existing 110 mm-radius
+socket envelope. Internal stack pairs are checked with the existing 12 mm planning
+reserve, including across adjacent shoulder axes. Their own containing outer
+shells are excluded; outer-shell collision checks still protect against other
+robot parts. Large shoulder roll can make stacks interfere and is now rejected.
+The prior kinematic joint limits are not a claim that this packaging supports the
+entire range. Motor torque capability, thermal design, shaft/bearing interfaces
+and mass distribution have not been validated against these reservations.
+
+Upper arm and forearm links reserve straight 12 mm-diameter passages for a
+6 mm-diameter cable bundle, leaving 3 mm radial clearance. Ferrules mark the ends
+of the reserved rigid runs. **There is no completed joint-crossing harness.**
+Service loops, bend/twist life, connector dimensions, strain relief and routing
+through reducers remain unresolved and are labeled that way in Studio. No fake
+flexible wire animation or assumed collision-free harness is shown. Actual part
+selection and joint harness design must precede a manufacturing-ready claim.
