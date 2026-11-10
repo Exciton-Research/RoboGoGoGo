@@ -80,6 +80,9 @@ class RecoveryPlanner:
         )
         self.vision_required = False
         self.observation = None
+        from .perception.memory import SceneMemory
+
+        self.memory = SceneMemory()
         self.checked = 0
         self.rejections = []
 

@@ -322,11 +322,11 @@ class Manipulation:
 
     def observe_recovery(self, cloud, *, seed=None, target_mask=None):
         """Supply calibrated visible surfaces; no object-state segmentation fallback."""
-        from .perception.recovery import detect
-
         if not self.recovery or not self.recovery.planner.vision_required:
             raise ValueError("Enable camera-based recovery before supplying observations")
-        observation = detect(cloud, seed=seed, target_mask=target_mask)
+        observation = self.recovery.planner.memory.observe(
+            cloud, seed=seed, target_mask=target_mask
+        )
         self.recovery.planner.observation = observation
         return observation
 

@@ -146,7 +146,9 @@ def test_studio_uses_rgb_only_and_records_the_proposals():
     }
     observation = dict(time=0.0, camera_poses=poses)
     # Deliberately no renderer depths, material, object state, or support registry.
-    planner = SimpleNamespace(observation=None)
+    from robogogogo.perception import SceneMemory
+
+    planner = SimpleNamespace(observation=None, memory=SceneMemory())
     m = SimpleNamespace(recovery=SimpleNamespace(planner=planner), grippers={})
     workspace = SimpleNamespace(
         task_service=SimpleNamespace(manipulation=m),

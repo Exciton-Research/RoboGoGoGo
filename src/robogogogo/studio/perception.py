@@ -78,7 +78,7 @@ def analyze_stereo(workspace, request):
 
 def update_recovery_observation(workspace, observation_index):
     """Camera-mode task input: RGB stereo only; renderer ground-truth depth is excluded."""
-    from ..perception.recovery import RecoveryObservation, backproject, detect
+    from ..perception.recovery import SurfaceCloud, backproject
 
     m, session, episode = workspace.task_service.manipulation, workspace.session, workspace.episode
     planner = m.recovery.planner
@@ -99,7 +99,7 @@ def update_recovery_observation(workspace, observation_index):
                 raise ValueError("Invalid captured RGB frame")
             images[name] = cv.cvtColor(decoded, cv.COLOR_BGR2RGB)
         pairs = [names]
-        if getattr(m.recovery, "view", None) is not None:
+        if len(configs) > 2:
             wrists = [n for n in configs if n not in names]
             pairs += [("head_left", n) for n in wrists[:2]]
             if len(wrists) >= 2:
@@ -158,14 +158,18 @@ def update_recovery_observation(workspace, observation_index):
             pose = session.poses()
             body = m.arms[holders[0]].body
             seed = np.asarray(pose.position[body]) + 0.2 * np.asarray(pose.rotation[body])[:, 0]
-        planner.observation = detect(cloud, seed=seed)
+        planner.observation = planner.memory.observe(cloud, seed=seed)
         planner.observation.diagnostics.update(
             stereo_pairs=[list(pair) for pair in pairs], rejected_pairs=rejected
         )
     except ValueError as error:
-        planner.observation = RecoveryObservation(
-            timestamp, "calibrated_rgb_stereo", 0.02, (), (), None, dict(error=str(error))
+        empty = np.empty((0, 3))
+        if planner.memory.timestamp is not None and timestamp < planner.memory.timestamp:
+            raise ValueError("Camera observations must be ordered in simulation time") from error
+        planner.observation = planner.memory.observe(
+            SurfaceCloud(empty, empty, empty, timestamp, 0.02, "calibrated_rgb_stereo")
         )
+        planner.observation.diagnostics["error"] = str(error)
     # Store the exact camera-derived decision inputs alongside the captured observation.
     observation["recovery_perception"] = dict(
         **planner.observation.summary(),
