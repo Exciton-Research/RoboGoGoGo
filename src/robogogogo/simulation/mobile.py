@@ -100,7 +100,16 @@ class MobileDynamics:
     def _step(self, state, goal, twist, mu, previous_acceleration):
         return self._predict(state, goal, twist, mu, previous_acceleration)[:5]
 
-    def _predict(self, state, goal, twist, mu, previous_acceleration):
+    def _predict(
+        self,
+        state,
+        goal,
+        twist,
+        mu,
+        previous_acceleration,
+        goal_velocity=None,
+        goal_acceleration=None,
+    ):
         model = self.model
 
         def substep(carry, _):
@@ -114,6 +123,12 @@ class MobileDynamics:
                 0.35, jnp.minimum(stopping_speed, 2 * jnp.abs(error))
             )
             desired_acc = jnp.clip(6 * (desired_speed - current.qd), -0.35, 0.35)
+            if goal_velocity is not None:
+                desired_acc = jnp.clip(
+                    goal_acceleration + 40 * error + 12 * (goal_velocity - current.qd),
+                    -0.35,
+                    0.35,
+                )
             desired_acc = desired_acc.at[self.base].set(0)
             torque = sp.inverse_dynamics(model, current.q, current.qd, desired_acc)
             torque += model.damping * current.qd

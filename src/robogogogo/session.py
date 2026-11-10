@@ -234,8 +234,15 @@ class Session:
     def _advance_mobile(self):
         self._advance_motion_goal()
         twist = self.drive_twist if self.elapsed < self.drive_until else np.zeros(3)
+        reference, velocity, reference_acceleration = self._motion_reference()
         following, acc, margin, torque, diagnostics, positions = self.mobile.predict(
-            self.state, self.target_q, jnp.asarray(twist), self.tire_mu, self.com_acceleration
+            self.state,
+            reference,
+            jnp.asarray(twist),
+            self.tire_mu,
+            self.com_acceleration,
+            velocity,
+            reference_acceleration,
         )
         if not all(
             np.isfinite(np.asarray(v)).all() for v in (following.q, following.qd, acc, margin)
@@ -417,6 +424,7 @@ class Session:
             final_goal=np.asarray(goal).tolist(),
         )
         self.target_q = self.motion_waypoints[1]
+        self._begin_motion_segment()
 
     def _advance_motion_goal(self):
         if not self.motion_plan or self.motion_plan["status"] not in ("ready", "running", "paused"):
@@ -441,6 +449,24 @@ class Session:
             raise FloatingPointError(f"Planned segment failed revalidation: {error}") from error
         self.motion_plan["waypoint"] = next_index
         self.target_q = goal
+        self._begin_motion_segment()
+
+    def _begin_motion_segment(self):
+        self.segment_start = self.state.q
+        self.segment_time = self.elapsed
+        distance = float(jnp.max(jnp.abs(self.target_q - self.segment_start)))
+        self.segment_duration = max(0.5, 1.875 * distance / 0.3, (5.774 * distance / 0.2) ** 0.5)
+
+    def _motion_reference(self):
+        if not self.motion_plan or self.motion_plan["status"] not in ("ready", "running", "paused"):
+            return self.target_q, None, None
+        duration = self.segment_duration
+        t = min(1.0, max(0.0, (self.elapsed - self.segment_time) / duration))
+        s = 10 * t**3 - 15 * t**4 + 6 * t**5
+        velocity = (30 * t**2 - 60 * t**3 + 30 * t**4) / duration
+        acceleration = (60 * t - 180 * t**2 + 120 * t**3) / duration**2
+        delta = self.target_q - self.segment_start
+        return self.segment_start + s * delta, velocity * delta, acceleration * delta
 
     def cancel_motion_plan(self):
         self.stop_drive()
