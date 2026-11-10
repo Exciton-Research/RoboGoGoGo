@@ -57,7 +57,7 @@ def resolve_arms(model, definitions=None) -> tuple[ArmGroup, ...]:
         if not indices:
             raise ValueError(f"Tool frame {tool} has no movable ancestor")
         groups.append(
-            ArmGroup(name, tool, body, tuple(reversed(indices)), tuple(reversed(joint_names)), root))
+            ArmGroup(name, tool, body, tuple(reversed(indices)), tuple(reversed(joint_names)), root)
         )
         names.add(name)
         tools.add(tool)
