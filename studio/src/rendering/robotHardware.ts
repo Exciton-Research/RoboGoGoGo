@@ -21,7 +21,9 @@ export function addRobotHardware(
     dark = "#263334",
     rubber = "#202828";
   for (const joint of model.joints) {
-    if (/^(left|right)_(waist|upper_roll|shoulder|elbow)$/.test(joint.name)) {
+    // Shoulder drives are rendered once, from the shared catalog packages.
+    // Do not add another illustrative reducer at each of those axes.
+    if (/^(left|right)_elbow$/.test(joint.name)) {
       addArmActuator(model, joint.body, add);
       continue;
     }

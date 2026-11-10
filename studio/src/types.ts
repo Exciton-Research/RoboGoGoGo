@@ -16,6 +16,8 @@ export interface Visual {
   rpy: Vec3;
 }
 export interface PackagingVolume {
+  cover_allowance_m?: number;
+  shoulder_axis?: "yaw" | "roll" | "pitch" | null;
   mounting_offset?: number;
   component?: {
     model: string;

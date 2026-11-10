@@ -32,6 +32,8 @@ def shoulder_packages(model):
                     end=(origin + axis * (offset + part.length_m)).tolist(),
                     radius=part.diameter_m / 2,
                     mounting_offset=offset,
+                    cover_allowance_m=0.004,
+                    shoulder_axis={"waist": "yaw", "upper_roll": "roll", "shoulder": "pitch"}.get(suffix),
                     component=part.to_dict(),
                     provenance="manufacturer external dimensions; custom mounting interfaces",
                 )
@@ -48,7 +50,10 @@ def packaging_capsules(model):
             p["body"],
             tuple((np.array(p["start"]) + p["end"]) / 2),
             tuple((np.array(p["start"]) + p["end"]) / 2),
-            float(np.hypot(p["radius"], np.linalg.norm(np.array(p["end"]) - p["start"]) / 2)),
+            float(np.hypot(
+                p["radius"] + p["cover_allowance_m"],
+                np.linalg.norm(np.array(p["end"]) - p["start"]) / 2 + p["cover_allowance_m"],
+            )),
         )
         for p in shoulder_packages(model)
     ]

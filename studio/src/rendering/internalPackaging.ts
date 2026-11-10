@@ -47,12 +47,13 @@ export function addInternalPackaging(model: RobotModel, add: AddMesh) {
         p.radius,
         "#a1aeb5",
       );
+    const allowance = p.cover_allowance_m ?? 0.004;
     const skin = add(
       p.body,
       new THREE.CylinderGeometry(
-        p.radius + 0.004,
-        p.radius + 0.004,
-        b.distanceTo(a) + 0.008,
+        p.radius + allowance,
+        p.radius + allowance,
+        b.distanceTo(a) + 2 * allowance,
         64,
       ),
       "#e4e6e2",
@@ -61,6 +62,24 @@ export function addInternalPackaging(model: RobotModel, add: AddMesh) {
     skin.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction);
     skin.userData.removableCover = true;
     skin.material.roughness = 0.38;
+    if (p.shoulder_axis) {
+      // A segmented shoulder housing encloses each real motor. These necks
+      // remain within the existing socket collision envelope and follow each
+      // motor's actual parent; a single rigid shell would bind the three axes.
+      const neck = segment(
+        p.body,
+        a
+          .clone()
+          .addScaledVector(direction, -(p.mounting_offset ?? 0.025) + 0.035),
+        a,
+        0.026,
+        "#e4e6e2",
+      );
+      neck.userData.inspectionOnly = false;
+      neck.userData.removableCover = true;
+      neck.visible = true;
+      neck.material.metalness = 0.15;
+    }
     // Custom coaxial output coupling between module and the joint carrier.
     const distance = p.mounting_offset ?? 0.025;
     segment(
