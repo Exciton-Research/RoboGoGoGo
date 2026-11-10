@@ -11,7 +11,7 @@ import numpy as np
 from camera_recovery import render_camera
 from recovery_search import fixture
 
-from robogogogo.perception import detect, fuse
+from robogogogo.perception import fuse
 from robogogogo.vla.cameras import world_camera_pose
 
 
@@ -48,7 +48,7 @@ def observe(session, m, camera):
     ]
     body = m.arms["left"].body
     seed = np.asarray(pose.position[body]) + 0.2 * np.asarray(pose.rotation[body])[:, 0]
-    return detect(fuse(clouds), seed=seed)
+    return m.observe_recovery(fuse(clouds), seed=seed)
 
 
 def run():

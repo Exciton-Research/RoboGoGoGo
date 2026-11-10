@@ -125,3 +125,26 @@ def test_aging_memory_increases_incentive_to_revisit_same_view():
     stale_gain = remembered.view_evidence.score(pose, pose, camera)["gain"]
     assert fresh_gain == 0
     assert stale_gain > fresh_gain
+
+
+def test_motion_evidence_inflates_uncertainty_of_still_hidden_target_parts():
+    memory = SceneMemory()
+    first = image(1.0, 0)
+    memory.observe(first, target_mask=np.ones(len(first.points), bool))
+    # Only one valid center ray looks through the old target location.
+    depth = np.full((9, 9), np.nan)
+    depth[4, 4] = 2.0
+    later = backproject(
+        depth,
+        np.full((9, 9, 3), 120),
+        np.array([[100.0, 0, 4], [0, 100.0, 4], [0, 0, 1]]),
+        np.zeros(3),
+        np.eye(3),
+        timestamp=1.0,
+        uncertainty_m=0.003,
+    )
+    result = memory.observe(later, target_mask=np.ones(1, bool))
+    assert result.diagnostics["scene_memory"]["motion_evidence"] > 0
+    hidden = [c for c in memory.cells.values() if c["seen"] == 0]
+    assert hidden and min(c["variance"] for c in hidden) >= 0.02**2
+    assert np.min(result.view_evidence.confidence) < 0.5
