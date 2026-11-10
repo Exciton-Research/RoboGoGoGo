@@ -66,6 +66,7 @@ def harness_spans():
                     bodies=(src, dst),
                     anchors=(a, d),
                     normal=[0, sign, 0],
+                    normals=([1, 0, 0] if group == "shoulder" else [0, sign, 0], [0, sign, 0]),
                     length_m=length,
                     joints=tuple(f"{side}_{j}" for j in joints),
                     neutral=neutral,
@@ -128,11 +129,11 @@ def harness_routes(model, q, pose):
     for span in harness_spans():
         endpoints = []
         normals = []
-        for name, anchor in zip(span["bodies"], span["anchors"]):
+        for endpoint, (name, anchor) in enumerate(zip(span["bodies"], span["anchors"])):
             body = model.names.index(name)
             rotation = np.asarray(pose.rotation[body])
             endpoints.append(np.asarray(pose.position[body]) + rotation @ anchor)
-            normals.append(rotation @ span["normal"])
+            normals.append(rotation @ span["normals"][endpoint])
         points, bend, feasible = routed_curve(*endpoints, *normals, span["length_m"])
         # Conservative total joint excursion, including wrist camera/tool leads.
         twist = (

@@ -161,19 +161,29 @@ def harness_fixture_specs():
 
     fixtures = []
     for span in harness_spans():
-        normal = np.array(span["normal"])
         for endpoint, (name, point) in enumerate(zip(span["bodies"], span["anchors"])):
+            normal = np.array(span["normals"][endpoint])
             anchor = np.array(point)
             root = anchor.copy()
             if name == "torso":
-                root = np.array([-0.14, normal[1] * 0.24, 0.20])
+                root = np.array([-0.14, np.sign(anchor[1]) * 0.24, 0.20])
             else:
                 root[1:] *= 0.4
             prefix = f"{span['owner']}_harness_{endpoint}"
-            for tag, a, b, radius, kind in (
-                ("support", root, anchor, 0.004, "bracket"),
-                ("clamp", anchor - normal * 0.01, anchor + normal * 0.01, 0.022, "clamp"),
-            ):
+            supports = [("support", root, anchor, 0.004, "bracket")]
+            if name == "torso":
+                rear = root.copy()
+                rear[0] = -0.32
+                outside = anchor.copy()
+                outside[0] = -0.32
+                supports = [
+                    ("support_rear", root, rear, 0.004, "bracket"),
+                    ("support_cross", rear, outside, 0.004, "bracket"),
+                    ("support_tip", outside, anchor, 0.004, "bracket"),
+                ]
+            for tag, a, b, radius, kind in supports + [
+                ("clamp", anchor - normal * 0.01, anchor + normal * 0.01, 0.022, "clamp")
+            ]:
                 fixtures.append(
                     dict(
                         name=f"{prefix}_{tag}",
