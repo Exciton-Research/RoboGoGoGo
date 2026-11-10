@@ -226,8 +226,8 @@ export function Inspector() {
                     </button>
                   </div>
                   <p className="control-note">
-                    Goals are applied through torque control when the simulation
-                    runs.
+                    Move arm plans and starts torque-controlled motion. Use
+                    Pause motion to suspend execution.
                   </p>
                   <div className="target-control">
                     <div className="section-heading">

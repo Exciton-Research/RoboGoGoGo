@@ -285,8 +285,9 @@ export function VlaPanel(props: Props) {
         <p>ZIP · RGB + ground-truth depth + transitions + physics parameters</p>
       </div>
       <div className="vla-limit">
-        Frictional finger contacts support the handover fixture. Model-specific
-        inference and training adapters are the next integration layer.
+        This robot supports recorded reaching and base driving. Its fingers are
+        visual geometry; physical grasping, learned inference and training are
+        not integrated yet.
       </div>
     </div>
   );

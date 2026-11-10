@@ -10,9 +10,9 @@ dimensions, masses, inertias and limits are illustrative engineering assumptions
 
 Run `python -m robogogogo.server`, open `/simulation/`, and select the Robot tab.
 The articulated mobile concept is the default scene. Choose Standing, Low or
-Reach, then Run posture motion. Pause before editing a new pose. Torso
+Reach to plan and start posture motion. Pause before editing a new pose. Torso
 joint goals allow individual torso exploration. Wheel-drive buttons command forward/reverse,
-lateral motion and yaw for three simulation seconds; Run starts integration and
+lateral motion and yaw immediately for three simulation seconds;
 Brake requests zero wheel speed. Pause freezes time and clears the drive lease. Existing arm controls manipulate
 only the seven joints of each arm, not the shared torso or base.
 
