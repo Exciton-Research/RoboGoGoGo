@@ -68,11 +68,13 @@ class LocalizationBuffer:
         self.resets = 0
         self.last_reset = None
         self.fault = None
+        self.epoch_start = -np.inf
 
-    def _reset(self, reason):
+    def _reset(self, reason, timestamp):
         self.epoch += 1
         self.resets += 1
         self.last_reset = reason
+        self.epoch_start = max(timestamp, max(self.highwater.values(), default=timestamp))
         for queue in self.dynamic.values():
             queue.clear()
 
@@ -100,7 +102,7 @@ class LocalizationBuffer:
             ):
                 raise ValueError("Invalid localization timestamp or translation")
             if sample.epoch != self.source_epochs.get(edge, sample.epoch):
-                self._reset("Localization provider changed its epoch")
+                self._reset("Localization provider changed its epoch", sample.timestamp)
             self.source_epochs[edge] = sample.epoch
             item = (sample.timestamp, position, q, received)
             if sample.static:
@@ -110,7 +112,7 @@ class LocalizationBuffer:
                 if old and (
                     np.linalg.norm(old[1] - position) > 1e-9 or angular_distance(old[2], q) > 1e-7
                 ):
-                    self._reset("Static localization transform changed")
+                    self._reset("Static localization transform changed", sample.timestamp)
                 self.static[edge] = item
                 if len(self.static) == len(self.edges):
                     raise ValueError("Moving-base localization requires a dynamic TF edge")
@@ -119,6 +121,8 @@ class LocalizationBuffer:
                 raise ValueError("Localization edge changed from static to dynamic")
             if sample.timestamp < self.highwater.get(edge, sample.timestamp) - 1:
                 raise ValueError("Localization clock reset; reconnect required")
+            if sample.timestamp < self.epoch_start:
+                return
             queue = self.dynamic[edge]
             for old in queue:
                 if old[0] == sample.timestamp:
@@ -149,7 +153,7 @@ class LocalizationBuffer:
                         raise ValueError(
                             "Out-of-order localization discontinuity; reconnect required"
                         )
-                    self._reset("Localization pose jumped or exceeded configured motion bounds")
+                    self._reset("Localization pose jumped or exceeded configured motion bounds", sample.timestamp)
                     break
             queue.append(item)
             queue.sort(key=lambda value: value[0])
@@ -180,7 +184,9 @@ class LocalizationBuffer:
             if edge in self.static:
                 a = b = self.static[edge]
             else:
-                queue = self.dynamic[edge]
+                if sample.timestamp < self.epoch_start:
+                return
+            queue = self.dynamic[edge]
                 before = [item for item in queue if item[0] <= timestamp]
                 after = [item for item in queue if item[0] >= timestamp]
                 if not before or not after:

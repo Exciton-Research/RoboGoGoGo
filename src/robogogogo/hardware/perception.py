@@ -30,6 +30,7 @@ class HardwarePerception:
         self.verified_info = set()
         self.status = dict(state="waiting", reason=self.sync.reason, scene_memory={})
         self.scene = None
+        self.memory_epoch = 0
         self.audit = None
         if audit_dir is not None:
             path = Path(audit_dir) / str(uuid4())
@@ -59,6 +60,8 @@ class HardwarePerception:
     def ingest(self, sample):
         with self.lock:
             self.sync.add(sample, self.clock())
+            if self.sync.localization_epoch != self.memory_epoch or self.sync.fault:
+                self.scene = None
 
     def calibration_info(self, info):
         with self.lock:
@@ -84,10 +87,29 @@ class HardwarePerception:
         with self.lock:
             self.sync.fault = str(reason)
 
+    def localization_status(self):
+        localization = self.sync.localization
+        if localization is None:
+            return dict(mode="fixed", epoch=0)
+        return dict(
+            mode="moving",
+            epoch=localization.epoch,
+            resets=localization.resets,
+            chain=list(localization.chain),
+            reason=localization.health(self.clock()),
+            last_reset=localization.last_reset,
+            translation_uncertainty_m=localization.config["translation_uncertainty_m"],
+            rotation_uncertainty_rad=localization.config["rotation_uncertainty_rad"],
+        )
+
     def scene_snapshot(self):
         with self.lock:
             if (
                 self.scene is None
+                or (
+                    self.sync.localization is not None
+                    and self.sync.localization.health(self.clock()) is not None
+                )
                 or self.sync.fault
                 or self.updated is None
                 or self.clock() - self.updated > 0.5
@@ -99,6 +121,7 @@ class HardwarePerception:
     def snapshot(self):
         with self.lock:
             result = dict(self.status)
+            result["localization"] = self.localization_status()
             result.update(
                 calibration_revision=self.profile.document["revision"],
                 calibration_digest=self.profile.digest,
@@ -120,6 +143,14 @@ class HardwarePerception:
                     for n, c in self.profile.cameras.items()
                 ],
             )
+            if self.sync.localization_epoch != self.memory_epoch:
+                result.update(
+                    state="blocked",
+                    reason="Localization changed; awaiting new-epoch observations",
+                    scene_memory={},
+                )
+            if result["localization"].get("reason"):
+                result.update(state="blocked", reason=result["localization"]["reason"])
             if self.sync.fault:
                 result.update(state="fault", reason=self.sync.fault, scene_memory={})
             if self.updated is not None:
@@ -140,6 +171,11 @@ class HardwarePerception:
 
     def step(self):
         with self.lock:
+            if self.memory_epoch != self.sync.localization_epoch:
+                self.memory.clear()
+                self.scene = None
+                self.memory_epoch = self.sync.localization_epoch
+                self.status["scene_memory"] = {}
             required_info = {
                 n for n, c in self.profile.cameras.items() if c.get("require_camera_info", False)
             }
@@ -173,7 +209,10 @@ class HardwarePerception:
                 ),
                 cv.COLOR_BGR2RGB,
             )
-            poses[name] = self.profile.pose(name, bundle.positions[name])
+            base = bundle.base_poses.get(name)
+            poses[name] = self.profile.pose(
+                name, bundle.positions[name], base.world_from_base if base else None
+            )
         clouds, rejected = [], []
         for left, right in self.profile.pairs:
             try:
@@ -195,6 +234,33 @@ class HardwarePerception:
                 angular_errors = [
                     self.profile.rotation_uncertainty(n, bundle.joint_gap_s) for n in (left, right)
                 ]
+                world_translation_error, world_rotation_error = 0.0, 0.0
+                if bundle.base_poses:
+                    for index, name in enumerate((left, right)):
+                        base = bundle.base_poses[name]
+                        lever = np.linalg.norm(
+                            poses[name]["position"] - base.world_from_base[:3, 3]
+                        )
+                        translation_errors[index] += (
+                            base.interpolation_translation_m
+                            + lever * base.interpolation_rotation_rad
+                        )
+                        angular_errors[index] += base.interpolation_rotation_rad
+                        world_translation_error = max(
+                            world_translation_error,
+                            base.translation_uncertainty_m + lever * base.rotation_uncertainty_rad,
+                        )
+                        world_rotation_error = max(
+                            world_rotation_error, base.rotation_uncertainty_rad
+                        )
+                        # Only identical exposure times justify treating global
+                        # localization uncertainty as a common world-frame error.
+                        if bundle.skew_s > 1e-9:
+                            translation_errors[index] += (
+                                base.translation_uncertainty_m
+                                + lever * base.rotation_uncertainty_rad
+                            )
+                            angular_errors[index] += base.rotation_uncertainty_rad
                 z, baseline = result.depth, result.baseline_m
                 k = result.intrinsics
                 ray_factor = np.sqrt(
@@ -210,6 +276,8 @@ class HardwarePerception:
                     + z * sum(translation_errors) / baseline
                     + z**2 * sum(angular_errors) / baseline
                     + z * ray_factor * max(angular_errors)
+                    + world_translation_error
+                    + z * ray_factor * world_rotation_error
                 )
                 valid = np.isfinite(result.depth) & (sigma <= 0.02)
                 if not valid.any():
@@ -228,18 +296,40 @@ class HardwarePerception:
                 )
             except ValueError as error:
                 rejected.append(dict(pair=[left, right], reason=str(error)))
-        if clouds:
-            observation = self.memory.observe(fuse(clouds))
-        else:
-            empty = np.empty((0, 3))
-            observation = self.memory.observe(
-                SurfaceCloud(empty, empty, empty, bundle.timestamp, 0.02, "hardware_no_depth")
-            )
+        with self.lock:
+            if (
+                self.sync.fault
+                or bundle.localization_epoch != self.sync.localization_epoch
+                or self.stop.is_set()
+            ):
+                self.memory.clear()
+                self.scene = None
+                return
+            if clouds:
+                observation = self.memory.observe(fuse(clouds))
+            else:
+                empty = np.empty((0, 3))
+                observation = self.memory.observe(
+                    SurfaceCloud(empty, empty, empty, bundle.timestamp, 0.02, "hardware_no_depth")
+                )
         record = dict(
             timestamp=bundle.timestamp,
             calibration_digest=bundle.calibration_digest,
             skew_s=bundle.skew_s,
             joint_gap_s=bundle.joint_gap_s,
+            localization_epoch=bundle.localization_epoch,
+            localization={
+                n: dict(
+                    world_from_base=b.world_from_base.tolist(),
+                    gap_s=b.gap_s,
+                    translation_uncertainty_m=b.translation_uncertainty_m,
+                    rotation_uncertainty_rad=b.rotation_uncertainty_rad,
+                    interpolation_translation_m=b.interpolation_translation_m,
+                    interpolation_rotation_rad=b.interpolation_rotation_rad,
+                    edges=b.edges,
+                )
+                for n, b in bundle.base_poses.items()
+            },
             frames={
                 n: dict(
                     timestamp=f.timestamp,
@@ -260,7 +350,11 @@ class HardwarePerception:
                 )
             )
         with self.lock:
-            if self.sync.fault or self.stop.is_set():
+            if (
+                self.sync.fault
+                or self.stop.is_set()
+                or bundle.localization_epoch != self.sync.localization_epoch
+            ):
                 self.memory.clear()
                 return
             self.scene = dict(
@@ -268,6 +362,7 @@ class HardwarePerception:
                 calibration_digest=self.profile.digest,
                 world_frame=self.profile.document["world_frame"],
                 has_current_depth=bool(clouds),
+                localization_epoch=bundle.localization_epoch,
                 points=observation.view_evidence.points.tolist(),
                 normals=observation.view_evidence.normals.tolist(),
                 confidence=observation.view_evidence.confidence.tolist(),
