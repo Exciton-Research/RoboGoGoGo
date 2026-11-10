@@ -168,7 +168,8 @@ def test_command_rejection_safe_motion_and_substep_rollback(model):
         session.set_joints(configuration(model, TORSO))
     np.testing.assert_array_equal(session.target_q, goal_before)
     session.set_joints(mobile_home(model, "low"))
-    session.set_drive([0.05, 0, 0.05], duration=0.3)
+    with pytest.raises(ValueError, match="Finish or cancel"):
+        session.set_drive([0.05, 0, 0.05], duration=0.3)
     for _ in range(1000):
         session.advance()
         assert session.mobile_status["collision_guard"] == "clear"
@@ -188,6 +189,7 @@ def test_command_rejection_safe_motion_and_substep_rollback(model):
         diagnostics,
         jnp.asarray([configuration(model, CROSS), before.q]),
     )
+    session.cancel_motion_plan()
     session.set_drive([0.1, 0, 0])
     with pytest.raises(CollisionViolation, match="Self-collision"):
         session.advance()

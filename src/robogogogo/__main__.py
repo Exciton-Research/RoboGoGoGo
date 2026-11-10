@@ -20,6 +20,7 @@ def main():
     jax.config.update("jax_enable_x64", True)
     if not args.headless:
         import uvicorn
+
         from .studio.api import create_app
 
         uvicorn.run(create_app(), host="127.0.0.1", port=args.port)

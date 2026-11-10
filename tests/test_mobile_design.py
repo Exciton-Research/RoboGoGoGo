@@ -111,6 +111,8 @@ def test_default_studio_mobile_postures_dynamics_checkpoint_and_task_boundary(tm
         after = client.post("/api/command", json={"op": "step"}).json()
         assert np.isfinite(after["state"]["q"]).all()
         assert after["state"]["q"] != snapshot["state"]["q"]
+        assert client.post("/api/projects", json={"name": "Mobile concept"}).status_code == 422
+        after = client.post("/api/command", json={"op": "cancel_plan"}).json()
         saved = client.post("/api/projects", json={"name": "Mobile concept"}).json()
         project = saved["project"]
         assert all(a["root"] for a in project["arms"])
