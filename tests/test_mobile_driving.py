@@ -95,3 +95,46 @@ def test_session_drive_validation_lease_reset_and_no_coordinate_bypass(model):
     session.reset()
     np.testing.assert_array_equal(session.drive_twist, 0)
     assert session.drive_until == 0
+
+
+def test_turn_and_torso_motion_keep_support_reserve(model, mobile):
+    low = jnp.asarray(mobile_home(model, "low"))
+
+    @jax.jit
+    def run():
+        def tick(carry, _):
+            state, acc = carry
+            following, acc, margin, _, _ = mobile._step(
+                state, low, jnp.array([0.0, 0.0, 0.15]), 0.7, acc
+            )
+            return (following, acc), margin
+
+        return jax.lax.scan(tick, (sp.initial_state(model), jnp.zeros(3)), None, length=500)
+
+    (state, _), margins = run()
+    assert np.isfinite(state.q).all()
+    assert float(jnp.min(margins)) > mobile.margin
+    assert float(state.q[mobile.base[2]]) > 0.15
+    torso = model.indices[model.names.index("torso_lower")]
+    assert abs(float(state.q[torso] - low[torso])) < 0.2
+
+
+def test_guard_rejection_is_atomic_and_clears_drive(model):
+    session = Session(model, arms=mobile_arm_definitions(), mobile=True)
+    session.set_drive([0.1, 0, 0])
+    before = session.state
+    _, diagnostics = session.mobile.tire_forces(before, 0.7, jnp.zeros(3))
+    session.mobile.step = lambda *args: (
+        before._replace(q=before.q + 1),
+        jnp.zeros(3),
+        -0.1,
+        jnp.zeros_like(before.q),
+        diagnostics,
+    )
+    with pytest.raises(FloatingPointError, match="Stability guard"):
+        session.advance()
+    assert session.state is before
+    assert session.elapsed == 0
+    assert len(session.history) == 1
+    np.testing.assert_array_equal(session.drive_twist, 0)
+    assert session.mobile_status["guard"] == "blocked"
