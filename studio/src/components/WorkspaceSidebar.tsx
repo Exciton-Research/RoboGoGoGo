@@ -103,9 +103,7 @@ export function WorkspaceSidebar() {
               <div className="tree-world robot-root">
                 <ChevronDown size={13} />
                 <Activity size={15} />
-                <strong>
-                  {model?.scene === "drop" ? "Contact body" : "Robot"}
-                </strong>
+                <strong>Robot</strong>
                 <span className="tree-tag">{model?.dof ?? "—"} DOF</span>
               </div>
               {model?.names.map((name, i) => (

@@ -238,9 +238,7 @@ export function VlaPanel(props: Props) {
         </div>
         <button
           className="button execute-button"
-          disabled={
-            props.disabled || !episode || episode.done || !!props.coordination
-          }
+          disabled={props.disabled || !episode || episode.done}
           onClick={execute}
         >
           <StepForward size={14} />
@@ -265,9 +263,7 @@ export function VlaPanel(props: Props) {
         ) : (
           <button
             className="button collect-button"
-            disabled={
-              props.disabled || !episode || episode.done || !!props.coordination
-            }
+            disabled={props.disabled || !episode || episode.done}
             onClick={props.onCollect}
           >
             <Play size={12} fill="currentColor" />

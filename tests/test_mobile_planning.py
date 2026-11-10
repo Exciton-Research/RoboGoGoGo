@@ -56,9 +56,7 @@ def test_auto_plan_executes_then_releases_drive_and_cancel_is_explicit(model):
     before = session.target_q
     with pytest.raises(PlanningError, match="Self-collision"):
         invalid = configuration(model, TORSO)
-        for name in ("head_pan", "head_tilt"):
-            index = model.indices[model.names.index(name)]
-            invalid[index] = float(session.state.q[index])
+        invalid[29:] = np.asarray(session.state.q)[29:]
         invalid[session.mobile.driven] = np.asarray(session.state.q)[session.mobile.driven]
         session.set_joints(invalid)
     np.testing.assert_array_equal(session.target_q, before)

@@ -97,16 +97,12 @@ export function Inspector() {
             <>
               <div className="inspector-title">
                 <div className="section-kicker">ROBOT CONTROLLER</div>
-                <h2>
-                  {model?.scene === "drop" ? "Free fall" : "Joint position"}
-                </h2>
+                <h2>Joint position</h2>
                 <p>
-                  {model?.scene === "drop"
-                    ? "Gravity drives a vertically guided sphere."
-                    : "Debug controls · using these ends the current robot episode."}
+                  Debug controls · using these ends the current robot episode.
                 </p>
               </div>
-              {model?.scene !== "drop" ? (
+              {
                 <>
                   <MobileDesignControls />
                   <div className="control-mode">
@@ -284,44 +280,7 @@ export function Inspector() {
                     </div>
                   </div>
                 </>
-              ) : (
-                <div className="contact-properties">
-                  <div className="experiment-illustration">
-                    <Circle size={64} strokeWidth={1} />
-                    <div />
-                  </div>
-                  <dl>
-                    <div>
-                      <dt>Body mass</dt>
-                      <dd>1.00 kg</dd>
-                    </div>
-                    <div>
-                      <dt>Sphere radius</dt>
-                      <dd>0.10 m</dd>
-                    </div>
-                    <div>
-                      <dt>Ground height</dt>
-                      <dd>0.00 m</dd>
-                    </div>
-                    <div>
-                      <dt>Active contacts</dt>
-                      <dd>{state?.contacts ?? 0}</dd>
-                    </div>
-                    <div>
-                      <dt>Normal force</dt>
-                      <dd>{nice(state?.normal_force ?? 0, 3)} N</dd>
-                    </div>
-                    <div>
-                      <dt>Vertical velocity</dt>
-                      <dd>{nice(state?.qd[0] ?? 0, 3)} m/s</dd>
-                    </div>
-                  </dl>
-                  <p className="info-note">
-                    This experiment uses a compliant sphere-to-plane contact
-                    model. Small ground penetration is expected at equilibrium.
-                  </p>
-                </div>
-              )}
+              }
             </>
           ) : (
             <>

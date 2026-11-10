@@ -163,20 +163,10 @@ export function SimulationStage() {
             </button>
           </div>
           <div className="scene-caption">
-            <span className="scene-number">
-              {model?.scene === "drop" ? "02" : "01"}
-            </span>
+            <span className="scene-number">01</span>
             <div>
               <strong>{model?.name ?? "Robotics workspace"}</strong>
-              <span>
-                {model?.scene === "drop"
-                  ? "1 kg sphere · compliant ground contact"
-                  : snapshot?.coordination?.kind === "material_grasp"
-                    ? "Material grasp and lift"
-                    : snapshot?.coordination?.kind === "handover"
-                      ? "Grasp · hand over · place"
-                      : "Reaching fixture · joint-delta actions"}
-              </span>
+              <span>RG Mobile Duo · coordinated arm and torso motion</span>
             </div>
           </div>
           <div className="viewport-hint vla-hidden">
@@ -206,21 +196,10 @@ export function SimulationStage() {
           <div>
             <span>
               <Target size={12} />
-              {model?.scene === "drop"
-                ? "PENETRATION"
-                : (model?.arms.length ?? 1) > 1
-                  ? "MAX TOOL ERROR"
-                  : "TARGET ERROR"}
+              MAX TOOL ERROR
             </span>
             <strong>
-              {state
-                ? nice(
-                    (model?.scene === "drop"
-                      ? state.penetration
-                      : state.distance) * 1000,
-                    2,
-                  )
-                : "—"}
+              {state ? nice(state.distance * 1000, 2) : "—"}
               <small>mm</small>
             </strong>
           </div>
