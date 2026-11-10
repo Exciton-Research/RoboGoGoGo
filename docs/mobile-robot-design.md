@@ -267,3 +267,24 @@ measurements. Thermal limits, bus voltage, backlash, compliance and true stictio
 remain unmodeled. Base, torso and head retain their previous actuator models.
 Trajectory and episode NPZ exports include the revision, provenance and parameter
 arrays so data collected under these assumptions can be identified.
+
+### Shoulder and elbow assembly frames
+
+The detailed shoulder and elbow housings are mounted to the parent link using
+URDF joint origin and rest orientation. Output flanges, shaft plugs and bolt
+circles belong to the child link. The paired index marks therefore show relative
+joint rotation rather than rotating the entire motor housing with its output.
+Meshes consume the physics link transforms; no independent animation drives them.
+
+The stepped casings, seals and flange details represent output-side reducer and
+bearing packaging. Co-located shoulder axes remain a kinematic concept: internal
+motor placement, bearing loads, transmissions, cable routing and packaging
+interference are not yet mechanically validated. These details do not introduce
+additional mass or contacts; existing aggregate link inertias and collision
+capsules remain the physical model.
+
+Run the frame checks with
+`node --experimental-strip-types --test studio/tests/armActuator.test.mjs`.
+The mobile dynamics tests also verify zero-effort gravity response, inability of
+position commands to move unpowered motors directly, bounded powered gravity
+holding, tire traction and coordinated reaching.
