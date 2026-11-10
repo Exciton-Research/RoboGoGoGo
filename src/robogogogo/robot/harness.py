@@ -61,7 +61,9 @@ def harness_routes(model, q, pose):
         for suffix, neutral in NEUTRAL.items():
             body = model.names.index(f"{side}_{suffix}")
             parent, index = model.parents[body], model.indices[body]
-            sign = mounting_sign(side, suffix)
+            # Route roll dress packs aft: a forward-facing arch would cross the
+            # forearm when the arm extends along +X.
+            sign = -1 if suffix == "upper_roll" else mounting_sign(side, suffix)
             delta = float(q[index]) - neutral
             points, bend = loop_points(np.asarray(model.axis[body]) * sign, delta * sign)
             rotation = np.asarray(pose.rotation[parent]) @ np.asarray(model.orientation[body])
