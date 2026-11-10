@@ -64,6 +64,7 @@ class TestExecutionBackend:
                 tuple(self.velocity[:6]),
                 tuple(self.velocity[6:12]),
                 tuple(self.position[12:]),
+                tuple(self.velocity[12:]),
                 self.command_id,
                 self.trajectory is not None,
                 self.fault,

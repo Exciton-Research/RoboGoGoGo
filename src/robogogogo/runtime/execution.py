@@ -23,6 +23,10 @@ class CommandExecutor:
     completion_grace_s = 0.3
 
     def __init__(self, backend, *, clock=time.monotonic):
+        if backend.is_test is not True:
+            raise ValueError(
+                "Physical execution adapters are not enabled before robot commissioning"
+            )
         self.backend, self.clock = backend, clock
         self.lock = threading.RLock()
         self.mode = "disarmed"
@@ -54,6 +58,7 @@ class CommandExecutor:
                 for v in (value.left, value.right, value.left_velocity, value.right_velocity)
             )
             or len(value.grippers) != 2
+            or len(value.gripper_velocity) != 2
             or not all(math.isfinite(v) for v in numbers)
             or type(value.sequence) is not int
             or not math.isfinite(value.timestamp)
@@ -65,12 +70,20 @@ class CommandExecutor:
             raise ValueError("Measured arm position exceeds execution limits")
         if any(not 0 <= width <= limits.gripper_width for width in value.grippers):
             raise ValueError("Measured gripper width exceeds execution limits")
+        if any(
+            abs(v) > limits.joint_speed + 1e-6 for v in value.left_velocity + value.right_velocity
+        ):
+            raise ValueError("Measured arm speed exceeds execution limits")
+        if any(abs(v) > limits.gripper_speed + 1e-6 for v in value.gripper_velocity):
+            raise ValueError("Measured gripper speed exceeds execution limits")
         if value.fault:
             raise ValueError(value.fault)
         return value
 
     def _read(self):
         value = self._validate_feedback(self.backend.read())
+        if self.feedback and value.timestamp < self.feedback.timestamp:
+            raise ValueError("Execution feedback timestamp rolled back")
         if self.feedback and value.sequence < self.feedback.sequence:
             raise ValueError("Execution feedback sequence rolled back")
         if self.feedback and value.sequence == self.feedback.sequence:
@@ -289,6 +302,8 @@ class CommandExecutor:
                 )
             if type(sequence) is not int or sequence != self.last_sequence + 1:
                 raise ValueError("Command sequence must advance exactly once")
+            if type(observation_sequence) is not int:
+                raise ValueError("Observation sequence must be an integer")
             observed = dict(self.observations).get(observation_sequence)
             if observed is None or not 0 <= self.clock() - observed <= self.observation_timeout_s:
                 raise ValueError("Command references missing or stale observation")

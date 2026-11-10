@@ -33,6 +33,7 @@ class ExecutionFeedback:
     left_velocity: tuple[float, ...]
     right_velocity: tuple[float, ...]
     grippers: tuple[float, float]
+    gripper_velocity: tuple[float, float]
     command_id: str | None
     moving: bool
     fault: str | None = None
