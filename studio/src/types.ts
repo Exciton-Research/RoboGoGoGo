@@ -35,6 +35,7 @@ export interface PackagingVolume {
 }
 export interface RobotModel {
   shoulder_packages: PackagingVolume[];
+  assembly_parts: (PackagingVolume & { kind: "bracket" | "connector" })[];
   cable_passages: PackagingVolume[];
   name: string;
   scene: "mobile_dual_arm";

@@ -71,6 +71,15 @@ export function addInternalPackaging(model: RobotModel, add: AddMesh) {
       "#778d99",
     );
   }
+  for (const p of model.assembly_parts ?? []) {
+    segment(
+      p.body,
+      new THREE.Vector3(...p.start),
+      new THREE.Vector3(...p.end),
+      p.radius,
+      p.kind === "connector" ? "#232b30" : "#9aa8b1",
+    );
+  }
   for (const p of model.cable_passages) {
     const a = new THREE.Vector3(...p.start),
       b = new THREE.Vector3(...p.end);

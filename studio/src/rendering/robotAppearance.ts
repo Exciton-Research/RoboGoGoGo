@@ -96,7 +96,7 @@ export function addResearchRobotDetails(model: RobotModel, add: AddMesh) {
       }
       for (const [suffix, length, radius] of [
         ["wrist_roll", 0.04, 0.043],
-        ["wrist_pitch", 0.10, 0.043],
+        ["wrist_pitch", 0.1, 0.043],
         ["tool_roll", 0.13, 0.04],
       ] as const) {
         if (name.endsWith(suffix)) {

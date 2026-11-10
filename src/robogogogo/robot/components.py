@@ -74,10 +74,19 @@ ARM_COMPONENTS = {
 def mounting_offset(suffix):
     # Catalog assemblies are mounted outside the intersecting axes; a custom
     # output coupling/yoke bridges to the joint. Connectors need separate clearance.
-    return 0.075 if suffix in ("waist", "upper_roll", "shoulder") else 0.025
+    return 0.083 if suffix in ("waist", "upper_roll", "shoulder") else 0.025
 
 
 def mounting_sign(side, suffix):
     if suffix == "wrist_roll":
         return -1
     return -1 if side == "right" and suffix in ("shoulder", "elbow", "wrist_pitch") else 1
+
+
+def mounting_mass(suffix):
+    """Mass of modeled 8 mm aluminum saddle rods and 12 g connector estimate."""
+    from math import pi
+
+    spec = ARM_COMPONENTS[suffix]
+    length = 2 * (spec.length_m + 0.012) + 8 * (spec.diameter_m / 2 + 0.008)
+    return pi * 0.004**2 * length * 2700 + 0.012

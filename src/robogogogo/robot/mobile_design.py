@@ -10,7 +10,7 @@ import xml.etree.ElementTree as ET
 from copy import deepcopy
 from importlib.resources import files
 
-from .components import ARM_COMPONENTS, mounting_offset, mounting_sign
+from .components import ARM_COMPONENTS, mounting_offset, mounting_sign, mounting_mass
 
 DESIGN = dict(
     name="RG Mobile Duo · articulated concept",
@@ -280,10 +280,11 @@ def mobile_dual_arm_urdf():
                 o + a * (mounting_offset(suffix) + spec.length_m / 2) for o, a in zip(base, axis)
             ]
             name = f"{side}_{suffix}_actuator"
-            actuator = link(name, spec.mass_kg)
+            mass = spec.mass_kg + mounting_mass(suffix)
+            actuator = link(name, mass)
             inertia = actuator.find("inertial/inertia")
-            axial = spec.mass_kg * (spec.diameter_m / 2) ** 2 / 2
-            radial = spec.mass_kg * (3 * (spec.diameter_m / 2) ** 2 + spec.length_m**2) / 12
+            axial = mass * (spec.diameter_m / 2) ** 2 / 2
+            radial = mass * (3 * (spec.diameter_m / 2) ** 2 + spec.length_m**2) / 12
             for tag, a in zip(("ixx", "iyy", "izz"), axis):
                 inertia.set(tag, str(axial if abs(a) > 0.5 else radial))
             joint(f"{name}_mount", item.find("parent").get("link"), name, origin=center)

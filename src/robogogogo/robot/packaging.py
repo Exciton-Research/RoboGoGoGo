@@ -71,3 +71,71 @@ def arm_cable_passages(model):
         for side in ("left", "right")
         for link, length in (("shoulder", 0.32), ("elbow", 0.28))
     ]
+
+
+def assembly_parts(model):
+    """Custom mounting saddles and connector installation envelopes in parent frames.
+
+    Rails and end ties form a cage around each module. Dimensions are our design,
+    not vendor mounting-hole CAD; rear connector placement needs vendor CAD confirmation.
+    """
+    result = []
+    for drive in shoulder_packages(model):
+        a, b = np.array(drive["start"]), np.array(drive["end"])
+        axis = (b - a) / np.linalg.norm(b - a)
+        radial = np.array([1.0, 0, 0]) if abs(axis[0]) < 0.5 else np.array([0.0, 1, 0])
+        other = np.cross(axis, radial)
+        owner = drive["name"].removesuffix("_drive_package")
+
+        def part(suffix, start, end, radius, kind):
+            length = np.linalg.norm(end - start)
+            mass = np.pi * radius**2 * length * 2700 if kind == "bracket" else 0.012
+            result.append(
+                dict(
+                    name=f"{owner}_{suffix}",
+                    body=drive["body"],
+                    start=start.tolist(),
+                    end=end.tolist(),
+                    radius=radius,
+                    owner=owner,
+                    kind=kind,
+                    mass_kg=float(mass),
+                    provenance="custom aluminum saddle"
+                    if kind == "bracket"
+                    else "XT30(2+2) installation envelope; port clocking provisional",
+                )
+            )
+
+        # Two side rails with end ties, leaving both module faces accessible.
+        spacing = drive["radius"] + 0.008
+        front, rear = a - axis * 0.006, b + axis * 0.006
+        for sign in (-1, 1):
+            part(
+                f"mount_rail_{sign}",
+                front + radial * spacing * sign,
+                rear + radial * spacing * sign,
+                0.004,
+                "bracket",
+            )
+        for tag, point in (("front", front), ("rear", rear)):
+            # Radial ties are above the shaft; no fictitious solid disk through it.
+            start = point + radial * spacing + other * spacing
+            end = point - radial * spacing + other * spacing
+            part(f"mount_tie_{tag}", start, end, 0.004, "bracket")
+            for sign in (-1, 1):
+                part(
+                    f"mount_corner_{tag}_{sign}",
+                    point + radial * spacing * sign,
+                    point + radial * spacing * sign + other * spacing,
+                    0.004,
+                    "bracket",
+                )
+        part("power_can_connector", b + axis * 0.004, b + axis * 0.024, 0.009, "connector")
+    return result
+
+
+def assembly_capsules(model):
+    return [
+        Capsule(p["name"], p["body"], tuple(p["start"]), tuple(p["end"]), p["radius"])
+        for p in assembly_parts(model)
+    ]
