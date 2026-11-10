@@ -128,6 +128,8 @@ class EpisodeService:
             desired = jnp.clip(
                 s.state.q + jnp.asarray(np.clip(delta, -limit, limit)), s.model.lower, s.model.upper
             )
+            if s.mobile is not None:
+                s.mobile.validate_goal(np.asarray(s.state.q), np.asarray(desired))
             applied = np.asarray(desired - s.state.q)
             previous = workspace.cached
             s.target_q = desired  # Preserve the task's target separately from the controller goal.

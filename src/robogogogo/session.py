@@ -250,8 +250,17 @@ class Session:
         if float(margin) < self.mobile.margin:
             self.stop_drive()
             self.mobile_status["guard"] = "blocked"
-            raise ValueError(
+            raise FloatingPointError(
                 "Stability guard rejected predicted motion; simulation frozen before support margin violation"
+            )
+        base_q = np.asarray(following.q)[np.asarray(self.mobile.base)]
+        lower = np.asarray(self.model.lower)[np.asarray(self.mobile.base)]
+        upper = np.asarray(self.model.upper)[np.asarray(self.mobile.base)]
+        if np.any(base_q < lower + 0.05) or np.any(base_q > upper - 0.05):
+            self.stop_drive()
+            self.mobile_status["guard"] = "blocked"
+            raise FloatingPointError(
+                "Mobile arena boundary reached; simulation frozen before virtual joint stops"
             )
         self.state, self.com_acceleration = following, acc
         self.target_q = self.target_q.at[self.mobile.driven].set(following.q[self.mobile.driven])

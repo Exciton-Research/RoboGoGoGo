@@ -275,7 +275,12 @@ class Studio:
                 self.message = "Simulation paused"
             elif op == "step":
                 self.running = False
-                self._advance(1)
+                try:
+                    self._advance(1)
+                except FloatingPointError as error:
+                    self.error = str(error)
+                    self._refresh()
+                    return self.cached
                 if len(self.session.history) < self.max_samples:
                     self.message = "Advanced one control tick"
             elif op == "reset":
@@ -431,6 +436,8 @@ class Studio:
                 goal=np.asarray(s.target_q).tolist(),
                 target=np.asarray(s.target).tolist(),
                 elapsed=s.elapsed,
+                tire_friction=s.tire_mu,
+                mobile_com_acceleration=np.asarray(s.com_acceleration).tolist(),
                 arms=[{"name": arm.name, "tool": arm.tool, "root": arm.root} for arm in s.arms],
                 targets={name: value.tolist() for name, value in s.targets.items()},
                 cameras=[
@@ -479,6 +486,10 @@ class Studio:
                         raise ValueError("Checkpoint target names do not match arm groups")
                     s.targets = {name: np.asarray(value) for name, value in project.targets.items()}
                 s.elapsed = project.elapsed
+                s.tire_mu = project.tire_friction
+                s.com_acceleration = jnp.asarray(project.mobile_com_acceleration)
+                if s.mobile is not None:
+                    s.mobile.validate_goal(np.asarray(s.state.q), np.asarray(s.target_q))
                 s.restart_recording()
                 if self.scene != "drop":
                     self.episode = self._episode_for_state(

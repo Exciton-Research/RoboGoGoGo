@@ -115,7 +115,7 @@ def test_default_studio_mobile_postures_dynamics_checkpoint_and_task_boundary(tm
         project = saved["project"]
         assert all(a["root"] for a in project["arms"])
         restored = client.post(f"/api/projects/{project['id']}/load").json()
-        np.testing.assert_allclose(restored["state"]["goal"], goal)
+        np.testing.assert_allclose(restored["state"]["goal"], after["state"]["goal"])
         blocked = client.post("/api/tasks/plan", json={"kind": "handover"})
         assert blocked.status_code == 422
         assert "stability" in blocked.json()["detail"]

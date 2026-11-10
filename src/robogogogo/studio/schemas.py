@@ -164,6 +164,8 @@ class PolicyAction(Payload):
 
 
 class Project(Payload):
+    tire_friction: float = Field(default=0.7, ge=0, le=1.5)
+    mobile_com_acceleration: tuple[float, float, float] = (0, 0, 0)
     format: Literal["robogogogo-project-v1"] = "robogogogo-project-v1"
     id: str
     name: str = Field(min_length=1, max_length=80)
