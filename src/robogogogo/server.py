@@ -34,8 +34,19 @@ def main():
     parser.add_argument(
         "--hardware-profile", type=Path, help="Measured ROS hardware calibration profile JSON"
     )
+    parser.add_argument("--ros-camera-info", action="append", default=[], metavar="NAME=TOPIC")
     args = parser.parse_args()
     backends, profiles = {}, {}
+    info_topics = {}
+    for entry in args.ros_camera_info:
+        if "=" not in entry:
+            parser.error("CameraInfo format is NAME=/camera/camera_info")
+        name, topic = entry.split("=", 1)
+        if name in info_topics:
+            parser.error("CameraInfo names must be unique")
+        info_topics[name] = topic
+    if info_topics and not args.ros_joints:
+        parser.error("--ros-camera-info requires --ros-joints")
     if args.hardware_profile and not args.ros_joints:
         parser.error("--hardware-profile requires --ros-joints")
     if args.ros_camera and not args.ros_joints:
@@ -52,11 +63,19 @@ def main():
                 parser.error("Camera names must be unique")
             cameras[name] = topic
         try:
-            ROS2Backend(joint_topic=args.ros_joints, cameras=cameras, domain_id=args.ros_domain_id)
+            ROS2Backend(
+                joint_topic=args.ros_joints,
+                cameras=cameras,
+                domain_id=args.ros_domain_id,
+                camera_info_topics=info_topics,
+            )
         except ValueError as error:
             parser.error(str(error))
         backends["ros2"] = lambda: ROS2Backend(
-            joint_topic=args.ros_joints, cameras=cameras, domain_id=args.ros_domain_id
+            joint_topic=args.ros_joints,
+            cameras=cameras,
+            domain_id=args.ros_domain_id,
+            camera_info_topics=info_topics,
         )
     if args.hardware_profile:
         from .hardware.calibration import CalibrationProfile

@@ -26,6 +26,7 @@ class HardwarePerception:
         self.thread = None
         self.updated = None
         self.count = 0
+        self.verified_info = set()
         self.status = dict(state="waiting", reason=self.sync.reason, scene_memory={})
         self.audit = None
         if audit_dir is not None:
@@ -45,6 +46,26 @@ class HardwarePerception:
     def ingest(self, sample):
         with self.lock:
             self.sync.add(sample, self.clock())
+
+    def calibration_info(self, info):
+        with self.lock:
+            camera = self.profile.cameras.get(info.name)
+            if camera is None:
+                return
+            try:
+                if (
+                    info.frame_id != camera["frame_id"]
+                    or (info.width, info.height) != (camera["width"], camera["height"])
+                    or info.distortion_model != camera["distortion_model"]
+                    or np.asarray(info.intrinsics).shape != (3, 3)
+                    or np.asarray(info.distortion).shape != np.asarray(camera["distortion"]).shape
+                    or not np.allclose(info.intrinsics, camera["intrinsics"], rtol=1e-6, atol=1e-6)
+                    or not np.allclose(info.distortion, camera["distortion"], rtol=1e-6, atol=1e-6)
+                ):
+                    raise ValueError("Driver CameraInfo differs from measured profile")
+                self.verified_info.add(info.name)
+            except (ValueError, TypeError) as error:
+                self.sync.fault = f"Calibration mismatch for {info.name}: {error}"
 
     def invalidate(self, reason):
         with self.lock:
@@ -92,6 +113,16 @@ class HardwarePerception:
 
     def step(self):
         with self.lock:
+            required_info = {
+                n for n, c in self.profile.cameras.items() if c.get("require_camera_info", False)
+            }
+            if not self.sync.fault and not required_info.issubset(self.verified_info):
+                self.status.update(
+                    state="blocked",
+                    reason="Waiting for matching CameraInfo: "
+                    + ", ".join(sorted(required_info - self.verified_info)),
+                )
+                return
             bundle = self.sync.next(self.clock())
             if bundle is None:
                 self.status.update(

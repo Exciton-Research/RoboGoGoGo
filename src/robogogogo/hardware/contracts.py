@@ -26,10 +26,22 @@ class CameraSample:
 
 
 @dataclass(frozen=True)
+class CameraInfoSample:
+    name: str
+    frame_id: str
+    width: int
+    height: int
+    intrinsics: tuple
+    distortion: tuple
+    distortion_model: str
+
+
+@dataclass(frozen=True)
 class TelemetrySink:
     joints: Callable[[JointSample], None]
     camera: Callable[[CameraSample], None]
     error: Callable[[str], None]
+    calibration: Callable[[CameraInfoSample], None] | None = None
 
 
 class ReadOnlyBackend(Protocol):

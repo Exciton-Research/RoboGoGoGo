@@ -3,7 +3,7 @@
 import re
 import threading
 
-from .contracts import CameraSample, JointSample, TelemetrySink
+from .contracts import CameraInfoSample, CameraSample, JointSample, TelemetrySink
 
 
 def timestamp(header):
@@ -33,7 +33,9 @@ def camera_sample(name, message):
 
 
 class ROS2Backend:
-    def __init__(self, *, joint_topic="/joint_states", cameras=None, domain_id=None):
+    def __init__(
+        self, *, joint_topic="/joint_states", cameras=None, domain_id=None, camera_info_topics=None
+    ):
         self.joint_topic, self.cameras = joint_topic, dict(cameras or {})
         if len(self.cameras) > 8 or any(
             not re.fullmatch(r"[a-zA-Z0-9_-]{1,64}", n) for n in self.cameras
@@ -46,6 +48,11 @@ class ROS2Backend:
             raise ValueError("ROS topics must be absolute names")
         if domain_id is not None and (not isinstance(domain_id, int) or not 0 <= domain_id <= 232):
             raise ValueError("ROS domain ID must be between 0 and 232")
+        self.info_topics = dict(camera_info_topics or {})
+        if not set(self.info_topics).issubset(self.cameras) or any(
+            not t.startswith("/") for t in self.info_topics.values()
+        ):
+            raise ValueError("CameraInfo topics must correspond to configured cameras")
         self.domain_id = domain_id
         self.context = self.node = self.executor = self.thread = None
         self.stop = threading.Event()
@@ -93,6 +100,42 @@ class ROS2Backend:
                 lambda message, name=name: image(name, message),
                 qos_profile_sensor_data,
             )
+        if self.info_topics:
+            from sensor_msgs.msg import CameraInfo
+
+            def info(name, message):
+                try:
+                    if (
+                        message.binning_x > 1
+                        or message.binning_y > 1
+                        or message.roi.width
+                        or message.roi.height
+                    ):
+                        raise ValueError(
+                            "Binned/cropped CameraInfo requires an explicitly adjusted calibration"
+                        )
+                    if sink.calibration:
+                        sink.calibration(
+                            CameraInfoSample(
+                                name,
+                                message.header.frame_id,
+                                message.width,
+                                message.height,
+                                tuple(tuple(message.k[i : i + 3]) for i in range(0, 9, 3)),
+                                tuple(message.d),
+                                message.distortion_model,
+                            )
+                        )
+                except Exception as error:
+                    sink.error(f"Invalid ROS CameraInfo: {error}")
+
+            for name, topic in self.info_topics.items():
+                self.node.create_subscription(
+                    CameraInfo,
+                    topic,
+                    lambda message, name=name: info(name, message),
+                    qos_profile_sensor_data,
+                )
         self.executor = SingleThreadedExecutor(context=self.context)
         self.executor.add_node(self.node)
 
