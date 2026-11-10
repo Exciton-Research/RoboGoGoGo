@@ -190,13 +190,13 @@ class EpisodeService:
                 raise ValueError("Start a new episode first")
             session = workspace.session
             if getattr(self, "_control_model", None) is not session.model:
-                self._control_model = session.model
                 self._control_system = ControlSystem(
                     {"rule_based_reach": ReachPolicy(session.model, session.arms)},
                     lower=session.model.lower,
                     upper=session.model.upper,
                     max_delta=episode.action_spec["max_delta"],
                 )
+                self._control_model = session.model
             observation = Observation(
                 episode.instruction,
                 b"",

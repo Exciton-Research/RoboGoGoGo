@@ -39,7 +39,11 @@ class ControlSystem:
             or not self.lower.size
             or self.upper.shape != self.lower.shape
             or self.limit.shape != self.lower.shape
-            or not np.isfinite([self.lower, self.upper, self.limit]).all()
+            or np.isnan(self.lower).any()
+            or np.isnan(self.upper).any()
+            or np.isposinf(self.lower).any()
+            or np.isneginf(self.upper).any()
+            or not np.isfinite(self.limit).all()
             or (self.lower > self.upper).any()
             or (self.limit <= 0).any()
             or not self.controllers

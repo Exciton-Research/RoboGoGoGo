@@ -50,3 +50,14 @@ def test_waypoints_wait_for_settling_and_hold_when_done():
     assert policy.done
     policy.reset()
     assert not policy.done
+
+
+def test_continuous_joint_bounds_keep_finite_increment_limits():
+    system = ControlSystem(
+        {"wheel": Proposal(((9.0,),))}, lower=[-np.inf], upper=[np.inf], max_delta=[0.1]
+    )
+    result = system.step(obs((100.0,)), controller="wheel")
+    np.testing.assert_allclose(result.action.actions, [[0.1]])
+    for lower, upper in (([np.nan], [1]), ([np.inf], [np.inf]), ([-np.inf], [-np.inf])):
+        with pytest.raises(ValueError, match="bounds"):
+            ControlSystem({"wheel": Proposal(((0.0,),))}, lower=lower, upper=upper, max_delta=[0.1])
