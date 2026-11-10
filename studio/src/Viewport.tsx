@@ -104,25 +104,32 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
       const defaultTarget = new THREE.Vector3(0.15, 0, 0.85);
       const home = (view: "perspective" | "top" | "front") => {
         const framedTarget = defaultTarget.clone();
+        let distance = 3.2;
         if (model.scene === "mobile_dual_arm") {
-          const base = model.names.indexOf("base_link");
-          const position = current.current.snapshot.state.positions[base];
-          framedTarget.x += position[0];
-          framedTarget.y += position[1];
+          const state = current.current.snapshot.state;
+          const bounds = new THREE.Box3();
+          for (const position of state.positions)
+            bounds.expandByPoint(new THREE.Vector3(...position));
+          for (const route of state.harness ?? [])
+            for (const point of route.points)
+              bounds.expandByPoint(new THREE.Vector3(...point));
+          bounds.expandByScalar(0.18);
+          bounds.getCenter(framedTarget);
+          const sphere = bounds.getBoundingSphere(new THREE.Sphere());
+          const vertical = THREE.MathUtils.degToRad(camera.fov / 2);
+          const horizontal = Math.atan(Math.tan(vertical) * camera.aspect);
+          distance = sphere.radius / Math.sin(Math.min(vertical, horizontal));
         }
         controls.target.copy(framedTarget);
-        if (view === "top")
-          camera.position
-            .copy(framedTarget)
-            .add(new THREE.Vector3(0, -0.001, 2.7));
-        else if (view === "front")
-          camera.position
-            .copy(framedTarget)
-            .add(new THREE.Vector3(0, -2.7, 0.12));
-        else
-          camera.position
-            .copy(framedTarget)
-            .add(new THREE.Vector3(1.65, -2.2, 1.5));
+        const direction =
+          view === "top"
+            ? new THREE.Vector3(0, -0.001, 1)
+            : view === "front"
+              ? new THREE.Vector3(0, -1, 0.04)
+              : new THREE.Vector3(1.65, -2.2, 1.5);
+        camera.position
+          .copy(framedTarget)
+          .add(direction.normalize().multiplyScalar(distance));
         controls.update();
       };
       cameraControl.current = home;
