@@ -22,7 +22,7 @@ def mobile_collision_world(model):
     add("pelvis", "torso_yaw", (0, 0, 0), (0, 0, 0), 0.13)
     add("lower_torso", "torso_lower", (0, 0, 0.075), (0, 0, 0.365), 0.09)
     add("upper_torso", "torso_upper", (0, 0, 0.065), (0, 0, 0.375), 0.08)
-    for name, z in (("chest_lower", 0.10), ("chest_upper", 0.18)):
+    for name, z in (("chest_lower", 0.10), ("chest_middle", 0.14), ("chest_upper", 0.18)):
         add(name, "torso", (0, -0.11, z), (0, 0.11, z), 0.15)
     add("head", "head", (0, 0, 0), (0, 0, 0), 0.11)
     body_names = [c.name for c in capsules]
@@ -38,7 +38,7 @@ def mobile_collision_world(model):
         add(f"{side}_wrist_pitch", f"{side}_wrist_pitch", (0, 0, 0), (0.03, 0, 0), 0.044)
         add(f"{side}_wrist_tip", f"{side}_tool_roll", (0, 0, 0), (0.04, 0, 0), 0.041)
         add(f"{side}_hand", f"{side}_tool", (0.015, 0, 0), (0.12, 0, 0), 0.045)
-        for name in ("chest_lower", "chest_upper"):
+        for name in ("chest_lower", "chest_middle", "chest_upper"):
             exclusions.append((f"{side}_socket", name))
         attached = [
             ("socket", "upper_arm"),

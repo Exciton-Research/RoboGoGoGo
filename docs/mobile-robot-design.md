@@ -75,12 +75,13 @@ robot. In particular:
   watchdogs. Base arena bounds stop prediction before virtual joint stops.
 - Static torso/arm goal paths are sampled for support margin, and dynamic checks
   monitor integration. Joint acceleration requests are bounded to 0.35 rad/s².
-  No whole-body collision avoidance or formal continuous-path guarantee is provided.
+  Arm self-collision paths are checked using conservative envelopes and adaptive
+  subdivision. This does not certify physical hardware or environmental clearance.
 - Masses and box-approximation inertias are assumptions; there is no motor sizing,
   structural analysis, cable routing, power design or manufacturing CAD.
 - Gripper fingers are cosmetic in this concept, not independently actuated contact
   geometry. Earlier contact experiments do not validate this mobile mechanism.
-- Posture presets are not collision-checked or hardware stability-certified. Automated task
+- Posture presets pass self-collision checks but are not hardware stability-certified. Automated task
   planning is rejected for this scene until whole-body planning is implemented.
   Select the legacy dual-arm scene for the existing handover experiments.
 - Real ROS/SDK telemetry remains read-only. The separate command execution test
@@ -118,7 +119,7 @@ Python/JAX mobile session. External URDF consumers must supply their own dynamic
 
 ## Reference-inspired arm revision
 
-The mobile robot now uses chest-side shoulder mounts at y = ±0.28 m and
+The mobile robot now uses chest-side shoulder mounts at y = ±0.35 m and
 z = 0.22 m relative to the torso frame. Its home pose places elbows below the
 shoulders, with the forearms reaching forward. Upper-arm and forearm lengths
 remain 0.32 m and 0.28 m. The distal three-joint assembly is shortened to
@@ -128,3 +129,33 @@ cuffs instead of exposed industrial link boxes and stacked motor housings.
 These are reference-inspired proportions, not measured vendor geometry. Shells
 remain presentation geometry rather than validated collision meshes. Existing
 saved joint angles retain their names but produce the revised geometry.
+
+
+## Mobile self-collision guard
+
+The mobile Session checks both commanded joint paths and every predicted physics
+substep before committing a control tick. This covers torso presets, arm goals,
+IK solutions, recorded policy actions, restored checkpoints, and arm motion induced
+by wheel driving. Unsafe goals are rejected without replacing the current goal;
+unsafe predictions clear drive, pause Studio, and leave state, elapsed time and
+trajectory history unchanged. Reset is required after an execution fault.
+
+Explicit capsules cover upper arms, forearms, elbow caps, compact wrists, grippers,
+chest, head, folding torso and base pods. A 12 mm separation reserve is required.
+The shoulder mounts were widened to ±0.35 m because the previous pose overlapped
+the chest envelope. All opposite-arm pairs and non-attached arm/body pairs remain
+enabled. Named exclusions cover intentional shared volumes at shoulder sockets,
+elbows and within each compact wrist. Body-to-body pairs within the fixed torso
+assembly are outside this arm-focused guard; this is not complete robot collision
+certification, and the approximations have not been validated against hardware CAD.
+
+The collision oracle checks endpoints, bounds possible proxy displacement, and
+adaptively subdivides each joint-space edge. An edge that cannot be certified by
+the depth limit is rejected. Continuous wheel angles are supported without angle
+wrapping; prismatic bounds remain finite. This checks the simulation's piecewise
+joint-space motion, not unmodeled continuous-time impacts or compliant deformation.
+
+Studio reports the closest checked capsule pair and clearance. This feature avoids
+unsafe motion by rejecting it; it does not yet find automatic detours, coordinate
+recovery, or avoid external obstacles. The earlier coordinated mobile task planner
+remains disabled until those capabilities and whole-body planning are implemented.
