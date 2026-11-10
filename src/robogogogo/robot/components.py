@@ -89,4 +89,4 @@ def mounting_mass(suffix):
 
     spec = ARM_COMPONENTS[suffix]
     length = 2 * (spec.length_m + 0.012) + 8 * (spec.diameter_m / 2 + 0.008)
-    return pi * 0.004**2 * length * 2700 + 0.012
+    return pi * 0.004**2 * (length + 0.012) * 2700 + 0.012 + 2 * pi * 0.003**2 * 0.03 * 2700
