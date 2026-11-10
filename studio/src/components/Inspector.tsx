@@ -47,7 +47,11 @@ export function Inspector() {
   useEffect(() => {
     if (activeArm && snapshot)
       setTarget(snapshot.state.targets[activeArm.name]);
-  }, [activeArm?.name, snapshot?.epoch]);
+  }, [
+    activeArm?.name,
+    snapshot?.epoch,
+    snapshot?.state.targets[activeArm?.name ?? ""]?.join(","),
+  ]);
   return (
     <>
       {" "}
@@ -366,6 +370,22 @@ export function Inspector() {
                       <dd>
                         {nice(state?.torque[selectedJointIndex] ?? 0)}{" "}
                         {selectedJoint.kind === "prismatic" ? "N" : "N·m"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Simulated actuator load</dt>
+                      <dd>
+                        <meter
+                          aria-label="Simulated actuator load"
+                          min={0}
+                          max={1}
+                          value={Math.min(
+                            1,
+                            Math.abs(state?.torque[selectedJointIndex] ?? 0) /
+                              Math.max(selectedJoint.effort, 0.001),
+                          )}
+                          style={{ width: "100%" }}
+                        />
                       </dd>
                     </div>
                     <div>
