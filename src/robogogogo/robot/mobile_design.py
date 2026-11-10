@@ -288,14 +288,19 @@ def mobile_dual_arm_urdf():
             for tag, a in zip(("ixx", "iyy", "izz"), axis):
                 inertia.set(tag, str(axial if abs(a) > 0.5 else radial))
             joint(f"{name}_mount", item.find("parent").get("link"), name, origin=center)
+    # Aggregate custom fittings at their actual host frames, rather than
+    # placing an approximate bracket mass at each actuator's centre.
+    from jax import enable_x64
+
     from ..urdf import loads
     from .fixture_inertia import add_fixture_inertia
     from .packaging import assembly_parts, harness_fixture_specs
     from .shoulder_wiring import cover_mass_specs
 
-    # Aggregate custom fittings at their actual host frames, rather than
-    # placing an approximate bracket mass at each actuator's centre.
-    layout = loads(ET.tostring(robot, encoding="unicode")).model
+    # Exported fixture dimensions must not depend on the application's default
+    # simulation precision. The context restores the caller's configuration.
+    with enable_x64(True):
+        layout = loads(ET.tostring(robot, encoding="unicode")).model
     fittings = [dict(part, body_name=layout.names[part["body"]]) for part in assembly_parts(layout)]
     add_fixture_inertia(robot, fittings + harness_fixture_specs() + cover_mass_specs(layout))
     ET.indent(robot)
