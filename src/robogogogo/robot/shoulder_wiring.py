@@ -29,7 +29,7 @@ def adapter_layout(suffix, sign):
     return {
         "waist": ([-0.025, 0, 0.226], [-1, 0, 0]),
         "upper_roll": ([-0.163, sign * 0.025, 0.025], [0, 0, 1]),
-        "shoulder": ([-0.025, sign * 0.201, sign * 0.025], [-1, 0, 0]),
+        "shoulder": ([-0.025, sign * 0.201, sign * 0.020], [-1, 0, 0]),
     }[suffix]
 
 
@@ -53,7 +53,7 @@ def branch_specs(model):
                 "upper_roll",
                 "shoulder",
                 [-0.163, sign * 0.035, 0.025],
-                [-0.035, sign * 0.201, sign * 0.025],
+                [-0.035, sign * 0.201, sign * 0.020],
                 [0, sign, 0],
                 [-1, 0, 0],
                 0.250,

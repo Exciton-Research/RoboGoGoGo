@@ -33,7 +33,7 @@ def harness_spans():
                 "torso",
                 f"{side}_shoulder",
                 [-0.28, sign * 0.58, 0.22],
-                [0.23, sign * 0.16, 0.14],
+                [0.23, sign * 0.17, 0.14],
                 0.75,
                 ("waist", "upper_roll", "shoulder"),
                 (0.0, 0.0, 0.6),
