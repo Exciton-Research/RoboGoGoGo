@@ -2657,21 +2657,146 @@ textarea {
   line-height: 1.5;
 }
 
-.whole-body-card { margin: 4px 0 18px; padding: 16px; border: 1px solid #cbd8d2; border-radius: 12px; background: linear-gradient(145deg, #f0f5f1, #fafbf8); }
-.whole-body-heading { display: flex; align-items: center; gap: 10px; color: #32655c; }
-.whole-body-heading h3 { margin: 5px 0 0; color: #283d36; font-size: 16px; line-height: 1.3; }
-.whole-body-card p, .whole-body-card > small { color: #65756c; font-size: 11px; line-height: 1.6; }
-.whole-body-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 12px 0; }
-.whole-body-fields label { display: flex; flex-direction: column; gap: 4px; color: #5f7168; font-size: 10px; }
-.whole-body-fields input { min-width: 0; width: 100%; padding: 8px 4px; border: 1px solid #cbd8d2; border-radius: 5px; background: #fff; color: #253e34; font: inherit; font-size: 12px; }
-.whole-body-start { width: 100%; justify-content: center; background: #275f53; border-color: #275f53; color: #fff; }
-.whole-body-secondary { width: 100%; justify-content: center; margin-top: 6px; }
-.whole-body-tags { display: flex; flex-wrap: wrap; gap: 5px; margin: 12px 0; }
-.whole-body-tags span { padding: 4px 6px; border-radius: 4px; background: #e3ece5; color: #486554; font-size: 9px; }
+.whole-body-card {
+  margin: 4px 0 18px;
+  padding: 16px;
+  border: 1px solid #cbd8d2;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #f0f5f1, #fafbf8);
+}
+.whole-body-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #32655c;
+}
+.whole-body-heading h3 {
+  margin: 5px 0 0;
+  color: #283d36;
+  font-size: 16px;
+  line-height: 1.3;
+}
+.whole-body-card p,
+.whole-body-card > small {
+  color: #65756c;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.whole-body-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin: 12px 0;
+}
+.whole-body-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #5f7168;
+  font-size: 10px;
+}
+.whole-body-fields input {
+  min-width: 0;
+  width: 100%;
+  padding: 8px 4px;
+  border: 1px solid #cbd8d2;
+  border-radius: 5px;
+  background: #fff;
+  color: #253e34;
+  font: inherit;
+  font-size: 12px;
+}
+.whole-body-start {
+  width: 100%;
+  justify-content: center;
+  background: #275f53;
+  border-color: #275f53;
+  color: #fff;
+}
+.whole-body-secondary {
+  width: 100%;
+  justify-content: center;
+  margin-top: 6px;
+}
+.whole-body-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 12px 0;
+}
+.whole-body-tags span {
+  padding: 4px 6px;
+  border-radius: 4px;
+  background: #e3ece5;
+  color: #486554;
+  font-size: 9px;
+}
 
-.whole-body-actions { display: flex; gap: 6px; margin-top: 8px; }
-.whole-body-actions button { flex: 1; justify-content: center; }
+.whole-body-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+.whole-body-actions button {
+  flex: 1;
+  justify-content: center;
+}
 
-.pose-draft { position: sticky; top: 0; z-index: 3; padding: 12px; margin: 8px 0 12px; background: #edf6ef; border: 1px solid #9bbbae; border-radius: 8px; font-size: 12px; }
-.pose-draft p { font-size: 11px; line-height: 1.5; }
-.pose-draft-actions { display: flex; gap: 6px; margin-top: 8px; }
+.pose-draft {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  padding: 12px;
+  margin: 8px 0 12px;
+  background: #edf6ef;
+  border: 1px solid #9bbbae;
+  border-radius: 8px;
+  font-size: 12px;
+}
+.pose-draft p {
+  font-size: 11px;
+  line-height: 1.5;
+}
+.pose-draft-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.robot-view-switch {
+  position: absolute;
+  z-index: 4;
+  left: 16px;
+  top: 44px;
+  display: flex;
+  padding: 3px;
+  gap: 3px;
+  border: 1px solid #c7d1cb;
+  background: #f9faf6;
+  border-radius: 8px;
+}
+.robot-view-switch button {
+  border: 0;
+  background: transparent;
+  padding: 7px 12px;
+  border-radius: 5px;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  color: #52625b;
+}
+.robot-view-switch button[aria-pressed="true"] {
+  background: #325e52;
+  color: white;
+}
+.engineering-note {
+  position: absolute;
+  z-index: 3;
+  left: 16px;
+  top: 87px;
+  font-size: 10px;
+  padding: 5px 7px;
+  background: #f7f4e9;
+  color: #66563f;
+  pointer-events: none;
+}

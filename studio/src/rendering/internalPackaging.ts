@@ -36,11 +36,26 @@ export function addInternalPackaging(model: RobotModel, add: AddMesh) {
   for (const p of model.shoulder_packages) {
     const a = new THREE.Vector3(...p.start),
       b = new THREE.Vector3(...p.end);
-    const boundary = a
-      .clone()
-      .add(b.clone().sub(a).normalize().multiplyScalar(p.reducer_length!));
-    segment(p.body, a, boundary, p.radius, "#9da8b0"); // reducer reservation
-    segment(p.body, boundary, b, p.motor_radius!, "#b67747"); // motor reservation
+    // Complete catalog motor/gearbox/driver module; do not invent vendor internals.
+    segment(p.body, a, b, p.radius, "#34414a");
+    const direction = b.clone().sub(a).normalize();
+    for (const end of [a, b])
+      segment(
+        p.body,
+        end.clone().addScaledVector(direction, -0.002),
+        end.clone().addScaledVector(direction, 0.002),
+        p.radius,
+        "#a1aeb5",
+      );
+    // Custom coaxial output coupling between module and the joint carrier.
+    const distance = p.name.includes("elbow") ? 0.025 : 0.075;
+    segment(
+      p.body,
+      a.clone().addScaledVector(direction, -distance + 0.012),
+      a,
+      0.012,
+      "#778d99",
+    );
   }
   for (const p of model.cable_passages) {
     const a = new THREE.Vector3(...p.start),

@@ -1,3 +1,4 @@
+import { addBackbone } from "./rendering/backbone";
 import { addInternalPackaging } from "./rendering/internalPackaging";
 import type { PosePreview } from "./types";
 import { addRobotHardware } from "./rendering/robotHardware";
@@ -201,6 +202,8 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
         mesh.castShadow = true;
         mesh.receiveShadow = true;
         mesh.userData.body = body;
+        if (["#dce3e7", "#e4e6e2", "#e4e6e2"].includes(color))
+          mesh.userData.removableCover = true;
         if (position) mesh.position.fromArray(position);
         bodyGroups[body].add(mesh);
         bodyMaterials.push({ body, material: mat });
@@ -298,6 +301,7 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
         addMesh,
       );
       addInternalPackaging(model, addMesh);
+      addBackbone(model, addMesh);
       const covers: THREE.Object3D[] = [],
         internals: THREE.Object3D[] = [];
       bodyGroups.forEach((group) =>

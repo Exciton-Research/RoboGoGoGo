@@ -45,7 +45,7 @@ export function addResearchRobotDetails(model: RobotModel, add: AddMesh) {
           [0, 0, 0],
         );
         socket.userData.removableCover = true;
-        socket.scale.set(0.08, 0.084, 0.088);
+        socket.scale.set(0.166, 0.166, 0.166);
       }
       const upper = name.endsWith("shoulder");
       const forearm = name.endsWith("elbow");

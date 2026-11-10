@@ -16,6 +16,13 @@ export interface Visual {
   rpy: Vec3;
 }
 export interface PackagingVolume {
+  component?: {
+    model: string;
+    ratio: number;
+    rated_nm: number;
+    mass_kg: number;
+    source: string;
+  };
   name: string;
   body: number;
   start: Vec3;
@@ -55,7 +62,17 @@ export interface RobotModel {
   dtype: string;
   max_samples: number;
 }
+export interface HarnessRoute {
+  name: string;
+  points: Vec3[];
+  radius: number;
+  valid: boolean;
+  min_bend_m: number;
+  bend_limit_m: number;
+  twist_rad_m: number;
+}
 export interface SimState {
+  harness?: HarnessRoute[];
   motion?: {
     status:
       "ready" | "running" | "paused" | "complete" | "cancelled" | "blocked";

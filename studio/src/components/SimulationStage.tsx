@@ -5,7 +5,6 @@ import {
   ArrowDownToLine,
   ArrowRight,
   Axis3D,
-  Box,
   Clock3,
   Grid2X2,
   LoaderCircle,
@@ -94,23 +93,27 @@ export function SimulationStage() {
           </div>
         </div>
         <div className="viewport-wrap">
-          {showInternals && (
-            <div
-              className="viewport-label"
-              style={{
-                position: "absolute",
-                zIndex: 3,
-                top: 42,
-                left: 16,
-                maxWidth: "75%",
-                padding: "6px 8px",
-                background: "#f6f4e9",
-                color: "#66563f",
-                fontSize: 10,
-                pointerEvents: "none",
-              }}
+          <div
+            className="robot-view-switch"
+            role="group"
+            aria-label="Robot visualization mode"
+          >
+            <button
+              aria-pressed={!showInternals}
+              onClick={() => setShowInternals(false)}
             >
-              PACKAGING RESERVATIONS · JOINT HARNESS UNRESOLVED
+              Exterior
+            </button>
+            <button
+              aria-pressed={showInternals}
+              onClick={() => setShowInternals(true)}
+            >
+              Engineering
+            </button>
+          </div>
+          {showInternals && (
+            <div className="engineering-note">
+              Catalog proximal drives · custom structure · harness analysis
             </div>
           )}
           {shown ? (
@@ -172,15 +175,7 @@ export function SimulationStage() {
             >
               <Axis3D size={18} />
             </button>
-            <button
-              className={`icon-button ${showInternals ? "active" : ""}`}
-              aria-label="Toggle internal packaging"
-              aria-pressed={showInternals}
-              title="Inspect assumed drive envelopes and reserved cable passages"
-              onClick={() => setShowInternals(!showInternals)}
-            >
-              <Box size={16} />
-            </button>
+
             <button
               className={`icon-button ${showCameraGuides ? "active" : ""}`}
               aria-label="Toggle camera guidelines"
