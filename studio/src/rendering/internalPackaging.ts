@@ -88,9 +88,14 @@ export function addInternalPackaging(model: RobotModel, add: AddMesh) {
       );
       fitting.material.metalness = 0.05;
     }
-    if (p.kind === "clamp") {
+    if (p.kind === "clamp" || p.kind === "swivel_clamp") {
       fitting.geometry.dispose();
-      const ring = new THREE.TorusGeometry(0.0185, 0.0035, 12, 40);
+      const ring = new THREE.TorusGeometry(
+        p.kind === "swivel_clamp" ? 0.02 : 0.0185,
+        p.kind === "swivel_clamp" ? 0.002 : 0.0035,
+        12,
+        40,
+      );
       ring.rotateX(Math.PI / 2);
       fitting.geometry = ring;
       fitting.material.color.set("#7d919c");

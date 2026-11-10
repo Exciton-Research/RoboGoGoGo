@@ -31,6 +31,29 @@ export function createHarnessVisuals(scene: THREE.Scene) {
       );
       cable.castShadow = true;
       group.add(cable);
+      if (route.name.includes("_shoulder_")) {
+        for (const [i, point] of [
+          points[0],
+          points[points.length - 1],
+        ].entries()) {
+          const normal = route.guide_normals?.[i];
+          if (!normal) continue;
+          const guide = new THREE.Mesh(
+            new THREE.TorusGeometry(0.017, 0.002, 12, 40),
+            new THREE.MeshStandardMaterial({
+              color: "#a1b3bd",
+              metalness: 0.7,
+              roughness: 0.35,
+            }),
+          );
+          guide.position.copy(point);
+          guide.quaternion.setFromUnitVectors(
+            new THREE.Vector3(0, 0, 1),
+            new THREE.Vector3(...normal).normalize(),
+          );
+          group.add(guide);
+        }
+      }
     }
   };
   return {

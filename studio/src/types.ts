@@ -36,7 +36,7 @@ export interface PackagingVolume {
 export interface RobotModel {
   shoulder_packages: PackagingVolume[];
   assembly_parts: (PackagingVolume & {
-    kind: "bracket" | "connector" | "clamp" | "wire";
+    kind: "bracket" | "connector" | "clamp" | "swivel_clamp" | "wire";
   })[];
   cable_passages: PackagingVolume[];
   name: string;
@@ -67,6 +67,8 @@ export interface RobotModel {
   max_samples: number;
 }
 export interface HarnessRoute {
+  guide_normals?: Vec3[];
+  swivel_angles_rad?: number[];
   name: string;
   points: Vec3[];
   radius: number;
