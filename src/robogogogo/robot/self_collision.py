@@ -30,7 +30,7 @@ def mobile_collision_world(model):
     # assembly shares volumes at torso hinges; body/body validation is separate.
     exclusions = list(combinations(body_names, 2))
     for side in ("left", "right"):
-        add(f"{side}_socket", f"{side}_waist", (0, 0, 0), (0, 0, 0), 0.11)
+        add(f"{side}_socket", f"{side}_waist", (0, 0, 0), (0, 0, 0), 0.17)
         add(f"{side}_upper_arm", f"{side}_shoulder", (0.075, 0, 0), (0.245, 0, 0), 0.075)
         add(f"{side}_forearm", f"{side}_elbow", (0.065, 0, 0), (0.215, 0, 0), 0.065)
         add(f"{side}_elbow_cap", f"{side}_elbow", (0, -0.07, 0), (0, 0.07, 0), 0.057)

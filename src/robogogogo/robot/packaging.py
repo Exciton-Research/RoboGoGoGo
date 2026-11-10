@@ -12,31 +12,45 @@ from ..planning.collision import Capsule
 
 
 def shoulder_packages(model):
+    from .components import ARM_COMPONENTS, mounting_offset, mounting_sign
+
     result = []
     for side in ("left", "right"):
-        for suffix in ("waist", "upper_roll", "shoulder"):
+        for suffix in ("waist", "upper_roll", "shoulder", "elbow"):
             body = model.names.index(f"{side}_{suffix}")
-            sign = -1 if side == "right" and suffix == "shoulder" else 1
-            axis = np.asarray(model.orientation[body]) @ np.asarray(model.axis[body]) * sign
+            part = ARM_COMPONENTS[suffix]
+            axis = (
+                np.asarray(model.orientation[body])
+                @ np.asarray(model.axis[body])
+                * mounting_sign(side, suffix)
+            )
             origin = np.asarray(model.origin[body])
+            offset = mounting_offset(suffix)
             result.append(
                 dict(
                     name=f"{side}_{suffix}_drive_package",
                     body=model.parents[body],
-                    start=(origin + axis * 0.05).tolist(),
-                    end=(origin + axis * 0.08).tolist(),
-                    radius=0.023,
-                    motor_radius=0.020,
-                    reducer_length=0.015,
-                    provenance="assumed packaging reservation; no selected components",
+                    start=(origin + axis * offset).tolist(),
+                    end=(origin + axis * (offset + part.length_m)).tolist(),
+                    radius=part.diameter_m / 2,
+                    component=part.to_dict(),
+                    provenance="manufacturer external dimensions; custom mounting interfaces",
                 )
             )
     return result
 
 
 def packaging_capsules(model):
+    # A sphere enclosing each complete finite cylinder. More conservative than
+    # vendor CAD, but it cannot falsely clear intersecting module bodies.
     return [
-        Capsule(p["name"], p["body"], tuple(p["start"]), tuple(p["end"]), p["radius"])
+        Capsule(
+            p["name"],
+            p["body"],
+            tuple((np.array(p["start"]) + p["end"]) / 2),
+            tuple((np.array(p["start"]) + p["end"]) / 2),
+            float(np.hypot(p["radius"], np.linalg.norm(np.array(p["end"]) - p["start"]) / 2)),
+        )
         for p in shoulder_packages(model)
     ]
 

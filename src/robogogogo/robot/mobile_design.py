@@ -10,6 +10,8 @@ import xml.etree.ElementTree as ET
 from copy import deepcopy
 from importlib.resources import files
 
+from .components import ARM_COMPONENTS, mounting_offset, mounting_sign
+
 DESIGN = dict(
     name="RG Mobile Duo · articulated concept",
     architecture="Four steerable wheels, folding torso, two 7-DoF arms, pan/tilt head",
@@ -171,7 +173,9 @@ def mobile_dual_arm_urdf():
         effort=500,
     )
     visual(chest, "box", (0.28, 0.50, 0.28), origin=(0, 0, 0.12))
-    template = ET.fromstring(files("robogogogo").joinpath("assets/mobile_arm_chain.urdf").read_text())
+    template = ET.fromstring(
+        files("robogogogo").joinpath("assets/mobile_arm_chain.urdf").read_text()
+    )
     for side, y in (("left", 0.35), ("right", -0.35)):
         for child in template:
             element = deepcopy(child)
@@ -260,6 +264,29 @@ def mobile_dual_arm_urdf():
         effort=10,
     )
     visual(head, "box", (0.19, 0.26, 0.18))
+    # Add complete proximal actuator masses to the structural concept links.
+    # Their output-side inertia uses a solid-cylinder approximation; vendor
+    # rotor/gear inertia and custom bracket masses are not identified yet.
+    for side in ("left", "right"):
+        for suffix in ("waist", "upper_roll", "shoulder", "elbow"):
+            spec = ARM_COMPONENTS[suffix]
+            item = robot.find(f"joint[@name='{side}_{suffix}_joint']")
+            item.find("limit").set("effort", str(spec.rated_nm))
+            axis = [
+                float(v) * mounting_sign(side, suffix) for v in item.find("axis").get("xyz").split()
+            ]
+            base = [float(v) for v in item.find("origin").get("xyz").split()]
+            center = [
+                o + a * (mounting_offset(suffix) + spec.length_m / 2) for o, a in zip(base, axis)
+            ]
+            name = f"{side}_{suffix}_actuator"
+            actuator = link(name, spec.mass_kg)
+            inertia = actuator.find("inertial/inertia")
+            axial = spec.mass_kg * (spec.diameter_m / 2) ** 2 / 2
+            radial = spec.mass_kg * (3 * (spec.diameter_m / 2) ** 2 + spec.length_m**2) / 12
+            for tag, a in zip(("ixx", "iyy", "izz"), axis):
+                inertia.set(tag, str(axial if abs(a) > 0.5 else radial))
+            joint(f"{name}_mount", item.find("parent").get("link"), name, origin=center)
     ET.indent(robot)
     return ET.tostring(robot, encoding="unicode")
 
