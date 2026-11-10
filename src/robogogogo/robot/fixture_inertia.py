@@ -18,7 +18,11 @@ def add_fixture_inertia(robot, fixtures):
         radius = fixture["radius"]
         axial = added_mass * radius**2 / 2
         radial = added_mass * (3 * radius**2 + length**2) / 12
-        added_tensor = np.eye(3) * radial + np.outer(axis, axis) * (axial - radial)
+        added_tensor = (
+            np.asarray(fixture["local_inertia"])
+            if "local_inertia" in fixture
+            else (np.eye(3) * radial + np.outer(axis, axis) * (axial - radial))
+        )
         tags = (("ixx", "ixy", "ixz"), ("ixy", "iyy", "iyz"), ("ixz", "iyz", "izz"))
         tensor = np.array([[float(inertia.get(tag)) for tag in row] for row in tags])
         combined = (old_center * old_mass + center * added_mass) / (old_mass + added_mass)

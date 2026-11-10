@@ -10,7 +10,7 @@ import xml.etree.ElementTree as ET
 from copy import deepcopy
 from importlib.resources import files
 
-from .components import ARM_COMPONENTS, mounting_mass, mounting_offset, mounting_sign
+from .components import ARM_COMPONENTS, mounting_offset, mounting_sign
 
 DESIGN = dict(
     name="RG Mobile Duo · articulated concept",
@@ -280,7 +280,7 @@ def mobile_dual_arm_urdf():
                 o + a * (mounting_offset(suffix) + spec.length_m / 2) for o, a in zip(base, axis)
             ]
             name = f"{side}_{suffix}_actuator"
-            mass = spec.mass_kg + mounting_mass(suffix)
+            mass = spec.mass_kg
             actuator = link(name, mass)
             inertia = actuator.find("inertial/inertia")
             axial = mass * (spec.diameter_m / 2) ** 2 / 2
@@ -289,9 +289,15 @@ def mobile_dual_arm_urdf():
                 inertia.set(tag, str(axial if abs(a) > 0.5 else radial))
             joint(f"{name}_mount", item.find("parent").get("link"), name, origin=center)
     from .fixture_inertia import add_fixture_inertia
-    from .packaging import harness_fixture_specs
+    from ..urdf import loads
+    from .packaging import assembly_parts, harness_fixture_specs
+    from .shoulder_wiring import cover_mass_specs
 
-    add_fixture_inertia(robot, harness_fixture_specs())
+    # Aggregate custom fittings at their actual host frames, rather than
+    # placing an approximate bracket mass at each actuator's centre.
+    layout = loads(ET.tostring(robot, encoding="unicode")).model
+    fittings = [dict(part, body_name=layout.names[part["body"]]) for part in assembly_parts(layout)]
+    add_fixture_inertia(robot, fittings + harness_fixture_specs() + cover_mass_specs(layout))
     ET.indent(robot)
     return ET.tostring(robot, encoding="unicode")
 

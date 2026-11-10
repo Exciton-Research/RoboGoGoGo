@@ -418,3 +418,36 @@ def fixed_wiring_report(model):
         failures=failures,
         scope="fixed leads, same-host hardware and inner cavities; supplier qualification pending",
     )
+
+
+def cover_mass_specs(model):
+    """Conservative ABS shell mass; overlap seams are counted on both pieces."""
+    fixtures = []
+    for cover in cover_specs(model):
+        a, b = np.array(cover["start"]), np.array(cover["end"])
+        length = np.linalg.norm(b - a)
+        axis = (b - a) / length
+
+        def solid(radius):
+            cylinder = 1200 * np.pi * radius**2 * length
+            sphere = 1200 * 4 * np.pi * radius**3 / 3
+            return np.array(
+                [
+                    cylinder + sphere,
+                    0.5 * cylinder * radius**2 + 0.4 * sphere * radius**2,
+                    cylinder * (3 * radius**2 + length**2) / 12
+                    + sphere * (0.4 * radius**2 + 0.375 * length * radius + 0.25 * length**2),
+                ]
+            )
+
+        mass, axial, radial = solid(cover["radius"]) - solid(cover["inner_radius"])
+        tensor = np.eye(3) * radial + np.outer(axis, axis) * (axial - radial)
+        fixtures.append(
+            dict(
+                **cover,
+                body_name=model.names[cover["body"]],
+                mass_kg=float(mass),
+                local_inertia=tensor.tolist(),
+            )
+        )
+    return fixtures
