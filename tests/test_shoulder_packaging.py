@@ -25,7 +25,7 @@ def test_shoulder_drive_proxies_enclose_hardware_and_check_moving_upper_arms():
     for proxy, package in zip(parts, shoulder_packages(model)):
         center = np.asarray(proxy.start)
         for end in (package["start"], package["end"]):
-            assert np.hypot(np.linalg.norm(np.asarray(end) - center), package["radius"]) <= proxy.radius + 1e-9
+            assert np.hypot(np.linalg.norm(np.asarray(end) - center), package["radius"] + package["cover_allowance_m"]) <= proxy.radius + 1e-9
     guard = mobile_collision_world(model)
     folded = home.copy()
     folded[model.indices[model.names.index("left_upper_roll")]] = np.pi / 2
@@ -63,3 +63,13 @@ def test_brackets_connectors_and_wrist_drives_clear_during_working_motion():
     names = {frozenset((world.capsules[i].name, world.capsules[j].name)) for i, j in world.pairs}
     assert frozenset(("left_wrist_pitch_power_can_connector", "right_hand")) in names
     assert frozenset(("left_wrist_pitch_power_can_connector", "chest_middle")) in names
+
+
+def test_each_shoulder_contains_exactly_three_catalog_motors():
+    model = loads(mobile_dual_arm_urdf()).model
+    packages = shoulder_packages(model)
+    for side in ("left", "right"):
+        motors = [p for p in packages if p["name"].startswith(side + "_") and p["shoulder_axis"]]
+        assert {p["shoulder_axis"] for p in motors} == {"yaw", "roll", "pitch"}
+        assert len(motors) == 3
+        assert all(p["cover_allowance_m"] == 0.004 for p in motors)
