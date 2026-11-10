@@ -23,7 +23,7 @@ def test_shoulder_drive_packages_fit_at_home_but_cannot_pass_through_each_other(
     guard = mobile_collision_world(model)
     assert not guard.edge_free(home, folded)
     for p in parts:
-        # Entire conservative drive capsule fits inside the existing 110 mm socket.
+        # Catalog cylinders use conservative enclosing spheres and enlarged shoulders.
         body = model.names.index(p.name.removesuffix("_drive_package"))
         origin = np.asarray(model.origin[body])
         assert (
@@ -32,7 +32,7 @@ def test_shoulder_drive_packages_fit_at_home_but_cannot_pass_through_each_other(
                 np.linalg.norm(np.asarray(p.end) - origin),
             )
             + p.radius
-            < 0.11
+            < (0.13 if "elbow" in p.name else 0.17)
         )
 
 

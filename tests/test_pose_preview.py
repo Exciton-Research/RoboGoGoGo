@@ -59,8 +59,8 @@ def test_invalid_preview_is_marked_without_moving_and_frozen_coordinates_stay_fi
 def test_trajectory_export_identifies_assumed_actuator_parameters(workspace, tmp_path):
     path = workspace.session.export(tmp_path / "drive.npz")
     with np.load(path, allow_pickle=False) as recording:
-        assert recording["arm_actuator_revision"].item() == "assumed-arm-drive-1"
-        assert "not component-specified" in recording["arm_actuator_provenance"].item()
+        assert recording["arm_actuator_revision"].item() == "catalog-proximal-drive-1"
+        assert "not measured" in recording["arm_actuator_provenance"].item()
         speeds = recording["arm_no_load_speed_rad_s"]
         friction = recording["arm_coulomb_friction_nm"]
         assert speeds.shape == friction.shape == (31,)

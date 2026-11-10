@@ -28,7 +28,7 @@ def inspect_dataset(path):
         manifest = json.loads(archive.read("episode.json"))
     if manifest.get("robot") != dict(id=ROBOT_ID, revision=ROBOT_REVISION):
         raise ValueError(
-            "Learning requires an RG Mobile Duo concept-1 episode; legacy robot data is unsupported"
+            f"Learning requires an RG Mobile Duo {ROBOT_REVISION} episode; legacy robot data is unsupported"
         )
     if manifest["action_spec"].get("dimensions") != SIMULATION_DOF:
         raise ValueError("RG Mobile Duo episodes require 31 simulation coordinates")
