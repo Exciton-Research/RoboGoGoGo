@@ -37,11 +37,26 @@ class CameraInfoSample:
 
 
 @dataclass(frozen=True)
+class TransformSample:
+    """Child-to-parent transform at acquisition time; quaternion order is x,y,z,w."""
+
+    timestamp: float
+    parent_frame: str
+    child_frame: str
+    translation: tuple[float, float, float]
+    quaternion_xyzw: tuple[float, float, float, float]
+    clock_domain: str = ""
+    static: bool = False
+    epoch: str = ""
+
+
+@dataclass(frozen=True)
 class TelemetrySink:
     joints: Callable[[JointSample], None]
     camera: Callable[[CameraSample], None]
     error: Callable[[str], None]
     calibration: Callable[[CameraInfoSample], None] | None = None
+    localization: Callable[[TransformSample], None] | None = None
 
 
 class ReadOnlyBackend(Protocol):
