@@ -16,6 +16,7 @@ from .definition import ROBOT_REVISION
 from .harness import harness_clearance
 from .mobile_design import mobile_dual_arm_urdf, mobile_home
 from .self_collision import mobile_collision_world
+from .shoulder_wiring import branch_specs, cover_mass_specs, fixed_wiring_report
 
 # Roll is outward on each side; all values radians.
 WORKING_RANGES = {
@@ -68,10 +69,16 @@ def audit(count=512, seed=43):
             counts["both_clear"] += 1
         else:
             report = min((rigid, cable), key=lambda r: r.distance)
-            failures.append(dict(case=label, pair=report.pair, clearance_m=report.distance, q=q.tolist()))
+            failures.append(
+                dict(case=label, pair=report.pair, clearance_m=report.distance, q=q.tolist())
+            )
+    fixed = fixed_wiring_report(model)
     return dict(
         revision=ROBOT_REVISION,
-        status="sampled_clear" if not failures else "failed",
+        status="sampled_clear" if not failures and fixed["valid"] else "failed",
+        fixed_wiring=fixed,
+        shoulder_branches=branch_specs(model),
+        service_cover_mass_upper_bound_kg=sum(p["mass_kg"] for p in cover_mass_specs(model)),
         seed=seed,
         ranges_rad=WORKING_RANGES,
         roll_convention="positive outward; negate right upper_roll",
@@ -82,7 +89,8 @@ def audit(count=512, seed=43):
         limitations=[
             "Finite samples, not continuous-space certification or full nominal joint range",
             "Cable routes are quasistatic geometric curves; no cable forces or fatigue model",
-            "Intermediate electrical branches and vendor connector locations need physical qualification",
+            "Shoulder branch geometry is modeled; vendor socket clocking and microloom flex ratings remain unverified",
+            "Cover models are service envelopes with mating openings, not manufacturing CAD",
         ],
     )
 

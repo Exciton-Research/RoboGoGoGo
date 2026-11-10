@@ -103,3 +103,13 @@ def test_cover_shell_inertias_are_positive_and_added_to_model(model):
         assert np.linalg.eigvalsh(part["local_inertia"]).min() > 0
     # Catalog rotor packages no longer absorb arbitrary fixture mass at their centres.
     assert float(model.mass[model.names.index("left_waist_actuator")]) == pytest.approx(0.750)
+
+
+def test_export_does_not_depend_on_simulation_precision():
+    from jax import enable_x64
+
+    with enable_x64(False):
+        single = mobile_dual_arm_urdf()
+    with enable_x64(True):
+        double = mobile_dual_arm_urdf()
+    assert single == double
