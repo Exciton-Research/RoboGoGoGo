@@ -4,6 +4,8 @@ Readiness is based on implemented paths, never on a user-set 'ready' flag.
 Simulation recordings and read-only telemetry do not enable physical execution.
 """
 
+from zipfile import BadZipFile
+
 from robogogogo.data.store import EpisodeStore
 from robogogogo.learning.datasets import inspect_dataset
 from robogogogo.robot.profile import RobotProfile
@@ -15,7 +17,10 @@ class RobotWorkflow:
         self.episodes = EpisodeStore(directory / "episodes")
 
     def validate_episode(self, identifier):
-        return inspect_dataset(self.episodes.archive(identifier))
+        try:
+            return inspect_dataset(self.episodes.archive(identifier))
+        except (BadZipFile, KeyError, TypeError) as error:
+            raise ValueError("Episode archive is malformed or missing required data") from error
 
     def snapshot(self, hardware):
         robot = self.robot.snapshot()

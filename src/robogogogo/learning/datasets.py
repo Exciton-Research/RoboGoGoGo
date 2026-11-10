@@ -15,6 +15,7 @@ def inspect_dataset(path):
     Simulation archives remain simulation data even if their actions came from a policy.
     """
     path = Path(path)
+    before = path.stat()
     with zipfile.ZipFile(path) as archive:
         if archive.getinfo("episode.json").file_size > 20_000_000:
             raise ValueError("Episode manifest exceeds size limit")
@@ -35,6 +36,13 @@ def inspect_dataset(path):
         raise ValueError("Training requires at least one aligned transition")
     with path.open("rb") as stream:
         digest = hashlib.file_digest(stream, "sha256").hexdigest()
+    after = path.stat()
+    if (before.st_ino, before.st_size, before.st_mtime_ns) != (
+        after.st_ino,
+        after.st_size,
+        after.st_mtime_ns,
+    ):
+        raise ValueError("Episode changed during validation; retry with a stable archive")
     return dict(
         id=manifest["id"],
         sha256=digest,

@@ -143,3 +143,12 @@ def test_dual_arm_capture_save_validate_and_reload_workflow(tmp_path):
     workflow = RobotWorkflow(tmp_path)
     assert workflow.episodes.list()[0]["id"] == saved["id"]
     assert workflow.validate_episode(saved["id"])["sha256"] == report.json()["sha256"]
+
+
+def test_malformed_dataset_is_reported_as_validation_error(tmp_path):
+    workflow = RobotWorkflow(tmp_path)
+    workflow.episodes.directory.mkdir()
+    identifier = "00000000-0000-0000-0000-000000000001"
+    workflow.episodes.archive(identifier).write_bytes(b"not an archive")
+    with pytest.raises(ValueError, match="malformed"):
+        workflow.validate_episode(identifier)
