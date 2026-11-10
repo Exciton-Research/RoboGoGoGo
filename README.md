@@ -794,3 +794,77 @@ or a learned motion predictor. It cannot know how an entirely hidden object move
 uncertainty growth and expiration handle that lack of evidence. The bounded ray
 sampling and noise model are approximations, and robot collision checks remain
 independent. Run `pytest tests/test_scene_memory.py` for temporal fusion regressions.
+
+### Read-only real-robot telemetry
+
+Open **Hardware** from the Studio header to monitor real joint states and up to
+eight camera feeds. Hardware telemetry has its own page and API; it does not drive
+the simulation, enable motor commands, feed uncalibrated images into scene memory,
+or change the task controller. No hardware actuation endpoint is implemented.
+
+For ROS 2, source your ROS environment and use a Python interpreter compatible
+with its `rclpy` and `sensor_msgs` installation, with robogogogo's Studio dependencies
+installed. Register the topics when launching Studio:
+
+```bash
+python -m robogogogo.server --port 8765 \
+  --ros-joints /joint_states \
+  --ros-camera head_left=/head/left/image/compressed \
+  --ros-camera head_right=/head/right/image/compressed \
+  --ros-camera wrist_left=/left_wrist/image/compressed
+```
+
+Then open `http://127.0.0.1:8765/hardware/`, select `ros2`, and connect. An optional
+`--ros-domain-id` selects the DDS domain. The adapter subscribes to `JointState`
+and RGB `CompressedImage` PNG/JPEG topics with sensor-data QoS. Raw `Image`,
+compressed depth, `CameraInfo`, TF, recording, and synchronized sensor bundles
+are not implemented in this first hardware integration. ROS 2 is optional and
+imported only when connecting; missing installations produce a visible error.
+See the official [rclpy subscription example](https://github.com/ros2/tutorials/blob/master/rclpy_tutorials/topics/listener_qos_py.py)
+and [sensor message definitions](https://index.ros.org/p/sensor_msgs/).
+
+Manufacturer SDKs use a small trusted Python wrapper implementing
+`TelemetryReader.read(timeout_s)` and `close()`. Return a `JointSample` or `None`
+and a tuple of `CameraSample` values. Register a factory so each connection gets a
+fresh SDK session:
+
+```python
+import uvicorn
+from robogogogo.hardware import SDKBackend
+from robogogogo.studio.api import create_app
+
+# Implement MyTelemetryReader for your manufacturer's read-only API.
+# read() must honor timeout_s; close() must unblock reads and release the client.
+app = create_app(hardware_backends={
+    "lab_robot": lambda: SDKBackend(MyTelemetryReader())
+})
+uvicorn.run(app, host="127.0.0.1", port=8765)
+```
+
+The wrapper must use SI units, preserve joint names/order, and provide sensor
+acquisition timestamps. Optional velocity/effort stays missing rather than becoming
+zero. Only the Python server can register adapter factories; the browser cannot
+load arbitrary modules or choose arbitrary hardware addresses. Vendor wrappers
+are trusted code: they must not enable motors, home the robot, or send commands
+while opening or closing telemetry. No manufacturer-specific SDK is bundled.
+
+Freshness uses the server's monotonic receipt clock (two-second default). Repeated
+or backward source timestamps do not refresh a stream; reconnect after resetting
+the robot clock. Joint and camera streams have independent stale indicators.
+Acquisition timestamps can use different clock domains and do not establish
+synchronization. Camera previews and metadata update independently. Lost browser
+connectivity marks retained values stale; disconnect removes cached telemetry and
+rejects late callbacks from the old adapter. The connection belongs to the server,
+so closing the browser page does not disconnect other observers.
+
+To preview this interface without hardware:
+
+```bash
+.venv/bin/python examples/hardware_monitor.py --port 8773
+```
+
+Select `demo_sdk` on `/hardware/`. Its labeled synthetic joint values and two test
+camera images exercise the same SDK adapter and API. They are not robot measurements.
+Run `pytest tests/test_hardware.py` for contract and integration tests. Real ROS DDS
+connectivity and vendor-specific behavior still require validation on the target
+robot; mock tests do not establish real-hardware readiness.
