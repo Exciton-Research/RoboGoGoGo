@@ -1,0 +1,240 @@
+.page {
+  min-height: 100vh;
+  overflow: auto;
+  background: #f4f5f1;
+  color: #20332c;
+  padding: 0 max(24px, calc((100vw - 1200px) / 2)) 72px;
+  font-family: "DM Sans", sans-serif;
+}
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 28px 0;
+  border-bottom: 1px solid #d8dfd7;
+}
+.brand {
+  font-size: 23px;
+  font-weight: 700;
+  text-decoration: none;
+  letter-spacing: -1px;
+}
+.brand span {
+  color: #698451;
+}
+.header nav {
+  display: flex;
+  gap: 28px;
+}
+.page a {
+  color: #385d42;
+  font-weight: 600;
+  text-underline-offset: 4px;
+}
+.intro {
+  max-width: 720px;
+  padding: 56px 0 36px;
+}
+.eyebrow {
+  font-size: 11px;
+  letter-spacing: 1.7px;
+  font-weight: 700;
+  color: #62765c;
+  margin: 0 0 12px;
+}
+.intro h1 {
+  font-size: clamp(36px, 5vw, 62px);
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: -2px;
+  margin: 0 0 24px;
+}
+.intro > p:last-child {
+  max-width: 610px;
+  line-height: 1.65;
+  color: #5c685f;
+  font-size: 16px;
+}
+.robot {
+  background: #e7ece2;
+  border: 1px solid #d3ddce;
+  padding: 26px;
+  border-radius: 12px;
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 1fr;
+  gap: 30px;
+  align-items: center;
+}
+.robot h2,
+.sectionTitle h2 {
+  font-size: 24px;
+  margin: 0;
+  font-weight: 500;
+}
+.robot p:not(.eyebrow) {
+  font-size: 13px;
+  color: #59675b;
+  line-height: 1.5;
+}
+.robot strong {
+  font-size: 14px;
+}
+.robot a {
+  font-size: 13px;
+}
+.badge {
+  display: inline-block;
+  border: 1px solid #d1d8cd;
+  background: #eef0eb;
+  color: #63705e;
+  border-radius: 5px;
+  font-size: 11px;
+  padding: 5px 8px;
+}
+.badge[data-state="available"] {
+  background: #dcebd7;
+  color: #315830;
+}
+.badge[data-state="blocked"] {
+  background: #f1eee5;
+  color: #7c6d4d;
+}
+.pending {
+  font-size: 13px;
+  line-height: 1.65;
+  color: #687066;
+  margin: 15px 0 30px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 28px;
+}
+.card {
+  border: 1px solid #dce1d8;
+  border-radius: 12px;
+  background: #fff;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  min-height: 236px;
+}
+.cardTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.number {
+  color: #9aaa92;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 14px;
+}
+.card h2 {
+  font-size: 19px;
+  font-weight: 500;
+  margin: 24px 0 12px;
+}
+.card p {
+  font-size: 13px;
+  line-height: 1.7;
+  color: #677164;
+  margin: 0 0 20px;
+}
+.card a {
+  font-size: 13px;
+  margin-top: auto;
+}
+.episodes {
+  margin-top: 52px;
+}
+.sectionTitle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+.sectionTitle a,
+.episodes > p {
+  font-size: 13px;
+}
+.episodes > p {
+  color: #687066;
+  line-height: 1.6;
+}
+.empty {
+  padding: 32px;
+  border: 1px dashed #bfcaba;
+  border-radius: 12px;
+  margin-top: 22px;
+  color: #6a7665;
+  font-size: 14px;
+}
+.episode {
+  margin-top: 14px;
+  background: #fff;
+  border: 1px solid #dce1d8;
+  padding: 20px;
+  border-radius: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 14px;
+}
+.episode h3 {
+  margin: 0;
+  font-size: 15px;
+}
+.episode p {
+  font-size: 12px;
+  color: #687066;
+}
+.actions {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  font-size: 13px;
+}
+.actions button {
+  border: 1px solid #becdb7;
+  border-radius: 6px;
+  padding: 9px 13px;
+  background: #eff3eb;
+  color: #385d42;
+  cursor: pointer;
+}
+.actions button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+.result {
+  width: 100%;
+  overflow-wrap: anywhere;
+}
+.error {
+  padding: 16px;
+  color: #8b4033;
+  background: #f8e7df;
+  border-radius: 8px;
+}
+@media (max-width: 850px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .robot {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+@media (max-width: 560px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  .sectionTitle {
+    align-items: start;
+    flex-direction: column;
+  }
+  .intro {
+    padding-top: 35px;
+  }
+}

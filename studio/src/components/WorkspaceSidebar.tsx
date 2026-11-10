@@ -84,18 +84,16 @@ export function WorkspaceSidebar() {
                 id="embodiment"
                 aria-label="Robot embodiment"
                 disabled={disabled}
-                value={model?.scene ?? "arm"}
+                value={model?.scene ?? "dual_arm_head"}
                 onChange={(e) =>
                   void command("scene", { scene: e.target.value })
                 }
               >
-                <option value="arm">Single arm · 6 joints</option>
-                <option value="dual_arm">Dual arms · 12 joints</option>
                 <option value="dual_arm_head">
                   Dual arms + pan/tilt head · 14 joints
                 </option>
-                {model?.scene === "urdf" && (
-                  <option value="urdf">Imported multi-arm robot</option>
+                {model && model.scene !== "dual_arm_head" && (
+                  <option value={model.scene}>Legacy simulation scene</option>
                 )}
               </select>
             </div>
