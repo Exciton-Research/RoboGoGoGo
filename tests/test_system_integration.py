@@ -17,7 +17,7 @@ cv = pytest.importorskip("cv2")
 
 
 def test_stereo_and_rule_control_roundtrip(tmp_path):
-    with TestClient(create_app(project_dir=tmp_path)) as client:
+    with TestClient(create_app(project_dir=tmp_path, initial_scene="arm")) as client:
         snapshot = client.post("/api/episodes/reset", json={"camera_preset": "head"}).json()
         image = np.full((240, 320, 3), 128, np.uint8)
         _, png = cv.imencode(".png", image)

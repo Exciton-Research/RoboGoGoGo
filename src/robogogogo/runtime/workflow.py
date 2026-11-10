@@ -22,7 +22,14 @@ class RobotWorkflow:
         selected = self.robot.backend is not None and hardware.get("backend") == self.robot.backend
         connected = selected and hardware.get("status") == "streaming"
         perception = hardware.get("perception", {})
-        calibrated = connected and perception.get("state") == "ready"
+        joint_names = set((hardware.get("joints") or {}).get("names", []))
+        camera_names = {camera["name"] for camera in hardware.get("cameras", [])}
+        mappings_match = (
+            not robot["missing"]
+            and set(self.robot.left_joints + self.robot.right_joints).issubset(joint_names)
+            and set(self.robot.cameras).issubset(camera_names)
+        )
+        calibrated = connected and mappings_match and perception.get("state") == "observing"
         episodes = self.episodes.list()
         return dict(
             robot=robot,

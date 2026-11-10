@@ -13,7 +13,7 @@ from typing import Iterator
 
 import numpy as np
 
-from robogogogo.vla import Observation
+from robogogogo.runtime.contracts import Observation
 
 
 @dataclass(frozen=True)

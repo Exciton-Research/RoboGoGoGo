@@ -39,7 +39,9 @@ def png_observation():
 
 @pytest.fixture(scope="module")
 def client(tmp_path_factory):
-    with TestClient(create_app(project_dir=tmp_path_factory.mktemp("vla"))) as c:
+    with TestClient(
+        create_app(project_dir=tmp_path_factory.mktemp("vla"), initial_scene="arm")
+    ) as c:
         yield c
 
 
