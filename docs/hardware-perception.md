@@ -7,13 +7,14 @@ Hardware perception owns a separate scene memory; it cannot command the robot.
 
 ## Deployment prerequisites
 
-- A fixed-base URDF with named fixed, revolute, continuous, or prismatic joints.
+- A rooted URDF with named fixed, revolute, continuous, or prismatic joints.
   Mesh visuals and inertial metadata are ignored for forward kinematics. Floating
-  bases, mimic joints, and unknown joint positions are rejected. A humanoid on a
-  moving base needs a timestamped localization/TF integration that is not yet
-  implemented; do not declare its base fixed to bypass this check.
+  URDF joints, mimic joints, and unknown joint positions are rejected. A moving
+  humanoid supplies the root's six-degree-of-freedom world pose through the
+  timestamped localization chain below; it must not declare its base fixed.
 - Measured optical-camera-to-mount transforms, robot joint zero conventions, and
-  a measured base-to-world transform. Optical axes are +X right, +Y down, +Z forward;
+  either a measured fixed base-to-world transform or an external localization
+  source with verified uncertainty bounds. Optical axes are +X right, +Y down, +Z forward;
   translations are meters, joint angles radians, and prismatic positions meters.
 - At least one horizontal stereo pair with overlapping equal-resolution images.
   Head/wrist pairing is allowed when its actual exposure-time geometry meets these
@@ -57,8 +58,10 @@ Required top-level fields:
 
 - `schema_version`: `1`; `revision`: your immutable calibration identifier.
 - `calibrated_at`: ISO-8601 with timezone; `robot_urdf`: path relative to the profile.
-- `fixed_base`: `true`; `world_frame`: the calibrated world-frame name.
-- `world_from_base`: rigid 4×4 transform mapping base coordinates into world.
+- `fixed_base`: boolean; `world_frame`: the calibrated world-frame name.
+- For `fixed_base: true`, `world_from_base`: rigid 4×4 transform mapping base
+  coordinates into world. For `false`, omit it and supply `localization` below.
+  A static fallback for a moving robot is rejected.
 - `clock_domain`: shared acquisition clock, e.g. `ros` for ROS adapters.
 - `joint_speed_limits`: map of every movable URDF joint name to its verified
   operating speed bound (rad/s or m/s). Joint telemetry may contain extra joints
@@ -124,6 +127,64 @@ loads the profile. A custom callback backend can send `CameraInfoSample` through
 `sink.calibration`; an SDK reader using a deployment-locked profile can omit
 `require_camera_info`. Both routes use the same synchronizer and geometry checks.
 
+## Moving-base localization and ROS 2 TF
+
+Set `fixed_base` to `false` and remove `world_from_base`. The `localization` object
+requires all of these fields; values must come from the deployment's measured
+localization performance and operating envelope:
+
+- `tf_chain`: two to eight unique frame names, starting at `world_frame` and ending
+  at the URDF root, for example `["map", "odom", "base_link"]`. Each consecutive
+  parent/child edge must be published in that direction. Names have no leading `/`.
+- `max_gap_s`: positive maximum dynamic interpolation bracket, at most 0.100 s.
+- `max_age_s`: maximum receipt age of dynamic transforms, at most 0.500 s and no
+  smaller than `max_gap_s`. Static transforms do not expire.
+- `translation_uncertainty_m` and `rotation_uncertainty_rad`: positive conservative
+  bounds for the composed world-to-base estimate, at most 0.050 m and 0.100 rad.
+- `max_linear_speed_m_s` and `max_angular_speed_rad_s`: positive conservative bounds
+  covering every dynamic edge **and** the composed base trajectory, each at most
+  10 in its respective units. Include localization estimator noise in the envelope.
+- `jump_translation_m` and `jump_rotation_rad`: discontinuity thresholds, positive
+  and at most 0.500 m and 1.000 rad. Exceeding a speed bound also triggers a reset.
+
+The CLI automatically subscribes to `/tf` and `/tf_static` for a moving ROS profile.
+The optional `tf2_msgs` package must be available alongside `rclpy` and `sensor_msgs`.
+Only the configured chain enters localization. Static subscriptions request reliable,
+transient-local delivery so existing static transforms can arrive for late subscribers.
+Programmatic `ROS2Backend` integrations can override `tf_topic`, `tf_static_topic`,
+and must pass the profile's `localization_chain`. The CLI uses the standard topics.
+
+This is a bounded explicit-chain TF consumer, not a general `tf2_ros.Buffer` lookup:
+there is no automatic path discovery, inverse-edge lookup, latest-pose substitution,
+or extrapolation. Each dynamic edge stores at most 256 samples. Linear translation
+interpolation and shortest-path quaternion SLERP resolve the chain at **each camera's
+corrected exposure time**. The result composes with interpolated encoders and measured
+optical mounts: world-from-base × base-from-mount × mount-from-optical. Joint TF is
+ignored; the URDF and encoder history are the single source for head/wrist kinematics.
+At least one localization edge must be dynamic, even while the robot is stationary.
+
+A custom SDK callback backend sends `TransformSample` to `sink.localization`, with
+parent/child frames, acquisition timestamp, translation in meters, normalized
+quaternion in `(x, y, z, w)` order, shared `clock_domain`, and a `static` flag. Optional
+`epoch` identifies a provider's map revision; change it when relocalization changes
+coordinates. The simple polling SDK reader does not produce transforms itself.
+
+A forward pose jump, changed static transform, or changed provider epoch immediately
+invalidates exported geometry, clears queued observations, and begins a new memory
+epoch. Fusion resumes only with fresh, synchronized inputs in that epoch. Changed
+parents, conflicting transforms at one timestamp, invalid poses, clock rollback,
+and ambiguous out-of-order discontinuities latch a fault until reconnect. Missing
+or stale TF temporarily blocks fusion and scene export; it never substitutes a
+fixed pose. Consumers must discard cached geometry when `localization_epoch` changes.
+
+TF supplies poses, not covariance or localization validity. Configured uncertainty
+bounds are deployment assumptions, not live quality estimates. Supply poses only
+while the external estimator is valid and reconnect or change the SDK epoch when a
+map revision cannot be detected as a jump. Small gradual map corrections can remain
+below discontinuity thresholds; this implementation does not deform or reproject old
+maps. Prefer a continuous local world frame where appropriate. SLAM, visual-inertial
+odometry, map optimization, and humanoid balance/walking control remain external.
+
 ## Synchronization and uncertainty behavior
 
 Each camera gets a bounded acquisition-time queue; joint history is bounded too.
@@ -143,7 +204,9 @@ history are rejected. These bounds do not prove absolute acquisition latency.
 
 Images are undistorted before stereo. A conservative scalar uncertainty budget
 adds stereo disparity error, static calibration error, speed-bounded pose error
-from joint interpolation/timing, and bounded scene motion. Translational and
+from joint interpolation/timing, and bounded scene motion. Moving localization adds
+composed pose uncertainty and interpolation/timing bounds, including upstream
+rotation acting on downstream TF translations and camera lever arms. Translational and
 rotational uncertainty also enter the triangulation error, which grows with range
 and decreasing stereo baseline. Depth above 20 mm
 uncertainty is discarded. This model is an engineering bound under the configured
@@ -155,31 +218,37 @@ fabricated timestamp.
 ## Studio and downstream consumers
 
 Hardware → **Calibration & synchronization** shows revision/digest, clock/world
-frames, skew, joint bracket, camera mount details, rejected/dropped samples, and
+frames, skew, joint/TF brackets, localization chain/health and memory epoch/reset
+reason, camera mount details, rejected/dropped samples, and
 memory uncertainty. Preview freshness and fusion readiness are separate states.
 `GET /api/hardware/scene` exports the bounded world-frame samples, per-sample
 uncertainty, confidence, last-seen times, calibration digest, and whether the current
-bundle produced depth. It returns HTTP 409 if the session is unconfigured, faulted,
-or older than 0.5 s. This is a read-only geometry API, not action authorization.
+bundle produced depth and its `localization_epoch`. It returns HTTP 409 if the
+session is unconfigured, faulted, localization is unavailable/stale, or the scene
+is older than 0.5 s. This is a read-only geometry API, not action authorization.
 
 Per-connection audit directories under `runs/studio/hardware/` hold the exact
 profile, URDF, digest manifest, and rotating JSONL records (10 MB × 3 files).
 Records include source image hashes/timestamps, interpolated joints, optical poses,
-rejection reasons, and memory statistics. Images are not stored: this is provenance,
+localization edge brackets, world-from-base poses, memory epochs, rejection reasons,
+and memory statistics. Images are not stored: this is provenance,
 not a complete replay dataset. Archived profiles retain their original URDF path;
 use the manifest's archived URDF with the `CalibrationProfile(document, robot_xml)`
 constructor to reproduce its digest independently of that original path.
 
 ## Validation boundary
 
-Run `pytest tests/test_hardware_perception.py tests/test_intrinsic_calibration.py`.
+Run `pytest tests/test_hardware_localization.py tests/test_hardware_perception.py
+tests/test_intrinsic_calibration.py tests/test_hardware.py`.
 These tests include numerical camera/robot fixtures, actual OpenCV stereo and
 calibration algorithms, timing rejection, uncertainty/pose-budget checks, and API
 lifecycle tests. They do not replace target-hardware validation: independently
 measure transforms and clock alignment, verify reconstructed stationary geometry
-while moving the wrists, and test transport loss before using the memory for any
+while moving the base, head and wrists, and test relocalization and transport loss before using the memory for any
 physical control. Hardware motion remains outside this integration.
 
 References: [ROS CameraInfo conventions](https://github.com/ros2/common_interfaces/blob/rolling/sensor_msgs/msg/CameraInfo.msg),
 [ROS timestamp synchronization](https://github.com/ros2/message_filters/blob/rolling/doc/index.rst),
 [OpenCV calibration](https://docs.opencv.org/4.8.0/d9/d0c/group__calib3d.html).
+
+Static TF QoS reference: [ROS 2 static listener QoS](https://docs.ros.org/en/rolling/p/tf2_ros/generated/classtf2__ros_1_1StaticListenerQoS.html).

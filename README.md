@@ -880,5 +880,9 @@ of camera preview. No simulation pose or synthetic depth is used by this path.
 The [hardware calibration and synchronization guide](docs/hardware-perception.md)
 covers checkerboard intrinsic calibration with held-out validation, measured mount
 transforms, clock-domain requirements, ROS CameraInfo validation, profile setup,
-uncertainty rejection, scene export, and audit records. Hardware remains read-only;
-fixed-base kinematics is required until timestamped moving-base localization is added.
+uncertainty rejection, scene export, and audit records. Moving robots can consume
+an explicit ROS 2 `/tf` and `/tf_static` localization chain at camera exposure time,
+composed with encoder-based head/wrist poses. Studio reports localization freshness,
+TF brackets and memory epochs; relocalization invalidates old geometry. This consumes
+an external localization estimator and does not implement SLAM or walking control.
+Hardware remains read-only; deployment still requires target-robot validation.
