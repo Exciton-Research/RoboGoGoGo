@@ -197,7 +197,7 @@ def mobile_dual_arm_urdf():
                 for item in list(element.findall("visual")):
                     element.remove(item)
             if element.tag == "joint":
-                short_offsets = {"wrist_pitch": 0.04, "tool_roll": 0.10, "tool": 0.13}
+                short_offsets = {"wrist_pitch": 0.055, "tool_roll": 0.10, "tool": 0.13}
                 for suffix, offset in short_offsets.items():
                     if element.attrib["name"] == f"{side}_{suffix}_joint":
                         element.find("origin").set("xyz", f"{offset} 0 0")
@@ -205,7 +205,7 @@ def mobile_dual_arm_urdf():
                 segments = {
                     "shoulder": (0.32, 0.075),
                     "elbow": (0.28, 0.065),
-                    "wrist_roll": (0.04, 0.043),
+                    "wrist_roll": (0.055, 0.043),
                     "wrist_pitch": (0.10, 0.043),
                     "tool_roll": (0.13, 0.04),
                 }

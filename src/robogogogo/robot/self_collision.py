@@ -34,7 +34,7 @@ def mobile_collision_world(model):
         add(f"{side}_upper_arm", f"{side}_shoulder", (0.075, 0, 0), (0.245, 0, 0), 0.075)
         add(f"{side}_forearm", f"{side}_elbow", (0.065, 0, 0), (0.215, 0, 0), 0.065)
         add(f"{side}_elbow_cap", f"{side}_elbow", (0, -0.07, 0), (0, 0.07, 0), 0.057)
-        add(f"{side}_wrist_roll", f"{side}_wrist_roll", (0, 0, 0), (0.04, 0, 0), 0.044)
+        add(f"{side}_wrist_roll", f"{side}_wrist_roll", (0, 0, 0), (0.055, 0, 0), 0.044)
         add(f"{side}_wrist_pitch", f"{side}_wrist_pitch", (0, 0, 0), (0.10, 0, 0), 0.044)
         add(f"{side}_wrist_tip", f"{side}_tool_roll", (0, 0, 0), (0.13, 0, 0), 0.041)
         add(f"{side}_hand", f"{side}_tool", (0.015, 0, 0), (0.12, 0, 0), 0.045)
@@ -57,9 +57,24 @@ def mobile_collision_world(model):
     from .packaging import packaging_capsules, assembly_capsules
 
     internals = packaging_capsules(model) + assembly_capsules(model)
-    # Each package is enclosed by its existing socket envelope. Comparing it
-    # against that robot's outer structural envelopes would double-count designed
-    # containment. Inter-package pairs remain active, including adjacent axes.
-    exclusions.extend((part.name, shell.name) for part in internals for shell in capsules)
+    # Exempt only named local mating/containing envelopes, never the opposite
+    # arm or remote body parts. Internal parts still check other drive assemblies.
+    containing = {
+        "waist": ("socket", "upper_arm"),
+        "upper_roll": ("socket", "upper_arm"),
+        "shoulder": ("socket", "upper_arm"),
+        "elbow": ("upper_arm", "forearm", "elbow_cap"),
+        "wrist_roll": ("forearm", "wrist_roll", "wrist_pitch"),
+        "wrist_pitch": ("wrist_roll", "wrist_pitch", "wrist_tip"),
+        "tool_roll": ("wrist_pitch", "wrist_tip", "hand"),
+    }
+    for part in internals:
+        side = part.name.split("_", 1)[0]
+        suffix = next(key for key in containing if part.name.startswith(f"{side}_{key}_"))
+        for shell in containing[suffix]:
+            exclusions.append((part.name, f"{side}_{shell}"))
+        if suffix in ("waist", "upper_roll", "shoulder"):
+            for chest in ("chest_lower", "chest_middle", "chest_upper"):
+                exclusions.append((part.name, chest))
     capsules.extend(internals)
     return CollisionWorld(model, capsules, margin=0.012, excluded_capsule_pairs=exclusions)
