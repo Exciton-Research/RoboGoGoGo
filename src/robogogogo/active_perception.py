@@ -6,9 +6,10 @@ requires a new measured observation after the camera has settled.
 
 import numpy as np
 
+from robogogogo.robot.cameras import world_camera_pose
+
 from . import spatial as sp
 from .planning.motion import PlanningError
-from .vla.cameras import world_camera_pose
 
 
 class ActivePerception:

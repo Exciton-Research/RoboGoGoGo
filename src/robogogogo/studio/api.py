@@ -15,7 +15,8 @@ from pydantic import BaseModel
 from starlette.background import BackgroundTask
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from ..hardware import HardwareService
+from robogogogo.robot import HardwareService
+
 from ..simulation.structural_lab import StructuralLab
 from .schemas import (
     CameraObservation,

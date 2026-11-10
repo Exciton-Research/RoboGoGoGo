@@ -50,7 +50,7 @@ class CameraSpec(Payload):
         import numpy as np
 
         if self.rpy is not None:
-            from ..vla.cameras import mounting_vectors
+            from robogogogo.robot.cameras import mounting_vectors
 
             forward, up = mounting_vectors(self.rpy)
             self.look_at = tuple(np.asarray(self.position) + forward)

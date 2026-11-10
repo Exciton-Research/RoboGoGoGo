@@ -13,11 +13,12 @@ from uuid import UUID, uuid4
 import jax.numpy as jnp
 import numpy as np
 
+from robogogogo.data.recording import Episode
+from robogogogo.robot.cameras import mounted_rig
+
 from .. import models, urdf
 from .. import spatial as sp
 from ..session import Session
-from ..vla import Episode
-from ..vla.cameras import mounted_rig
 from .episodes import EpisodeService
 from .schemas import CameraSpec, Command, NewEpisode, Project
 

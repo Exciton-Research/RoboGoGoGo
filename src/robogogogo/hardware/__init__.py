@@ -1,15 +1,16 @@
-"""Optional, read-only physical robot telemetry interfaces."""
+"""Compatibility exports; new integrations use robogogogo.robot."""
 
-from .contracts import (
+from robogogogo.robot import (
     CameraInfoSample,
     CameraSample,
+    HardwareService,
     JointSample,
     ReadOnlyBackend,
+    SDKBackend,
+    TelemetryReader,
     TelemetrySink,
     TransformSample,
 )
-from .sdk import SDKBackend, TelemetryReader
-from .service import HardwareService
 
 __all__ = [
     "CameraInfoSample",

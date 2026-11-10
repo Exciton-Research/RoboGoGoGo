@@ -4,10 +4,11 @@ from dataclasses import asdict, replace
 
 import numpy as np
 
+from robogogogo.runtime.supervisor import ControlSystem
+
 from ..contracts import Observation
 from ..planning import CollisionWorld, SphereObstacle, adjacent_exclusions, capsules_from_visuals
 from ..planning.task import TaskExecutor, plan_shared_inspection
-from ..system import ControlSystem
 from .schemas import PolicyAction
 
 

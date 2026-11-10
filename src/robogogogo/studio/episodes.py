@@ -7,8 +7,9 @@ from typing import TYPE_CHECKING
 import jax.numpy as jnp
 import numpy as np
 
+from robogogogo.robot.cameras import mounted_rig
+
 from .. import spatial as sp
-from ..vla.cameras import mounted_rig
 from .schemas import CameraObservation, CameraSpec, NewEpisode, PolicyAction
 
 if TYPE_CHECKING:
@@ -170,9 +171,10 @@ class EpisodeService:
             return workspace.cached
 
     def rule_action(self):
+        from robogogogo.runtime.policies import ReachPolicy
+        from robogogogo.runtime.supervisor import ControlSystem
+
         from ..contracts import Observation
-        from ..policies import ReachPolicy
-        from ..system import ControlSystem
 
         workspace = self.workspace
         with workspace.lock:

@@ -52,7 +52,7 @@ def main():
     if args.ros_camera and not args.ros_joints:
         parser.error("--ros-camera requires --ros-joints")
     if args.ros_joints:
-        from .hardware.ros2 import ROS2Backend
+        from robogogogo.robot.ros2 import ROS2Backend
 
         cameras = {}
         for entry in args.ros_camera:
@@ -83,7 +83,7 @@ def main():
             ),
         )
     if args.hardware_profile:
-        from .hardware.calibration import CalibrationProfile
+        from robogogogo.robot.calibration import CalibrationProfile
 
         try:
             profiles["ros2"] = CalibrationProfile.load(args.hardware_profile)
