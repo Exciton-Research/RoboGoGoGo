@@ -124,6 +124,39 @@ def routed_curve(a, d, u, v, length, samples=65):
     return max(candidates, key=lambda item: (item[2], item[1]))
 
 
+def swivel_route(a, d, u, v, length):
+    """Route through two passive fairleads with a 45 degree angular envelope.
+
+    Fairleads change tangent direction, not endpoints, cable length or bend limit.
+    The collision envelope includes the entire swivel ring at every orientation.
+    """
+    a, d, u, v = (np.asarray(value, float) for value in (a, d, u, v))
+    chord = d - a
+    chord /= max(np.linalg.norm(chord), 1e-12)
+    normal = u + v
+    normal -= chord * np.dot(normal, chord)
+    if np.linalg.norm(normal) < 1e-9:
+        points, bend, valid = routed_curve(a, d, u, v, length)
+        return points, bend, valid, (u, v), (0.0, 0.0)
+    normal /= np.linalg.norm(normal)
+    candidates = []
+    for degrees in (-30.0, -15.0, 0.0, 15.0, 30.0):
+        angle = np.deg2rad(degrees)
+        first = normal * np.cos(angle) + chord * np.sin(angle)
+        last = normal * np.cos(angle) - chord * np.sin(angle)
+        deflections = [
+            float(np.arccos(np.clip(np.dot(x, y), -1, 1))) for x, y in ((u, first), (v, last))
+        ]
+        if max(deflections) > np.pi / 4:
+            continue
+        points, bend, valid = _routed_curve(a, d, first, last, length)
+        candidates.append((points, bend, valid, (first, last), deflections))
+    if not candidates:
+        points, bend, valid = routed_curve(a, d, u, v, length)
+        return points, bend, valid, (u, v), (0.0, 0.0)
+    return max(candidates, key=lambda item: (item[2], item[1]))
+
+
 def harness_routes(model, q, pose):
     result = []
     for span in harness_spans():
@@ -134,7 +167,13 @@ def harness_routes(model, q, pose):
             rotation = np.asarray(pose.rotation[body])
             endpoints.append(np.asarray(pose.position[body]) + rotation @ anchor)
             normals.append(rotation @ span["normals"][endpoint])
-        points, bend, feasible = routed_curve(*endpoints, *normals, span["length_m"])
+        guide_angles = (0.0, 0.0)
+        if span["owner"].endswith("_shoulder"):
+            points, bend, feasible, normals, guide_angles = swivel_route(
+                *endpoints, *normals, span["length_m"]
+            )
+        else:
+            points, bend, feasible = routed_curve(*endpoints, *normals, span["length_m"])
         # Conservative total joint excursion, including wrist camera/tool leads.
         twist = (
             sum(
@@ -154,6 +193,8 @@ def harness_routes(model, q, pose):
                 twist_rad_m=twist,
                 valid=feasible and bend >= MIN_BEND and twist <= np.pi,
                 length_valid=feasible,
+                swivel_angles_rad=list(guide_angles),
+                guide_normals=[np.asarray(n).tolist() for n in normals],
                 source=CABLE_SOURCE,
                 can_source=CAN_SOURCE,
                 attachments=[f"{span['owner']}_harness_{i}" for i in (0, 1)],

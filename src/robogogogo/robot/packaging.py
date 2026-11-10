@@ -198,7 +198,13 @@ def harness_fixture_specs():
                     ("support_tip", outside, anchor, 0.004, "bracket"),
                 ]
             for tag, a, b, radius, kind in supports + [
-                ("clamp", anchor - normal * 0.01, anchor + normal * 0.01, 0.022, "clamp")
+                (
+                    "clamp",
+                    anchor - normal * 0.01,
+                    anchor + normal * 0.01,
+                    0.022,
+                    "swivel_clamp" if span["owner"].endswith("_shoulder") else "clamp",
+                )
             ]:
                 fixtures.append(
                     dict(
@@ -210,7 +216,7 @@ def harness_fixture_specs():
                         radius=radius,
                         kind=kind,
                         mass_kg=0.025
-                        if kind == "clamp"
+                        if kind in ("clamp", "swivel_clamp")
                         else float(np.pi * 0.004**2 * np.linalg.norm(b - a) * 2700),
                         provenance="custom split clamp and link-mounted aluminum standoff",
                     )
