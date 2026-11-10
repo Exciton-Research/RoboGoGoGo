@@ -276,3 +276,79 @@ def test_profile_rejects_unknown_fields_and_invalid_dates():
     d["calibrated_at"] = "2026-11-09"
     with pytest.raises(ValueError, match="timezone"):
         CalibrationProfile(d, XML)
+
+
+def test_measured_camera_offsets_align_acquisition_times():
+    d = document()
+    d["cameras"]["wrist"]["time_offset_s"] = 0.002
+    sync = Synchronizer(CalibrationProfile(d, XML))
+    sync.add(joint(1), 0)
+    sync.add(joint(1.02), 0.01)
+    sync.add(frame("head", 1.01), 0.02)
+    sync.add(frame("wrist", 1.008), 0.03)
+    assert sync.next(0.04).skew_s == pytest.approx(0, abs=1e-12)
+
+
+def test_discontinuous_encoder_motion_is_not_interpolated():
+    sync = Synchronizer(profile())
+    sync.add(joint(1, 0), 0)
+    sync.add(joint(1.02, 0.1), 0.01)
+    with pytest.raises(ValueError, match="velocity"):
+        sync.interpolate(1.01)
+
+
+def test_studio_fuses_only_profiled_hardware_and_faults_on_calibration_change(tmp_path):
+    import time
+
+    from fastapi.testclient import TestClient
+
+    from robogogogo.studio.api import create_app
+
+    class Backend:
+        def start(self, sink):
+            self.sink = sink
+
+        def close(self):
+            self.closed = True
+
+    backend = Backend()
+    app = create_app(
+        project_dir=tmp_path,
+        hardware_backends={"robot": lambda: backend},
+        hardware_profiles={"robot": profile()},
+    )
+    with TestClient(app) as client:
+        assert client.get("/api/hardware/scene").status_code == 409
+        client.post("/api/hardware/connect", json={"backend": "robot"}).raise_for_status()
+        left, right = textured_frames()
+        backend.sink.joints(joint(1))
+        backend.sink.camera(frame("head", 1.01, left))
+        backend.sink.camera(frame("wrist", 1.01, right))
+        # Future encoder sample enables interpolation, not extrapolation.
+        backend.sink.joints(joint(1.02))
+        deadline = time.monotonic() + 2
+        while time.monotonic() < deadline:
+            if client.get("/api/hardware").json()["perception"].get("bundles", 0):
+                break
+            time.sleep(0.01)
+        scene = client.get("/api/hardware/scene")
+        assert scene.status_code == 200 and scene.json()["points"]
+        assert scene.json()["has_current_depth"]
+        camera = document()["cameras"]["head"]
+        backend.sink.calibration(
+            CameraInfoSample(
+                "head",
+                "wrong_optical",
+                192,
+                96,
+                camera["intrinsics"],
+                camera["distortion"],
+                "plumb_bob",
+            )
+        )
+        assert client.get("/api/hardware/scene").status_code == 409
+        assert client.get("/api/hardware").json()["perception"]["state"] == "fault"
+        client.post("/api/hardware/disconnect", json={}).raise_for_status()
+        assert client.get("/api/hardware/scene").status_code == 409
+    assert backend.closed
+    assert list((tmp_path / "hardware").glob("*/manifest.json"))

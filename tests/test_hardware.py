@@ -242,17 +242,25 @@ def test_ros_backend_subscribes_and_cleans_up_owned_context(monkeypatch):
         "rclpy.executors": SimpleNamespace(SingleThreadedExecutor=Executor),
         "rclpy.qos": SimpleNamespace(qos_profile_sensor_data=object()),
         "sensor_msgs": SimpleNamespace(),
-        "sensor_msgs.msg": SimpleNamespace(JointState=object(), CompressedImage=object()),
+        "sensor_msgs.msg": SimpleNamespace(
+            JointState=object(), CompressedImage=object(), CameraInfo=object()
+        ),
     }
     for name, module in modules.items():
         monkeypatch.setitem(sys.modules, name, module)
     service = HardwareService(
-        {"ros2": lambda: ROS2Backend(cameras={"head": "/head/image/compressed"}, domain_id=5)}
+        {
+            "ros2": lambda: ROS2Backend(
+                cameras={"head": "/head/image/compressed"},
+                domain_id=5,
+                camera_info_topics={"head": "/head/camera_info"},
+            )
+        }
     )
     service.connect("ros2")
     assert initialized[0]["domain_id"] == 5
     callbacks = dict(nodes[0].subscriptions)
-    assert set(callbacks) == {"/joint_states", "/head/image/compressed"}
+    assert set(callbacks) == {"/joint_states", "/head/image/compressed", "/head/camera_info"}
     header = SimpleNamespace(stamp=SimpleNamespace(sec=1, nanosec=0), frame_id="robot")
     callbacks["/joint_states"](
         SimpleNamespace(header=header, name=["joint1"], position=[0.1], velocity=[], effort=[])
