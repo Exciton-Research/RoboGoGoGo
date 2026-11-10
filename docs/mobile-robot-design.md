@@ -78,8 +78,9 @@ robot. In particular:
   to 0.35 rad/s and reduced near targets using a stopping-distance estimate.
   Arm self-collision paths are checked using conservative envelopes and adaptive
   subdivision. This does not certify physical hardware or environmental clearance.
-- Masses and box-approximation inertias are assumptions; there is no motor sizing,
-  structural analysis, cable routing, power design or manufacturing CAD.
+- Structural masses and inertias remain assumptions. Proximal catalog actuators
+  and sampled cable routing are integrated below; structural analysis, complete
+  electrical design and manufacturing CAD remain unfinished.
 - Gripper fingers are cosmetic in this concept, not independently actuated contact
   geometry. Earlier contact experiments do not validate this mobile mechanism.
 - Posture presets pass self-collision checks but are not hardware stability-certified. Automated task
@@ -247,72 +248,83 @@ recordings, or controller state. Its outline is hidden from RGB/depth capture;
 recorded observations always depict the actual simulated robot.
 
 
-### Arm actuator assumptions
+### Catalog proximal drives and 1 kg payload target
 
-The mobile integration path applies `assumed-arm-drive-1` at every physics
-substep. Requested motor torque is limited by the URDF effort cap and a linear
-motoring torque-speed envelope. Full peak torque remains available for braking;
-there is no artificial joint velocity clamp. Smooth Coulomb gearbox friction is
-an external dissipative joint force, in addition to the existing viscous damping.
-The nominal inverse-dynamics controller compensates estimated friction before
-actuator saturation. The estimate currently equals the assumed plant value;
-robustness to identification error has not been established. Recorded torque is delivered motor
-torque, excluding passive friction; a control sample records the last substep,
-not every intervening torque sample.
+Robot revision `engineering-1` uses `catalog-proximal-drive-1`. Each arm selects:
 
-Assumed output no-load speeds are 3 rad/s for shoulder axes, 3.5 for elbows and 5
-for wrists. Coulomb friction is respectively 0.12, 0.08 and 0.025 N m, smoothed over
-0.02 rad/s. These are provisional output-side values, not selected motors or
-measurements. Thermal limits, bus voltage, backlash, compliance and true stiction
-remain unmodeled. Base, torso and head retain their previous actuator models.
-Trajectory and episode NPZ exports include the revision, provenance and parameter
-arrays so data collected under these assumptions can be identified.
+- Shoulder yaw and elbow: [CubeMars AK60-39 V3.0 KV80](https://www.cubemars.com/product/ak60-39-v3-0-kv80-robotic-actuator.html),
+  79 mm diameter × 67 mm length, 750 g, 39:1 planetary, 24 N m continuous.
+- Shoulder roll and pitch: [CubeMars AK80-64 KV80](https://www.cubemars.com/product/ak80-64-kv80-robotic-actuator.html),
+  98 mm diameter × 61.9 mm length, 850 g, 64:1 planetary, 48 N m continuous.
+- Wrist candidate: [CubeMars AK45-36 V3.0 KV80](https://www.cubemars.com/product/ak45-36-v3-0-kv80-robotic-actuator.html).
+  Its 55 × 56.5 mm package is **not integrated** into the compact wrist yet;
+  wrist masses, speed and torque limits retain their prior assumptions.
 
-### Shoulder and elbow assembly frames
+These integrated motor/gearbox units replace proximal placeholder volumes.
+Catalog mass is attached to the parent of each driven joint, with solid-cylinder
+inertia, in addition to assumed structural masses. External dimensions drive the
+inspection geometry and conservative enclosing collision volumes. Custom output
+couplings bridge the offset units to the co-located shoulder axes; their detailed
+bearings, mounts and structural sizing still require engineering CAD.
 
-The detailed shoulder and elbow housings are mounted to the parent link using
-URDF joint origin and rest orientation. Output flanges, shaft plugs and bolt
-circles belong to the child link. The paired index marks therefore show relative
-joint rotation rather than rotating the entire motor housing with its output.
-Meshes consume the physics link transforms; no independent animation drives them.
+With 1 kg applied at each tool at full extension, the current static calculation
+requires approximately 29.6 N m shoulder pitch and 10.5 N m elbow torque. Tests
+require at least 20% static reserve across the arms. This does not establish
+acceleration capacity, thermal duty cycle, impact tolerance or fatigue life.
 
-The stepped casings, seals and flange details represent output-side reducer and
-bearing packaging. Co-located shoulder axes remain a kinematic concept: internal
-motor placement, bearing loads, transmissions, cable routing and packaging
-interference are not yet mechanically validated. These details do not introduce
-additional mass or contacts; existing aggregate link inertias and collision
-capsules remain the physical model.
+Every physics substep limits torque to continuous URDF ratings and an assumed
+linear torque-speed envelope using catalog no-load speeds. Braking retains the
+continuous torque cap. Coulomb friction remains assumed (0.12 N m shoulder,
+0.08 elbow, 0.025 wrist), with nominal controller compensation before saturation.
+Voltage dynamics, backlash, compliance and thermal behavior are not modeled.
+Recorded torque is delivered motor torque, excluding passive friction, at the
+last substep of each control sample. Exported drive revision and provenance
+identify these assumptions; prior robot-revision datasets are rejected.
 
-Run the frame checks with
-`node --experimental-strip-types --test studio/tests/armActuator.test.mjs`.
-The mobile dynamics tests also verify zero-effort gravity response, inability of
-position commands to move unpowered motors directly, bounded powered gravity
-holding, tire traction and coordinated reaching.
+### Exterior and Engineering views
 
-### Internal packaging reservations
+Studio has explicit **Exterior** and **Engineering** buttons. Exterior displays
+removable shells over the dimensioned modules. Engineering exposes catalog
+actuators, custom output shafts, structural rails and cable passages. Structural
+rails and flange details are concept geometry, not load-qualified manufactured
+parts. Both views use the same physics transforms; there is no independent joint
+animation. RGB/depth observations retain the exterior, regardless of inspection
+mode. External cable loops remain visible in both modes and camera observations.
 
-The rear torso grille was removed: it had no cooling or electronics function.
-Studio's **Toggle internal packaging** button now exposes backend-defined motor
-(copper), reducer (silver), rigid cable-passage (blue) and bundle (amber) volumes.
-These are dimensioned reservations, not selected motors, functional gearbox
-teeth, or manufacturing CAD. RGB/depth observations always retain normal covers;
-the inspection display does not change recorded images or physical geometry.
+The rear decorative grille remains removed. Module covers are fitted around the
+selected external dimensions; internal gearbox teeth are not invented from
+unknown manufacturer internals. Conservative module collision envelopes check
+adjacent drives and reject incompatible poses; containing structural shells are
+excluded from their own internal collision pairs. This does not certify every
+mechanical interface or the full nominal joint range.
 
-Each shoulder axis reserves a 30 mm axial drive stack starting 50 mm from its
-joint center, with a 46 mm reducer diameter and 40 mm motor diameter. A conservative
-capsule surrounds the complete stack and fits within the existing 110 mm-radius
-socket envelope. Internal stack pairs are checked with the existing 12 mm planning
-reserve, including across adjacent shoulder axes. Their own containing outer
-shells are excluded; outer-shell collision checks still protect against other
-robot parts. Large shoulder roll can make stacks interfere and is now rejected.
-The prior kinematic joint limits are not a claim that this packaging supports the
-entire range. Motor torque capability, thermal design, shaft/bearing interfaces
-and mass distribution have not been validated against these reservations.
+### Moving cable routing
 
-Upper arm and forearm links reserve straight 12 mm-diameter passages for a
-6 mm-diameter cable bundle, leaving 3 mm radial clearance. Ferrules mark the ends
-of the reserved rigid runs. **There is no completed joint-crossing harness.**
-Service loops, bend/twist life, connector dimensions, strain relief and routing
-through reducers remain unresolved and are labeled that way in Studio. No fake
-flexible wire animation or assumed collision-free harness is shown. Actual part
-selection and joint harness design must precede a manufacturing-ready claim.
+Eight proximal joint service loops use constant-length 0.70 m cubic centrelines,
+with a 30 mm dress-pack envelope. Shoulder-roll loops route aft to clear extended
+forearms. Straight rigid passages have 36 mm internal diameter. Endpoint clamps
+are shown, but supporting brackets and complete terminal-to-terminal routing
+remain unfinished.
+
+The cable selection is separately fused 48 V power branches, a separate 24 V
+wrist supply and a dedicated CAN cable. Power routing uses
+[igus CFROBOT2.07.04.C](https://www.igus.it/contentData/Product_Files/Download/pdf/Data_sheet_chainflex_CFROBOT2.pdf)
+with conservative 8.5 mm diameter from the older manufacturer sheet, 10× diameter
+dynamic bend and ±180 degrees/m torsion. Including bundle offsets gives a 104.25 mm
+centreline bend-radius requirement. CAN candidate CFROBOT8.022 uses the
+[manufacturer data sheet](https://us.misumi-ec.com/linked/pdf/vona/EU_Data_sheet_chainflex_CFROBOT8.pdf).
+Connector pinouts, electrical derating, protection and terminations are pending.
+
+Each route is sampled into 48 chords with 2 mm interpolation padding. Checks
+cover bend/twist, rigid robot geometry, floor and other loops. Planning samples
+cable feasibility along edges; simulation checks every predicted physics substep
+and rolls back rejected motion without committing state, time or trajectory data.
+These are kinematic checks, not continuous cable-contact certification, elastic
+cable dynamics or fatigue qualification. The current paths do not yet supply a
+complete wrist-joint harness or detailed connector clearance.
+
+Validation: `pytest tests/test_catalog_harness.py tests/test_shoulder_packaging.py
+ tests/test_pose_preview.py tests/test_arm_actuators.py tests/test_whole_body.py`.
+The catalog test covers full-extension static payload, reference postures, bend,
+length, base-transform invariance and floor clearance. A separate regression
+checks atomic rollback on harness rejection.
