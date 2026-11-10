@@ -31,8 +31,13 @@ def main():
         help="CompressedImage topic; repeat for head and wrist cameras",
     )
     parser.add_argument("--ros-domain-id", type=int, default=None)
+    parser.add_argument(
+        "--hardware-profile", type=Path, help="Measured ROS hardware calibration profile JSON"
+    )
     args = parser.parse_args()
-    backends = {}
+    backends, profiles = {}, {}
+    if args.hardware_profile and not args.ros_joints:
+        parser.error("--hardware-profile requires --ros-joints")
     if args.ros_camera and not args.ros_joints:
         parser.error("--ros-camera requires --ros-joints")
     if args.ros_joints:
@@ -53,12 +58,23 @@ def main():
         backends["ros2"] = lambda: ROS2Backend(
             joint_topic=args.ros_joints, cameras=cameras, domain_id=args.ros_domain_id
         )
+    if args.hardware_profile:
+        from .hardware.calibration import CalibrationProfile
+
+        try:
+            profiles["ros2"] = CalibrationProfile.load(args.hardware_profile)
+            if set(profiles["ros2"].cameras) != set(cameras):
+                raise ValueError("ROS camera names must exactly match the calibration profile")
+        except (ValueError, KeyError, OSError) as error:
+            parser.error(str(error))
     if not 1024 <= args.port <= 65535:
         parser.error("port must be between 1024 and 65535")
     jax.config.update("jax_enable_x64", True)
     print(f"robogogogo Studio → http://127.0.0.1:{args.port} (warming up JAX)", flush=True)
     uvicorn.run(
-        create_app(project_dir=args.projects, hardware_backends=backends),
+        create_app(
+            project_dir=args.projects, hardware_backends=backends, hardware_profiles=profiles
+        ),
         host="127.0.0.1",
         port=args.port,
     )

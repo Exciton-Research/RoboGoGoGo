@@ -17,12 +17,19 @@ class HardwareService:
         *,
         stale_after=2.0,
         clock=time.monotonic,
+        perception_profiles=None,
+        audit_dir=None,
     ):
         if not math.isfinite(stale_after) or stale_after <= 0:
             raise ValueError("Telemetry freshness timeout must be positive")
         if any(not re.fullmatch(r"[a-zA-Z0-9_-]{1,64}", name) for name in backends):
             raise ValueError("Invalid backend name")
         self.backends = dict(backends)
+        self.profiles = dict(perception_profiles or {})
+        if not set(self.profiles).issubset(self.backends):
+            raise ValueError("Calibration profiles must name registered hardware backends")
+        self.audit_dir = audit_dir
+        self.perception = None
         self.stale_after, self.clock = stale_after, clock
         self.lock, self.lifecycle = threading.RLock(), threading.Lock()
         self.backend = None
@@ -50,6 +57,15 @@ class HardwareService:
                 backend = self.backends[name]()
                 with self.lock:
                     self.backend = backend
+                if name in self.profiles:
+                    from .perception import HardwarePerception
+
+                    pipeline = HardwarePerception(
+                        self.profiles[name], audit_dir=self.audit_dir, clock=self.clock
+                    )
+                    with self.lock:
+                        self.perception = pipeline
+                    pipeline.start()
                 backend.start(sink)
             except Exception as error:
                 self._close()
@@ -62,6 +78,8 @@ class HardwareService:
         with self.lock:
             if generation == self.generation:
                 self.error = str(message)[:500]
+                if self.perception:
+                    self.perception.invalidate(self.error)
 
     def _receive(self, generation, sample):
         try:
@@ -109,6 +127,8 @@ class HardwareService:
                 old = (
                     self.joint if isinstance(sample, JointSample) else self.cameras.get(sample.name)
                 )
+                if self.perception:
+                    self.perception.ingest(sample)
                 # Replayed samples cannot keep a dead sensor looking live.
                 if old and sample.timestamp <= old[0].timestamp:
                     return
@@ -167,6 +187,9 @@ class HardwareService:
                 joints=joint,
                 cameras=cameras,
                 session=self.generation,
+                perception=self.perception.snapshot()
+                if self.perception
+                else dict(state="not_configured", reason="No measured calibration profile active"),
             )
 
     def image(self, name):
@@ -178,16 +201,21 @@ class HardwareService:
     def _close(self):
         with self.lock:
             backend, self.backend = self.backend, None
+            pipeline, self.perception = self.perception, None
             self.generation += 1
             self.name, self.joint, self.error = None, None, None
             self.cameras = {}
-        if backend is not None:
-            try:
-                backend.close()
-            except Exception as error:
-                with self.lock:
-                    self.error = f"Hardware cleanup failed: {error}"
-                raise ValueError(self.error) from error
+        errors = []
+        for resource in (backend, pipeline):
+            if resource is not None:
+                try:
+                    resource.close()
+                except Exception as error:
+                    errors.append(str(error))
+        if errors:
+            with self.lock:
+                self.error = "Hardware cleanup failed: " + "; ".join(errors)
+            raise ValueError(self.error)
 
     def close(self):
         with self.lifecycle:

@@ -40,14 +40,25 @@ class HardwareConnection(BaseModel):
     backend: str
 
 
-def create_app(*, project_dir=None, static_dir=None, initial_scene="arm", hardware_backends=None):
+def create_app(
+    *,
+    project_dir=None,
+    static_dir=None,
+    initial_scene="arm",
+    hardware_backends=None,
+    hardware_profiles=None,
+):
     directory = Path(project_dir or Path.cwd() / "runs" / "studio")
 
     @asynccontextmanager
     async def lifespan(app):
         app.state.studio = await asyncio.to_thread(Studio, directory, scene=initial_scene)
         app.state.clients = 0
-        app.state.hardware = HardwareService(hardware_backends or {})
+        app.state.hardware = HardwareService(
+            hardware_backends or {},
+            perception_profiles=hardware_profiles,
+            audit_dir=directory / "hardware",
+        )
 
         async def clock():
             while True:

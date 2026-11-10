@@ -46,6 +46,10 @@ class HardwarePerception:
         with self.lock:
             self.sync.add(sample, self.clock())
 
+    def invalidate(self, reason):
+        with self.lock:
+            self.sync.fault = str(reason)
+
     def snapshot(self):
         with self.lock:
             result = dict(self.status)
@@ -69,9 +73,11 @@ class HardwarePerception:
                     for n, c in self.profile.cameras.items()
                 ],
             )
+            if self.sync.fault:
+                result.update(state="fault", reason=self.sync.fault, scene_memory={})
             if self.updated is not None:
                 result["age_s"] = max(0, self.clock() - self.updated)
-                if result["age_s"] > 0.5:
+                if result["age_s"] > 0.5 and not self.sync.fault:
                     result["state"] = "stale"
             return result
 
@@ -177,6 +183,9 @@ class HardwarePerception:
                 )
             )
         with self.lock:
+            if self.sync.fault or self.stop.is_set():
+                self.memory.clear()
+                return
             self.count += 1
             self.updated = self.clock()
             self.status = dict(
