@@ -47,6 +47,20 @@ export function addInternalPackaging(model: RobotModel, add: AddMesh) {
         p.radius,
         "#a1aeb5",
       );
+    const skin = add(
+      p.body,
+      new THREE.CylinderGeometry(
+        p.radius + 0.004,
+        p.radius + 0.004,
+        b.distanceTo(a) + 0.008,
+        64,
+      ),
+      "#e4e6e2",
+      a.clone().add(b).multiplyScalar(0.5).toArray(),
+    );
+    skin.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction);
+    skin.userData.removableCover = true;
+    skin.material.roughness = 0.38;
     // Custom coaxial output coupling between module and the joint carrier.
     const distance = p.name.includes("elbow") ? 0.025 : 0.075;
     segment(

@@ -63,9 +63,9 @@ def arm_cable_passages(model):
             body=model.names.index(f"{side}_{link}"),
             start=[0.025, 0, 0],
             end=[length - 0.025, 0, 0],
-            radius=0.006,
-            bundle_radius=0.003,
-            status="reserved; joint-to-joint harness unresolved",
+            radius=0.018,
+            bundle_radius=0.015,
+            status="rigid loom passage; proximal external service loops modeled; distal joint harness unresolved",
         )
         for side in ("left", "right")
         for link, length in (("shoulder", 0.32), ("elbow", 0.28))

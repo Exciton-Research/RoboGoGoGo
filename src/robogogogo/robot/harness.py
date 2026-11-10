@@ -3,7 +3,8 @@
 Kinematic centreline model, not cable elasticity/fatigue or electrical validation.
 Uses conservative CFROBOT2.07.04.C diameter 8.5 mm (older manufacturer sheet;
 newer sheet lists 8 mm), 10*d minimum bend and +/-180 degrees/m torsion.
-Power branch selection does not specify the separate impedance-controlled CAN pair.
+A conservative 30 mm dress-pack envelope contains separately fused power branches
+and a dedicated CFROBOT8.022 CAN cable; this is not connector pinout qualification.
 """
 
 import numpy as np
@@ -11,9 +12,12 @@ import numpy as np
 CABLE_SOURCE = (
     "https://www.igus.it/contentData/Product_Files/Download/pdf/Data_sheet_chainflex_CFROBOT2.pdf"
 )
-RADIUS = 0.00425
+RADIUS = 0.015
+POWER_DIAMETER = 0.0085
+CAN_DIAMETER = 0.0075
+CAN_SOURCE = "https://us.misumi-ec.com/linked/pdf/vona/EU_Data_sheet_chainflex_CFROBOT8.pdf"
 FREE_LENGTH = 0.70
-MIN_BEND = 10 * 2 * RADIUS + RADIUS
+MIN_BEND = 10 * POWER_DIAMETER + RADIUS + POWER_DIAMETER / 2
 NEUTRAL = {"waist": 0.0, "upper_roll": 0.0, "shoulder": 1.2, "elbow": -1.35}
 
 
@@ -23,7 +27,7 @@ def loop_points(axis, delta, samples=49):
     radial -= axis * np.dot(axis, radial)
     radial /= np.linalg.norm(radial)
     turned = radial * np.cos(delta) + np.cross(axis, radial) * np.sin(delta)
-    a, d = axis * 0.235 + radial * 0.20, axis * 0.235 - turned * 0.20
+    a, d = axis * 0.255 + radial * 0.21, axis * 0.255 - turned * 0.21
     t = np.linspace(0, 1, samples)[:, None]
 
     def curve(bulge):
@@ -76,7 +80,8 @@ def harness_routes(model, q, pose):
                     twist_rad_m=abs(delta) / FREE_LENGTH,
                     valid=bend >= MIN_BEND and abs(delta) / FREE_LENGTH <= np.pi,
                     source=CABLE_SOURCE,
-                    scope="power branch mechanical routing; CAN branch pending",
+                    scope="48 V individual branches + separate 24 V wrist feed + CFROBOT8.022 CAN; connector pinout pending",
+                    can_source=CAN_SOURCE,
                 )
             )
     return result
