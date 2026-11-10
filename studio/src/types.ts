@@ -17,7 +17,14 @@ export interface Visual {
 }
 export interface RobotModel {
   name: string;
-  scene: "arm" | "dual_arm" | "dual_arm_head" | "drop" | "urdf";
+  scene:
+    "arm" | "dual_arm" | "dual_arm_head" | "mobile_dual_arm" | "drop" | "urdf";
+  mobile_design?: {
+    name: string;
+    architecture: string;
+    fidelity: string;
+    arm_dof: number;
+  } | null;
   dof: number;
   arms: ArmGroup[];
   camera_presets: Record<string, CameraConfig[]>;

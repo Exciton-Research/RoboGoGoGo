@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { MobileDesignControls } from "./MobileDesignControls";
 import { VlaPanel } from "../VlaPanel";
 import {
   ArrowRight,
@@ -113,6 +114,7 @@ export function Inspector() {
               </div>
               {model?.scene !== "drop" ? (
                 <>
+                  <MobileDesignControls />
                   <div className="control-mode">
                     <span className="mode-dot" />
                     Computed torque PD<span className="chip">ACTIVE</span>

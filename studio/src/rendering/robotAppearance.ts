@@ -14,8 +14,10 @@ export function addResearchRobotDetails(model: RobotModel, add: AddMesh) {
   const builtIn =
     model.scene === "arm" ||
     model.scene === "dual_arm" ||
-    model.scene === "dual_arm_head";
+    model.scene === "dual_arm_head" ||
+    model.scene === "mobile_dual_arm";
   if (!builtIn) return;
+  const mobile = model.scene === "mobile_dual_arm";
   const graphite = "#22313d",
     metal = "#8799a6",
     shell = "#dce3e7",
@@ -56,7 +58,10 @@ export function addResearchRobotDetails(model: RobotModel, add: AddMesh) {
     return mesh;
   };
   model.names.forEach((name, body) => {
-    if (name.endsWith("pedestal")) {
+    if (name.endsWith("pedestal") && mobile) {
+      cylinder(body, 0.065, 0.035, metal, [0, 0, 0.017]);
+    }
+    if (name.endsWith("pedestal") && !mobile) {
       box(body, [0.3, 0.3, 0.045], graphite, [0, 0, 0.024], 0.025);
       cylinder(body, 0.09, 0.34, shell, [0, 0, 0.225]);
       cylinder(body, 0.11, 0.045, graphite, [0, 0, 0.065]);
@@ -113,39 +118,108 @@ export function addResearchRobotDetails(model: RobotModel, add: AddMesh) {
         [0.001, 0, 0],
       );
       ring.rotation.y = Math.PI / 2;
-      // A tool flange, deliberately not a simulated gripper.
+      // Concept fingers are presentation geometry, not a contact/gripper model.
+      if (mobile) {
+        box(body, [0.055, 0.072, 0.045], graphite, [0.035, 0, 0]);
+        for (const side of [-1, 1])
+          box(
+            body,
+            [0.06, 0.012, 0.032],
+            "#67aaa4",
+            [0.09, side * 0.025, 0],
+            0.004,
+          );
+      }
     }
   });
-  const root =
-    model.scene === "dual_arm" || model.scene === "dual_arm_head"
-      ? model.names.indexOf("world")
-      : model.names.indexOf("pedestal");
-  box(
-    root,
-    [
-      0.38,
+  if (mobile) {
+    const base = model.names.indexOf("base_link");
+    box(base, [0.014, 0.28, 0.035], "#67aaa4", [0.385, 0, -0.01], 0.004);
+    for (const [name, radius] of [
+      ["torso_lower", 0.075],
+      ["torso_upper", 0.065],
+    ] as const) {
+      const body = model.names.indexOf(name);
+      const shellMesh = add(
+        body,
+        new THREE.CapsuleGeometry(radius, 0.44 - 2 * radius, 8, 24),
+        shell,
+        [0, 0, 0.22],
+      );
+      shellMesh.rotation.x = Math.PI / 2;
+    }
+    const chest = add(
+      model.names.indexOf("torso"),
+      new THREE.SphereGeometry(1, 40, 24),
+      shell,
+      [0, 0, 0.14],
+    );
+    chest.scale.set(0.15, 0.26, 0.19);
+    box(
+      model.names.indexOf("torso"),
+      [0.012, 0.12, 0.018],
+      "#67aaa4",
+      [0.15, 0, 0.19],
+      0.004,
+    );
+    model.names.forEach((name, body) => {
+      if (!name.endsWith("_wheel")) return;
+      for (const y of [-0.043, 0.043]) {
+        const hub = add(
+          body,
+          new THREE.CylinderGeometry(0.085, 0.085, 0.008, 32),
+          metal,
+          [0, y, 0],
+        );
+        hub.rotation.y = 0;
+        box(body, [0.014, 0.01, 0.19], graphite, [0, y * 1.1, 0], 0.004);
+      }
+    });
+  } else {
+    const root =
       model.scene === "dual_arm" || model.scene === "dual_arm_head"
-        ? 1.12
-        : 0.38,
-      0.055,
-    ],
-    graphite,
-    [-0.07, 0, 0.028],
-    0.025,
-  );
-  box(root, [0.075, 0.075, 1.17], graphite, [-0.12, 0, 0.61], 0.009);
-  box(root, [0.095, 0.2, 0.28], shell, [-0.15, 0, 0.71], 0.02);
-  box(root, [0.006, 0.13, 0.16], graphite, [-0.098, 0, 0.72], 0.004);
-  for (let i = 0; i < 6; i++)
+        ? model.names.indexOf("world")
+        : model.names.indexOf("pedestal");
     box(
       root,
-      [0.008, 0.085, 0.006],
-      metal,
-      [-0.092, 0, 0.66 + i * 0.022],
-      0.001,
+      [
+        0.38,
+        model.scene === "dual_arm" || model.scene === "dual_arm_head"
+          ? 1.12
+          : 0.38,
+        0.055,
+      ],
+      graphite,
+      [-0.07, 0, 0.028],
+      0.025,
     );
+    box(root, [0.075, 0.075, 1.17], graphite, [-0.12, 0, 0.61], 0.009);
+    box(root, [0.095, 0.2, 0.28], shell, [-0.15, 0, 0.71], 0.02);
+    box(root, [0.006, 0.13, 0.16], graphite, [-0.098, 0, 0.72], 0.004);
+    for (let i = 0; i < 6; i++)
+      box(
+        root,
+        [0.008, 0.085, 0.006],
+        metal,
+        [-0.092, 0, 0.66 + i * 0.022],
+        0.001,
+      );
+  }
   const head = model.names.indexOf("head");
-  if (head >= 0) {
+  if (head >= 0 && mobile) {
+    const shellMesh = add(head, new THREE.SphereGeometry(1, 40, 24), shell);
+    shellMesh.scale.set(0.075, 0.105, 0.07);
+    for (const y of [-0.032, 0.032]) {
+      const lens = add(
+        head,
+        new THREE.CylinderGeometry(0.018, 0.018, 0.004, 32),
+        graphite,
+        [0.075, y, 0],
+      );
+      lens.rotation.z = Math.PI / 2;
+    }
+  }
+  if (head >= 0 && !mobile) {
     box(head, [0.12, 0.19, 0.092], graphite, [0, 0, 0], 0.022);
     box(head, [0.008, 0.155, 0.052], "#101d29", [0.063, 0, 0], 0.009);
     box(head, [0.008, 0.08, 0.004], "#50b6ba", [0.069, 0, 0.033], 0.001);

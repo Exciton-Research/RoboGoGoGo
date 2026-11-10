@@ -199,9 +199,16 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
       const builtIn =
         model.scene === "arm" ||
         model.scene === "dual_arm" ||
-        model.scene === "dual_arm_head";
+        model.scene === "dual_arm_head" ||
+        model.scene === "mobile_dual_arm";
+      const mobile = model.scene === "mobile_dual_arm";
       for (const visual of model.visuals) {
         const linkName = model.names[visual.body];
+        if (
+          mobile &&
+          ["torso", "torso_lower", "torso_upper"].includes(linkName)
+        )
+          continue;
         if (
           builtIn &&
           (linkName === "head" ||
@@ -214,8 +221,8 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
         if (visual.shape === "box")
           geometry = new RoundedBoxGeometry(
             d[0],
-            d[1] * (builtIn ? 1.2 : 1),
-            d[2] * (builtIn ? 1.2 : 1),
+            d[1] * (builtIn && !mobile ? 1.2 : 1),
+            d[2] * (builtIn && !mobile ? 1.2 : 1),
             3,
             Math.min(...d) * 0.13,
           );
@@ -226,12 +233,23 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
           geometry.rotateX(Math.PI / 2);
         }
         const color =
-          builtIn && linkName.includes("wrist") ? "#7f919e" : "#dce3e7";
+          mobile && linkName.endsWith("_wheel")
+            ? "#273037"
+            : builtIn && linkName.includes("wrist")
+              ? "#7f919e"
+              : "#dce3e7";
         const mesh = addMesh(visual.body, geometry, color, visual.origin);
         mesh.setRotationFromEuler(new THREE.Euler(...visual.rpy, "ZYX"));
       }
       for (const joint of model.joints) {
-        if (model.scene === "drop") continue;
+        if (
+          model.scene === "drop" ||
+          (mobile &&
+            (joint.name.startsWith("base_") ||
+              joint.name.endsWith("_wheel") ||
+              joint.name.endsWith("_steer")))
+        )
+          continue;
         const size = builtIn
           ? joint.name.includes("wrist") || joint.name.includes("tool")
             ? 0.046
