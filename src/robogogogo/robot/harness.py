@@ -80,3 +80,47 @@ def harness_routes(model, q, pose):
                 )
             )
     return result
+
+
+def harness_clearance(model, q, pose, world, routes=None):
+    """Sampled cable/rigid and inter-loop clearance, with chord padding.
+
+    This validates the kinematic routing, not cable contact forces or fatigue.
+    Same-loop neighbours are not collision pairs; each curve is a simple arch.
+    """
+    from ..planning.collision import Clearance, segment_distance
+
+    routes = harness_routes(model, q, pose) if routes is None else routes
+    for route in routes:
+        if not route["valid"]:
+            return Clearance(-1.0, (route["name"], "cable_bend_or_twist"))
+    # 48 chords per loop; 2 mm inflation exceeds the cubic interpolation error
+    # for this fixed-size arch (bulge <= .8 m, radius .2 m).
+    starts, ends, groups = [], [], []
+    for i, route in enumerate(routes):
+        points = np.array(route["points"])
+        starts.extend(points[:-1])
+        ends.extend(points[1:])
+        groups.extend([i] * (len(points) - 1))
+    a, b, groups = np.array(starts), np.array(ends), np.array(groups)
+    c, d = world.geometry(q)
+    n, k = len(a), len(c)
+    distances = segment_distance(
+        np.repeat(a, k, axis=0), np.repeat(b, k, axis=0), np.tile(c, (n, 1)), np.tile(d, (n, 1))
+    ).reshape(n, k)
+    distances -= RADIUS + 0.002 + world.radii[None, :]
+    row, col = np.unravel_index(np.argmin(distances), distances.shape)
+    best = Clearance(
+        float(distances[row, col]), (routes[groups[row]]["name"], world.capsules[col].name)
+    )
+    i, j = np.triu_indices(n, 1)
+    valid = groups[i] != groups[j]
+    i, j = i[valid], j[valid]
+    separation = segment_distance(a[i], b[i], a[j], b[j]) - 2 * (RADIUS + 0.002)
+    index = int(np.argmin(separation))
+    if separation[index] < best.distance:
+        best = Clearance(
+            float(separation[index]),
+            (routes[groups[i[index]]]["name"], routes[groups[j[index]]]["name"]),
+        )
+    return best
