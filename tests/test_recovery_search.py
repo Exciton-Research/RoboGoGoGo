@@ -11,7 +11,7 @@ from robogogogo.planning.motion import PlanningError
 from robogogogo.recovery_planning import RecoveryPlanner, contact_world
 
 spec = importlib.util.spec_from_file_location(
-    "recovery_search", Path(__file__).parents[1] / "examples/recovery_search.py"
+    "recovery_search", Path(__file__).parent / "fixtures/recovery_search.py"
 )
 BENCH = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(BENCH)

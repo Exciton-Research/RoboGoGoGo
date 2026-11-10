@@ -13,6 +13,7 @@ import numpy as np
 
 from robogogogo.data.recording import Episode
 from robogogogo.robot.cameras import mounted_rig
+from robogogogo.robot.definition import ROBOT_ID, ROBOT_REVISION
 
 from .. import spatial as sp
 from .. import urdf
@@ -350,6 +351,7 @@ class Studio:
         return Episode(
             instruction,
             self.session.target,
+            robot=dict(id=ROBOT_ID, revision=ROBOT_REVISION) if self.single_robot else None,
             cameras=cameras,
             arms=[arm.to_dict() for arm in self.session.arms],
             targets=self.session.targets,

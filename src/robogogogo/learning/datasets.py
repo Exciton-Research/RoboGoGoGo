@@ -6,6 +6,7 @@ import zipfile
 from pathlib import Path
 
 from robogogogo.data.datasets import iter_transitions
+from robogogogo.robot.definition import ROBOT_ID, ROBOT_REVISION, SIMULATION_DOF
 
 
 def inspect_dataset(path):
@@ -20,6 +21,12 @@ def inspect_dataset(path):
         if archive.getinfo("episode.json").file_size > 20_000_000:
             raise ValueError("Episode manifest exceeds size limit")
         manifest = json.loads(archive.read("episode.json"))
+    if manifest.get("robot") != dict(id=ROBOT_ID, revision=ROBOT_REVISION):
+        raise ValueError(
+            "Learning requires an RG Mobile Duo concept-1 episode; legacy robot data is unsupported"
+        )
+    if manifest["action_spec"].get("dimensions") != SIMULATION_DOF:
+        raise ValueError("RG Mobile Duo episodes require 31 simulation coordinates")
     count, sources, shape = 0, set(), None
     for transition in iter_transitions(path):
         signature = (
@@ -47,6 +54,7 @@ def inspect_dataset(path):
         id=manifest["id"],
         sha256=digest,
         transitions=count,
+        robot=manifest["robot"],
         environment=manifest.get("environment", "unknown"),
         action_spec=manifest["action_spec"],
         cameras=list(shape[1]),

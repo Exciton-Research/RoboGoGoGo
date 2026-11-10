@@ -27,10 +27,12 @@ class Episode:
         dt,
         substeps,
         horizon=250,
+        robot=None,
         cameras=None,
         arms=None,
         targets=None,
     ):
+        self.robot = dict(robot) if robot else None
         self.cameras = [dict(camera) for camera in (cameras or [CAMERA])]
         self.arms = list(arms or [])
         self.targets = {
@@ -81,6 +83,7 @@ class Episode:
     def summary(self):
         return dict(
             environment="simulation",
+            robot=self.robot,
             id=self.id,
             instruction=self.instruction,
             task=self.task_plan["kind"]
@@ -242,6 +245,7 @@ class Episode:
             format="robogogogo-episode-v2" if self.multiview else "robogogogo-episode-v1",
             camera_convention="position/look_at/up in mount coordinates; null mount is world; optical +X right, +Y down, +Z forward",
             environment="simulation",
+            robot=self.robot,
             id=self.id,
             created=self.created,
             instruction=self.instruction,

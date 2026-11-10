@@ -175,13 +175,15 @@ def create_app(
     async def command(body: Command):
         return await asyncio.to_thread(app.state.studio.command, body)
 
-    @app.post("/api/robot")
-    async def import_robot(body: ImportRobot):
-        return await asyncio.to_thread(
-            app.state.studio.import_robot,
-            body.xml,
-            [arm.model_dump() for arm in body.arms] if body.arms else None,
-        )
+    if _workspace_factory is not Studio:  # Numerical fixture injection only.
+
+        @app.post("/api/robot")
+        async def import_robot(body: ImportRobot):
+            return await asyncio.to_thread(
+                app.state.studio.import_robot,
+                body.xml,
+                [arm.model_dump() for arm in body.arms] if body.arms else None,
+            )
 
     @app.get("/api/projects")
     async def projects():
@@ -220,21 +222,23 @@ def create_app(
     async def act(body: PolicyAction):
         return await asyncio.to_thread(app.state.studio.episode_service.policy_action, body)
 
-    @app.post("/api/tasks/plan")
-    async def plan_task(body: PlanTask):
-        return await asyncio.to_thread(app.state.studio.task_service.plan, body)
+    if _workspace_factory is not Studio:
 
-    @app.post("/api/tasks/step")
-    async def task_step(body: TaskStep):
-        return await asyncio.to_thread(app.state.studio.task_service.step, body.observation)
+        @app.post("/api/tasks/plan")
+        async def plan_task(body: PlanTask):
+            return await asyncio.to_thread(app.state.studio.task_service.plan, body)
 
-    @app.post("/api/tasks/pause")
-    async def pause_task():
-        return await asyncio.to_thread(app.state.studio.task_service.pause)
+        @app.post("/api/tasks/step")
+        async def task_step(body: TaskStep):
+            return await asyncio.to_thread(app.state.studio.task_service.step, body.observation)
 
-    @app.post("/api/tasks/resume")
-    async def resume_task():
-        return await asyncio.to_thread(app.state.studio.task_service.resume)
+        @app.post("/api/tasks/pause")
+        async def pause_task():
+            return await asyncio.to_thread(app.state.studio.task_service.pause)
+
+        @app.post("/api/tasks/resume")
+        async def resume_task():
+            return await asyncio.to_thread(app.state.studio.task_service.resume)
 
     @app.post("/api/perception/stereo")
     async def stereo(body: StereoRequest):
