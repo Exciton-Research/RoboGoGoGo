@@ -197,15 +197,6 @@ export function addResearchRobotDetails(model: RobotModel, add: AddMesh) {
       [0, 0, 0.345],
     );
     neck.rotation.x = Math.PI / 2;
-    box(torso, [0.012, 0.19, 0.19], graphite, [-0.132, 0, 0.15], 0.006);
-    for (let i = 0; i < 7; i++)
-      box(
-        torso,
-        [0.004, 0.12, 0.004],
-        metal,
-        [-0.14, 0, 0.1 + i * 0.013],
-        0.001,
-      );
 
     box(
       model.names.indexOf("torso"),
