@@ -10,8 +10,10 @@ dimensions, masses, inertias and limits are illustrative engineering assumptions
 
 Run `python -m robogogogo.server`, open `/simulation/`, and select the Robot tab.
 The articulated mobile concept is the default scene. Choose Standing, Low or
-Reach, then Run posture motion. Pause before editing a new pose. Base and torso
-coordinates allow individual joint exploration. Existing arm controls manipulate
+Reach, then Run posture motion. Pause before editing a new pose. Torso
+joint goals allow individual torso exploration. Wheel-drive buttons command forward/reverse,
+lateral motion and yaw for three simulation seconds; Run starts integration and
+Brake requests zero wheel speed. Pause freezes time and clears the drive lease. Existing arm controls manipulate
 only the seven joints of each arm, not the shared torso or base.
 
 The generated [URDF](../examples/robots/mobile_dual_arm.urdf) contains the mechanism
@@ -30,7 +32,9 @@ defines the standing posture and alternative torso configurations.
 
 There are 31 simulated coordinates: 3 ideal planar base coordinates, 8 wheel
 coordinates, 4 torso joints, 14 arm joints and 2 head joints. The three planar
-coordinates are numerical supports, not physical actuators. Their small positive
+coordinates represent a flat-ground constraint, not physical actuators. Tire forces
+now drive them through coupled articulated dynamics; joint-position commands cannot
+move the base or wheel joints. Their small positive
 carrier inertias satisfy the native engine's articulated-body representation.
 
 Standing, Low and Reach presets preserve the sum of torso pitch angles, keeping
@@ -48,13 +52,31 @@ save/load. Next.js provides inspection and posture controls.
 This establishes geometry and software interfaces, not a mechanically validated
 robot. In particular:
 
-- Base motion is ideal planar motion, independent of wheel steering and rolling.
-  There is no tire traction, slip, steering coordination, odometry or tipping model.
+- Base motion uses a reduced-order, flat-ground swerve model. Longitudinal wheel
+  slip and lateral contact velocity generate regularized tire forces, capped by
+  a shared Coulomb friction circle. Wheel reaction torques act on rolling joints.
+  Steering reverses rolling direction when useful and attenuates drive until aligned.
+  Motor torques are limited separately from environmental contact forces.
+- Normal loads use bilinear sharing across the four wheel locations. A COM-based
+  zero-moment-point estimate includes translational COM acceleration but omits
+  angular momentum rate. A 35 mm support reserve guards predicted substeps.
+  Violations freeze the simulation before committing the control tick; this is
+  a numerical guard, not a physically demonstrated recovery or emergency stop.
+- No suspension, uneven terrain, wheel lift-off, body roll/pitch, impact or rollover
+  dynamics are modeled. Tire stiffness (180/220 N per m/s), friction and inertias
+  need experimental identification. There is no encoder odometry or navigation.
+- Drive commands are bounded to 0.5 m/s translation and 0.6 rad/s yaw, with leases
+  of at most five simulation seconds. Expiry requests zero wheel speed; braking
+  remains friction-limited. Leases do not run on wall time and are not hardware
+  watchdogs. Base arena bounds stop prediction before virtual joint stops.
+- Static torso/arm goal paths are sampled for support margin, and dynamic checks
+  monitor integration. Joint acceleration requests are bounded to 0.35 rad/s².
+  No whole-body collision avoidance or formal continuous-path guarantee is provided.
 - Masses and box-approximation inertias are assumptions; there is no motor sizing,
   structural analysis, cable routing, power design or manufacturing CAD.
 - Gripper fingers are cosmetic in this concept, not independently actuated contact
   geometry. Earlier contact experiments do not validate this mobile mechanism.
-- Posture presets are not collision-checked or stability-certified. Automated task
+- Posture presets are not collision-checked or hardware stability-certified. Automated task
   planning is rejected for this scene until whole-body planning is implemented.
   Select the legacy dual-arm scene for the existing handover experiments.
 - Real ROS/SDK telemetry remains read-only. The separate command execution test
@@ -64,8 +86,8 @@ robot. In particular:
 ## Path to a physical robot
 
 Freeze the mechanical geometry and actuator specifications first. Then replace
-illustrative inertias and limits with measured/CAD values; implement the actual
-base steering and drive model; add whole-body collision, balance and load limits;
+illustrative inertias and limits with measured/CAD values; identify and validate the real
+base steering and tire model; add whole-body collision, balance and load limits;
 and extend the command backend contract for base, torso, seven-joint arms and
 actuated grippers. Hardware commissioning must establish measured calibration,
 latencies, stop behavior and controller limits before autonomous operation.
@@ -73,3 +95,19 @@ latencies, stop behavior and controller limits before autonomous operation.
 Simulation, recording, learning and runtime can share this robot definition, but
 training, deployed inference and physical actuation remain separate unfinished
 integrations. The design does not imply those workflows are already complete.
+
+
+## Validation and reproducibility
+
+`tests/test_mobile_driving.py` covers force/load balance, the friction circle,
+slip dissipation, reversal/turning geometry, steering alignment, driving and braking,
+zero-friction wheel spin, simultaneous torso lowering and turning, command bounds,
+lease expiry and atomic guard rejection. These tests validate modeled behavior,
+not agreement with measured tire data.
+
+Project checkpoints preserve friction and the COM acceleration estimate used for
+load transfer. Restoring is paused with no active drive lease. The UI reports
+minimum predicted support margin, estimated tire loads and longitudinal slip.
+Raw URDF export only describes geometry and inertial joints: it does not encode
+the tire solver, guard, drive command lease or controller, which live in the native
+Python/JAX mobile session. External URDF consumers must supply their own dynamics.
