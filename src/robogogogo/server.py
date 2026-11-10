@@ -35,7 +35,18 @@ def main():
         "--hardware-profile", type=Path, help="Measured ROS hardware calibration profile JSON"
     )
     parser.add_argument("--ros-camera-info", action="append", default=[], metavar="NAME=TOPIC")
+    parser.add_argument(
+        "--robot-profile", type=Path, help="Single dual-arm deployment identity JSON"
+    )
     args = parser.parse_args()
+    from .robot.profile import RobotProfile
+
+    try:
+        robot_profile = (
+            RobotProfile.load(args.robot_profile) if args.robot_profile else RobotProfile()
+        )
+    except (ValueError, OSError) as error:
+        parser.error(str(error))
     backends, profiles = {}, {}
     info_topics = {}
     for entry in args.ros_camera_info:
@@ -97,7 +108,10 @@ def main():
     print(f"robogogogo Studio → http://127.0.0.1:{args.port} (warming up JAX)", flush=True)
     uvicorn.run(
         create_app(
-            project_dir=args.projects, hardware_backends=backends, hardware_profiles=profiles
+            project_dir=args.projects,
+            hardware_backends=backends,
+            hardware_profiles=profiles,
+            robot_profile=robot_profile,
         ),
         host="127.0.0.1",
         port=args.port,

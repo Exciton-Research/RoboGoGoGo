@@ -17,6 +17,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from robogogogo.robot import HardwareService
 
+from ..runtime.workflow import RobotWorkflow
 from ..simulation.structural_lab import StructuralLab
 from .schemas import (
     CameraObservation,
@@ -45,9 +46,10 @@ def create_app(
     *,
     project_dir=None,
     static_dir=None,
-    initial_scene="arm",
+    initial_scene="dual_arm_head",
     hardware_backends=None,
     hardware_profiles=None,
+    robot_profile=None,
 ):
     directory = Path(project_dir or Path.cwd() / "runs" / "studio")
 
@@ -55,6 +57,7 @@ def create_app(
     async def lifespan(app):
         app.state.studio = await asyncio.to_thread(Studio, directory, scene=initial_scene)
         app.state.clients = 0
+        app.state.workflow = RobotWorkflow(directory, robot=robot_profile)
         app.state.hardware = HardwareService(
             hardware_backends or {},
             perception_profiles=hardware_profiles,
@@ -84,6 +87,14 @@ def create_app(
     app.add_middleware(
         TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost", "[::1]", "testserver"]
     )
+
+    @app.get("/api/workflow")
+    async def workflow():
+        return await asyncio.to_thread(app.state.workflow.snapshot, app.state.hardware.snapshot())
+
+    @app.post("/api/data/{identifier}/validate")
+    async def validate_dataset(identifier: UUID):
+        return await asyncio.to_thread(app.state.workflow.validate_episode, identifier)
 
     def allowed_origin(origin, host):
         return origin is None or origin in (
