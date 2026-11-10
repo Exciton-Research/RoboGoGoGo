@@ -56,15 +56,30 @@ class EpisodeService:
             workspace.task = None
             workspace.session.reset()
             delta = np.zeros_like(workspace.session.model.home)
-            variants = {"a": [0.35, 0.15, -0.2], "b": [-0.35, -0.15, 0.25], "c": [0.15, -0.3, 0.35]}
-            for arm in workspace.session.arms:
-                indices = list(arm.joint_indices[:3])
-                delta[indices] = variants[request.variant][: len(indices)]
+            if workspace.session.mobile is not None:
+                # Reachable elbow flexion targets for this robot, rather than the
+                # old fixed-base shoulder offsets that intersected the chest.
+                variants = {"a": (0.2, 0.2), "b": (-0.2, -0.2), "c": (0.2, -0.2)}
+                for arm, value in zip(workspace.session.arms, variants[request.variant]):
+                    delta[arm.joint_indices[3]] = value
+            else:
+                variants = {
+                    "a": [0.35, 0.15, -0.2],
+                    "b": [-0.35, -0.15, 0.25],
+                    "c": [0.15, -0.3, 0.35],
+                }
+                for arm in workspace.session.arms:
+                    indices = list(arm.joint_indices[:3])
+                    delta[indices] = variants[request.variant][: len(indices)]
             desired = jnp.clip(
                 workspace.session.model.home + delta,
                 workspace.session.model.lower,
                 workspace.session.model.upper,
             )
+            if workspace.session.mobile is not None:
+                workspace.session.mobile.validate_goal(
+                    np.asarray(workspace.session.state.q), np.asarray(desired)
+                )
             workspace.session.targets = {
                 arm.name: np.asarray(sp.point_position(workspace.session.model, desired, arm.body))
                 for arm in workspace.session.arms
