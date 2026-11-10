@@ -16,76 +16,136 @@ RADIUS = 0.015
 POWER_DIAMETER = 0.0085
 CAN_DIAMETER = 0.0075
 CAN_SOURCE = "https://us.misumi-ec.com/linked/pdf/vona/EU_Data_sheet_chainflex_CFROBOT8.pdf"
-FREE_LENGTH = 0.51
 MIN_BEND = 10 * POWER_DIAMETER + RADIUS + POWER_DIAMETER / 2
-NEUTRAL = {"waist": 0.0, "upper_roll": 0.0, "shoulder": 0.6, "elbow": -0.675}
 
 
-def loop_points(axis, delta, samples=49):
-    axis = np.asarray(axis, float)
-    radial = np.array([1.0, 0, 0]) if abs(axis[0]) < 0.5 else np.array([0.0, 1, 0])
-    radial -= axis * np.dot(axis, radial)
-    radial /= np.linalg.norm(radial)
-    turned = radial * np.cos(delta) + np.cross(axis, radial) * np.sin(delta)
-    a, d = axis * 0.175 + radial * 0.15, axis * 0.175 - turned * 0.15
+def harness_spans():
+    """One dress-pack span per articulation group, not a loop per motor.
+
+    All anchors are explicit local-frame fixtures. Motor supply leads are fixed
+    on each motor's parent; only these spans cross moving link boundaries.
+    """
+    spans = []
+    for side, sign in (("left", 1), ("right", -1)):
+        for group, src, dst, a, d, length, joints, neutral in (
+            (
+                "shoulder",
+                "torso",
+                f"{side}_shoulder",
+                [-0.22, sign * 0.46, 0.20],
+                [0.19, sign * 0.12, 0.08],
+                0.60,
+                ("waist", "upper_roll", "shoulder"),
+                (0.0, 0.0, 0.6),
+            ),
+            (
+                "elbow",
+                f"{side}_shoulder",
+                f"{side}_elbow",
+                [0.17, sign * 0.14, -0.06],
+                [0.18, sign * 0.14, -0.06],
+                0.50,
+                ("elbow",),
+                (-0.675,),
+            ),
+            (
+                "wrist_pitch",
+                f"{side}_elbow",
+                f"{side}_tool",
+                [0.24, sign * 0.12, 0.06],
+                [0.0, sign * 0.12, 0.06],
+                0.55,
+                ("wrist_roll", "wrist_pitch", "tool_roll"),
+                (0.0, 0.075, 0.0),
+            ),
+        ):
+            spans.append(
+                dict(
+                    name=f"{side}_{group}_dress_pack",
+                    owner=f"{side}_{group}",
+                    bodies=(src, dst),
+                    anchors=(a, d),
+                    normal=[0, sign, 0],
+                    length_m=length,
+                    joints=tuple(f"{side}_{j}" for j in joints),
+                    neutral=neutral,
+                )
+            )
+    return spans
+
+
+def routed_curve(a, d, u, v, length, samples=65):
+    """Constant-length cubic with link-attached endpoint tangents.
+
+    Reject impossible span lengths; never stretch a wire to make a pose feasible.
+    """
+    a, d, u, v = (np.asarray(x, float) for x in (a, d, u, v))
     t = np.linspace(0, 1, samples)[:, None]
 
     def curve(bulge):
-        b, c = a + axis * bulge, d + axis * bulge
+        b, c = a + u * bulge, d + v * bulge
         return (1 - t) ** 3 * a + 3 * (1 - t) ** 2 * t * b + 3 * (1 - t) * t * t * c + t**3 * d
 
-    low, high = 0.01, 0.6
-    for _ in range(22):
-        middle = (low + high) / 2
-        length = np.linalg.norm(np.diff(curve(middle), axis=0), axis=1).sum()
-        if length < FREE_LENGTH:
-            low = middle
+    low, high = 0.0, 1.0
+    feasible = np.linalg.norm(d - a) <= length
+    for _ in range(24):
+        mid = (low + high) / 2
+        if np.linalg.norm(np.diff(curve(mid), axis=0), axis=1).sum() < length:
+            low = mid
         else:
-            high = middle
+            high = mid
     bulge = (low + high) / 2
-    b, c = a + axis * bulge, d + axis * bulge
+    b, c = a + u * bulge, d + v * bulge
     velocity = 3 * (1 - t) ** 2 * (b - a) + 6 * (1 - t) * t * (c - b) + 3 * t * t * (d - c)
     acceleration = 6 * (1 - t) * (c - 2 * b + a) + 6 * t * (d - 2 * c + b)
-    bend = np.min(
-        np.linalg.norm(velocity, axis=1) ** 3
-        / np.maximum(np.linalg.norm(np.cross(velocity, acceleration), axis=1), 1e-12)
+    bend = float(
+        np.min(
+            np.linalg.norm(velocity, axis=1) ** 3
+            / np.maximum(np.linalg.norm(np.cross(velocity, acceleration), axis=1), 1e-12)
+        )
     )
-    return curve(bulge), float(bend)
+    points = curve(bulge)
+    actual = float(np.linalg.norm(np.diff(points, axis=0), axis=1).sum())
+    feasible = bool(feasible and abs(actual - length) < 1e-6)
+    return points, bend, feasible
 
 
 def harness_routes(model, q, pose):
-    from .components import mounting_sign
-
     result = []
-    for side in ("left", "right"):
-        for suffix, neutral in NEUTRAL.items():
-            body = model.names.index(f"{side}_{suffix}")
-            parent, index = model.parents[body], model.indices[body]
-            # Route roll dress packs aft: a forward-facing arch would cross the
-            # forearm when the arm extends along +X.
-            sign = -1 if suffix == "upper_roll" else mounting_sign(side, suffix)
-            delta = float(q[index]) - neutral
-            points, bend = loop_points(np.asarray(model.axis[body]) * sign, delta * sign)
-            rotation = np.asarray(pose.rotation[parent]) @ np.asarray(model.orientation[body])
-            origin = np.asarray(pose.position[parent]) + np.asarray(
-                pose.rotation[parent]
-            ) @ np.asarray(model.origin[body])
-            points = points @ rotation.T + origin
-            result.append(
-                dict(
-                    name=f"{side}_{suffix}_service_loop",
-                    points=points.tolist(),
-                    radius=RADIUS,
-                    length_m=FREE_LENGTH,
-                    min_bend_m=bend,
-                    bend_limit_m=MIN_BEND,
-                    twist_rad_m=abs(delta) / FREE_LENGTH,
-                    valid=bend >= MIN_BEND and abs(delta) / FREE_LENGTH <= np.pi,
-                    source=CABLE_SOURCE,
-                    scope="48 V individual branches + separate 24 V wrist feed + CFROBOT8.022 CAN; connector pinout pending",
-                    can_source=CAN_SOURCE,
-                )
+    for span in harness_spans():
+        endpoints = []
+        normals = []
+        for name, anchor in zip(span["bodies"], span["anchors"]):
+            body = model.names.index(name)
+            rotation = np.asarray(pose.rotation[body])
+            endpoints.append(np.asarray(pose.position[body]) + rotation @ anchor)
+            normals.append(rotation @ span["normal"])
+        points, bend, feasible = routed_curve(*endpoints, *normals, span["length_m"])
+        # Conservative total joint excursion, including wrist camera/tool leads.
+        twist = (
+            sum(
+                abs(float(q[model.indices[model.names.index(j)]]) - neutral)
+                for j, neutral in zip(span["joints"], span["neutral"])
             )
+            / span["length_m"]
+        )
+        result.append(
+            dict(
+                name=span["name"],
+                points=points.tolist(),
+                radius=RADIUS,
+                length_m=span["length_m"],
+                min_bend_m=bend,
+                bend_limit_m=MIN_BEND,
+                twist_rad_m=twist,
+                valid=feasible and bend >= MIN_BEND and twist <= np.pi,
+                length_valid=feasible,
+                source=CABLE_SOURCE,
+                can_source=CAN_SOURCE,
+                attachments=[f"{span['owner']}_harness_{i}" for i in (0, 1)],
+                scope="grouped 48 V/24 V branches and CAN; link-mounted strain relief",
+            )
+        )
     return result
 
 
