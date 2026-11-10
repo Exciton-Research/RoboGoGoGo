@@ -80,11 +80,11 @@ def mobile_dual_arm_urdf():
             ET.SubElement(element, "dynamics", damping="0.2")
 
     link("world")
-    link("base_x")
+    link("base_x", 0.01)
     joint(
         "base_x_joint", "world", "base_x", "prismatic", axis=(1, 0, 0), limits=(-2, 2), effort=4000
     )
-    link("base_y")
+    link("base_y", 0.01)
     joint(
         "base_y_joint", "base_x", "base_y", "prismatic", axis=(0, 1, 0), limits=(-2, 2), effort=4000
     )
