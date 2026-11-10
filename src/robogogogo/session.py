@@ -327,6 +327,14 @@ class Session:
             collision_clearance_m=closest.distance,
             collision_pair=list(closest.pair),
         )
+        harness = self.mobile.harness_report(following.q)
+        self.mobile_status["harness_clearance_m"] = harness["clearance_m"]
+        if not harness["valid"]:
+            self.stop_drive()
+            self.mobile_status["collision_guard"] = "blocked"
+            raise CollisionViolation(
+                f"Cable routing guard rejected predicted motion: {harness['pair']}"
+            )
         self.state, self.com_acceleration = following, acc
         tracking = (
             np.r_[np.asarray(self.mobile.steer), np.asarray(self.mobile.wheels)]

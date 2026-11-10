@@ -156,6 +156,12 @@ class Studio:
             else None,
             project=dict(id=self.project_id, name=self.project_name),
             state=dict(
+                harness=self.session.mobile.harness_report(s.state.q)["routes"]
+                if self.session.mobile
+                else [],
+                harness_report=self.session.mobile.harness_report(s.state.q)
+                if self.session.mobile
+                else None,
                 mobile=self.session.mobile_status,
                 motion=self.session.motion_plan,
                 q=np.asarray(s.state.q).tolist(),

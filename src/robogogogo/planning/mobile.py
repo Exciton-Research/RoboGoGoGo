@@ -33,6 +33,9 @@ class MobilePlanningWorld:
         self.checks += 1
         full = self.full(q)
         clearance = self.collision.clearance(full)
+        harness = self.dynamics.harness_report(full)
+        if not harness["valid"]:
+            return Clearance(-1.0, tuple(harness["pair"]))
         if float(self.dynamics.static_margin(full)) < self.dynamics.margin:
             return Clearance(-1.0, ("support_margin", "robot"))
         return clearance
