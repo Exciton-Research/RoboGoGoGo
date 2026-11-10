@@ -74,7 +74,7 @@ def harness_spans():
     return spans
 
 
-def routed_curve(a, d, u, v, length, samples=65):
+def _routed_curve(a, d, u, v, length, samples=65):
     """Constant-length cubic with link-attached endpoint tangents.
 
     Reject impossible span lengths; never stretch a wire to make a pose feasible.
@@ -108,6 +108,19 @@ def routed_curve(a, d, u, v, length, samples=65):
     actual = float(np.linalg.norm(np.diff(points, axis=0), axis=1).sum())
     feasible = bool(feasible and abs(actual - length) < 1e-6)
     return points, bend, feasible
+
+
+def routed_curve(a, d, u, v, length, samples=65):
+    """Balance tangent lengths to avoid artificially pinching a skewed span.
+
+    All candidates retain anchor tangents and physical length. This is a
+    geometric routing model, not a cable elasticity/contact solver.
+    """
+    candidates = [
+        _routed_curve(a, d, np.asarray(u) * ratio, np.asarray(v) / ratio, length, samples)
+        for ratio in (0.60, 0.75, 0.90, 1.0, 1 / 0.90, 1 / 0.75, 1 / 0.60)
+    ]
+    return max(candidates, key=lambda item: (item[2], item[1]))
 
 
 def harness_routes(model, q, pose):
