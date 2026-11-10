@@ -288,8 +288,8 @@ def mobile_dual_arm_urdf():
             for tag, a in zip(("ixx", "iyy", "izz"), axis):
                 inertia.set(tag, str(axial if abs(a) > 0.5 else radial))
             joint(f"{name}_mount", item.find("parent").get("link"), name, origin=center)
-    from .fixture_inertia import add_fixture_inertia
     from ..urdf import loads
+    from .fixture_inertia import add_fixture_inertia
     from .packaging import assembly_parts, harness_fixture_specs
     from .shoulder_wiring import cover_mass_specs
 

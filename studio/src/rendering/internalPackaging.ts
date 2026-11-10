@@ -101,9 +101,9 @@ export function addInternalPackaging(model: RobotModel, add: AddMesh) {
     if (p.kind === "connector") {
       fitting.geometry.dispose();
       fitting.geometry = new THREE.BoxGeometry(
-        0.014,
+        Math.min(0.014, p.radius * 1.5),
         new THREE.Vector3(...p.end).distanceTo(new THREE.Vector3(...p.start)),
-        0.01,
+        Math.min(0.01, p.radius),
       );
       fitting.material.metalness = 0.05;
     }
@@ -122,6 +122,22 @@ export function addInternalPackaging(model: RobotModel, add: AddMesh) {
     // Saddles and plugs sit outside the module cover and remain physical in RGB.
     fitting.userData.inspectionOnly = false;
     fitting.visible = true;
+  }
+  for (const cover of model.shoulder_covers ?? []) {
+    const a = new THREE.Vector3(...cover.start),
+      b = new THREE.Vector3(...cover.end);
+    const skin = add(
+      cover.body,
+      new THREE.CapsuleGeometry(cover.radius, a.distanceTo(b), 12, 40),
+      "#e4e6e2",
+      a.clone().add(b).multiplyScalar(0.5).toArray(),
+    );
+    skin.quaternion.setFromUnitVectors(
+      new THREE.Vector3(0, 1, 0),
+      b.clone().sub(a).normalize(),
+    );
+    skin.userData.removableCover = true;
+    skin.material.roughness = 0.4;
   }
   for (const p of model.cable_passages) {
     const a = new THREE.Vector3(...p.start),

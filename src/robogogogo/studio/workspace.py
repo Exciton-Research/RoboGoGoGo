@@ -23,6 +23,7 @@ from ..robot.packaging import (
     harness_fixtures,
     shoulder_packages,
 )
+from ..robot.shoulder_wiring import cover_specs, fixed_wiring_report
 from ..robot.wiring import robot_wiring
 from ..session import Session
 from .episodes import EpisodeService
@@ -108,6 +109,8 @@ class Studio:
             axes=np.asarray(model.axis).tolist(),
             shoulder_packages=shoulder_packages(model),
             wiring=robot_wiring(model),
+            shoulder_covers=cover_specs(model),
+            fixed_wiring=fixed_wiring_report(model),
             assembly_parts=assembly_parts(model) + harness_fixtures(model),
             cable_passages=arm_cable_passages(model),
             joint_origins=np.asarray(model.origin).tolist(),

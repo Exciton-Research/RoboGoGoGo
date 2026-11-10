@@ -25,7 +25,11 @@ export function createHarnessVisuals(scene: THREE.Scene) {
       const cable = new THREE.Mesh(
         new THREE.TubeGeometry(curve, 64, route.radius, 8, false),
         new THREE.MeshStandardMaterial({
-          color: route.valid ? "#263b49" : "#c65643",
+          color: route.valid
+            ? route.internal
+              ? "#427e8c"
+              : "#263b49"
+            : "#c65643",
           roughness: 0.72,
         }),
       );

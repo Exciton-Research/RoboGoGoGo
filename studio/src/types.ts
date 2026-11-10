@@ -36,6 +36,8 @@ export interface PackagingVolume {
   bundle_radius?: number;
 }
 export interface RobotModel {
+  shoulder_covers: PackagingVolume[];
+  fixed_wiring: { valid: boolean; installation_gap_m: number };
   shoulder_packages: PackagingVolume[];
   assembly_parts: (PackagingVolume & {
     kind: "bracket" | "connector" | "clamp" | "swivel_clamp" | "wire";
@@ -69,6 +71,7 @@ export interface RobotModel {
   max_samples: number;
 }
 export interface HarnessRoute {
+  internal?: boolean;
   guide_normals?: Vec3[];
   swivel_angles_rad?: number[];
   name: string;
