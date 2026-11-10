@@ -27,6 +27,10 @@ def test_shoulder_drive_proxies_enclose_hardware_and_check_moving_upper_arms():
         for end in (package["start"], package["end"]):
             assert np.hypot(np.linalg.norm(np.asarray(end) - center), package["radius"]) <= proxy.radius + 1e-9
     guard = mobile_collision_world(model)
+    folded = home.copy()
+    folded[model.indices[model.names.index("left_upper_roll")]] = np.pi / 2
+    assert internals.clearance(folded).distance < 0
+    assert not guard.edge_free(home, folded)
     pairs = {frozenset((guard.capsules[i].name, guard.capsules[j].name)) for i, j in guard.pairs}
     for side in ("left", "right"):
         for suffix in ("waist", "upper_roll", "shoulder"):
