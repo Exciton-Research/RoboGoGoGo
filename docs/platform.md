@@ -19,7 +19,9 @@ simulation must never stand in for measured hardware configuration.
   or model inference implementation is installed by this refactor.
 - `robogogogo.runtime`: shared observations/actions, deterministic policies, the
   existing simulation action supervisor, and `RobotWorkflow`. The workflow reports
-  implemented capabilities; a configured profile cannot enable physical execution.
+  implemented capabilities; a configured profile cannot enable physical execution. The command execution
+  service provides coordinated goals, watchdogs, stop and takeover with an opt-in
+  test backend; physical adapters remain disabled.
 - `robogogogo.studio`: HTTP/WebSocket transport and interactive simulation services.
   The Next.js application presents workflow status, simulation, hardware telemetry,
   and the episode library. It does not own a hardware motor loop or a trainer.
@@ -90,7 +92,9 @@ from robogogogo.runtime.supervisor import ControlSystem
 
 `GET /api/workflow` reports the selected identity, hardware observation status,
 episode library and stage blockers. `POST /api/data/{episode_uuid}/validate` validates
-an existing local archive. These APIs neither move hardware nor launch training.
+an existing local archive. These APIs neither move hardware nor launch training. The separate
+[command execution test console](command-execution.md) can exercise group commands
+without physical actuators using `--test-execution`.
 Older archives without environment metadata retain an `unknown` origin during
 validation. A simulation recording never becomes a physical demonstration because
 an action is labeled `policy` or the configured robot happens to have matching DOFs.

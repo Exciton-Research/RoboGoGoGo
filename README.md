@@ -15,7 +15,10 @@ no external physics engine. Next.js/TypeScript provides the workbench.
 **Implemented:** reference simulation, aligned simulation episodes, dataset
 validation, read-only ROS/SDK telemetry, calibration, and moving-base perception.
 **Still required:** physical teleoperation/recording, hardware command execution,
-training, checkpoint inference, and real-robot evaluation. Simulation contact and
+training, checkpoint inference, and real-robot evaluation. An opt-in
+[command execution test layer](docs/command-execution.md) now provides coordinated
+arm/gripper goals, watchdogs, stop and manual takeover; it cannot move hardware.
+Simulation contact and
 recovery features are not physical robot integrations.
 
 Read the [single-robot platform guide](docs/platform.md) for package boundaries,
