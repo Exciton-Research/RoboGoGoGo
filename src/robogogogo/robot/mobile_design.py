@@ -181,23 +181,31 @@ def mobile_dual_arm_urdf():
                     item = element.find(tag)
                     item.set("link", f"{side}_{item.attrib['link']}")
                 if element.attrib["name"] == f"{side}_waist_joint":
-                    element.find("origin").set("xyz", "0 0 .04")
+                    element.find("origin").set("xyz", "0 0 0")
                 if element.attrib["name"] == f"{side}_shoulder_joint":
                     element.find("parent").set("link", f"{side}_upper_roll")
                     element.find("origin").set("xyz", "0 0 0")
+            if element.tag == "link" and element.attrib["name"] == f"{side}_waist":
+                element.find("inertial/origin").set("xyz", "0 0 0")
+                inertia = element.find("inertial/inertia")
+                for diagonal in ("ixx", "iyy", "izz"):
+                    inertia.set(diagonal, str(2.0 * 0.07**2 / 6))
+                for item in list(element.findall("visual")):
+                    element.remove(item)
             robot.append(element)
         joint(f"{side}_mount", "torso", f"{side}_pedestal", origin=(0, y, 0.15))
-        roll = link(f"{side}_upper_roll", 0.5)
+        link(f"{side}_upper_roll", 0.5)
         joint(
             f"{side}_upper_roll_joint",
             f"{side}_waist",
             f"{side}_upper_roll",
             "revolute",
-            origin=(0.08, 0, 0),
+            origin=(0, 0, 0),
             axis=(1, 0, 0),
             effort=60,
         )
-        visual(roll, "box", (0.06, 0.08, 0.08))
+        # Co-located shoulder axes form a compact ball-like mechanism.
+        # The small carrier inertia remains, but no extra spacer link is drawn.
     neck = link("head_pan", 0.3)
     joint(
         "head_pan_joint",

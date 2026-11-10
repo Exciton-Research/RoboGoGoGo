@@ -249,7 +249,10 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
           (mobile &&
             (joint.name.startsWith("base_") ||
               joint.name.endsWith("_wheel") ||
-              joint.name.endsWith("_steer")))
+              joint.name.endsWith("_steer") ||
+              joint.name.endsWith("_waist") ||
+              joint.name.endsWith("_upper_roll") ||
+              joint.name.endsWith("_shoulder")))
         )
           continue;
         const size = builtIn

@@ -58,8 +58,8 @@ export function addResearchRobotDetails(model: RobotModel, add: AddMesh) {
     return mesh;
   };
   model.names.forEach((name, body) => {
-    if (name.endsWith("pedestal") && mobile) {
-      cylinder(body, 0.065, 0.035, metal, [0, 0, 0.017]);
+    if (name.endsWith("shoulder") && mobile) {
+      add(body, new THREE.SphereGeometry(0.082, 32, 24), shell, [0, 0, 0]);
     }
     if (name.endsWith("pedestal") && !mobile) {
       box(body, [0.3, 0.3, 0.045], graphite, [0, 0, 0.024], 0.025);

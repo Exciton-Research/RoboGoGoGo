@@ -26,7 +26,11 @@ defines the standing posture and alternative torso configurations.
 - Wheel radius: 0.14 m; wheelbase: 0.50 m; wheel track: 0.68 m.
 - Two folding torso segments: 0.44 m each.
 - Four torso joints: yaw, lower pitch, upper pitch, chest pitch.
-- Two seven-joint arms with explicit shoulder attachment boundaries.
+- Two seven-joint arms with explicit shoulder attachment boundaries: three
+  co-located shoulder axes, elbow flexion, and three distal rotation axes.
+  The former shoulder spacer and pedestal-style housing are removed. Internal
+  `waist`/`upper_roll` names are retained for checkpoint field compatibility;
+  older joint poses now refer to the revised, shorter shoulder geometry.
 - Pan/tilt head, head stereo pair and one camera on each wrist.
 - Four wheel steering joints and four wheel rolling joints.
 

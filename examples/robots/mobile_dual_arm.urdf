@@ -306,21 +306,15 @@
   </link>
   <link name="left_waist">
     <inertial>
-      <origin xyz="0.04 0.0 0.0" />
+      <origin xyz="0 0 0" />
       <mass value="2.0" />
-      <inertia ixx="0.0012250000145286322" iyy="0.0016791666857898235" izz="0.0016791666857898235" ixy="0.0" ixz="0.0" iyz="0.0" />
+      <inertia ixx="0.0016333333333333336" iyy="0.0016333333333333336" izz="0.0016333333333333336" ixy="0.0" ixz="0.0" iyz="0.0" />
     </inertial>
-    <visual>
-      <origin xyz="0.04 0.0 0.0" />
-      <geometry>
-        <box size="0.07999999821186066 .07 .07" />
-      </geometry>
-    </visual>
   </link>
   <joint name="left_waist_joint" type="revolute">
     <parent link="left_pedestal" />
     <child link="left_waist" />
-    <origin xyz="0 0 .04" />
+    <origin xyz="0 0 0" />
     <axis xyz="0.0 0.0 1.0" />
     <limit lower="-2.799999952316284" upper="2.799999952316284" effort="60.0" velocity="5" />
     <dynamics damping="0.11999999731779099" />
@@ -460,17 +454,11 @@
       <mass value="0.5" />
       <inertia ixx="0.0008333333333333335" iyy="0.0008333333333333335" izz="0.0008333333333333335" ixy="0" ixz="0" iyz="0" />
     </inertial>
-    <visual>
-      <origin xyz="0 0 0" rpy="0 0 0" />
-      <geometry>
-        <box size="0.06 0.08 0.08" />
-      </geometry>
-    </visual>
   </link>
   <joint name="left_upper_roll_joint" type="revolute">
     <parent link="left_waist" />
     <child link="left_upper_roll" />
-    <origin xyz="0.08 0 0" />
+    <origin xyz="0 0 0" />
     <axis xyz="1 0 0" />
     <limit lower="-2.8" upper="2.8" effort="60" velocity="1.0" />
     <dynamics damping="0.2" />
@@ -490,21 +478,15 @@
   </link>
   <link name="right_waist">
     <inertial>
-      <origin xyz="0.04 0.0 0.0" />
+      <origin xyz="0 0 0" />
       <mass value="2.0" />
-      <inertia ixx="0.0012250000145286322" iyy="0.0016791666857898235" izz="0.0016791666857898235" ixy="0.0" ixz="0.0" iyz="0.0" />
+      <inertia ixx="0.0016333333333333336" iyy="0.0016333333333333336" izz="0.0016333333333333336" ixy="0.0" ixz="0.0" iyz="0.0" />
     </inertial>
-    <visual>
-      <origin xyz="0.04 0.0 0.0" />
-      <geometry>
-        <box size="0.07999999821186066 .07 .07" />
-      </geometry>
-    </visual>
   </link>
   <joint name="right_waist_joint" type="revolute">
     <parent link="right_pedestal" />
     <child link="right_waist" />
-    <origin xyz="0 0 .04" />
+    <origin xyz="0 0 0" />
     <axis xyz="0.0 0.0 1.0" />
     <limit lower="-2.799999952316284" upper="2.799999952316284" effort="60.0" velocity="5" />
     <dynamics damping="0.11999999731779099" />
@@ -644,17 +626,11 @@
       <mass value="0.5" />
       <inertia ixx="0.0008333333333333335" iyy="0.0008333333333333335" izz="0.0008333333333333335" ixy="0" ixz="0" iyz="0" />
     </inertial>
-    <visual>
-      <origin xyz="0 0 0" rpy="0 0 0" />
-      <geometry>
-        <box size="0.06 0.08 0.08" />
-      </geometry>
-    </visual>
   </link>
   <joint name="right_upper_roll_joint" type="revolute">
     <parent link="right_waist" />
     <child link="right_upper_roll" />
-    <origin xyz="0.08 0 0" />
+    <origin xyz="0 0 0" />
     <axis xyz="1 0 0" />
     <limit lower="-2.8" upper="2.8" effort="60" velocity="1.0" />
     <dynamics damping="0.2" />

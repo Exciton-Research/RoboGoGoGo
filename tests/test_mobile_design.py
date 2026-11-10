@@ -119,3 +119,17 @@ def test_default_studio_mobile_postures_dynamics_checkpoint_and_task_boundary(tm
         blocked = client.post("/api/tasks/plan", json={"kind": "handover"})
         assert blocked.status_code == 422
         assert "stability" in blocked.json()["detail"]
+
+
+def test_compact_humanlike_shoulder_has_coincident_three_axes(model):
+    pose = sp.forward_kinematics(model, model.home)
+    for side in ("left", "right"):
+        bodies = [
+            model.names.index(f"{side}_{name}") for name in ("waist", "upper_roll", "shoulder")
+        ]
+        for body in bodies[1:]:
+            np.testing.assert_allclose(pose.position[body], pose.position[bodies[0]], atol=1e-6)
+        elbow = model.names.index(f"{side}_elbow")
+        assert float(
+            jnp.linalg.norm(pose.position[elbow] - pose.position[bodies[-1]])
+        ) == pytest.approx(0.32)
