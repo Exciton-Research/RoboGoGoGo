@@ -175,3 +175,19 @@ def test_hardware_api_is_read_only_and_separate_from_simulation(tmp_path):
         client.post("/api/hardware/disconnect", json={})
         assert client.get("/api/hardware/cameras/head_left").status_code == 404
     assert feed.closed
+
+
+def test_cleanup_failure_disconnects_telemetry_and_reports_fault():
+    class BrokenClose(Feed):
+        def close(self):
+            raise RuntimeError("reader shutdown timed out")
+
+    feed = BrokenClose()
+    service = HardwareService({"robot": lambda: feed})
+    service.connect("robot")
+    feed.sink.joints(joint())
+    with pytest.raises(ValueError, match="cleanup failed"):
+        service.close()
+    feed.sink.joints(joint(2))
+    snapshot = service.snapshot()
+    assert snapshot["status"] == "fault" and snapshot["joints"] is None

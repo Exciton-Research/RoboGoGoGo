@@ -139,7 +139,7 @@ class HardwareService:
                     revision=revision,
                 )
 
-            joint = dict(**asdict(self.joint[0]), **{}) if self.joint else None
+            joint = asdict(self.joint[0]) if self.joint else None
             if joint is not None:
                 joint.update(metadata(self.joint))
             cameras = [
@@ -182,7 +182,12 @@ class HardwareService:
             self.name, self.joint, self.error = None, None, None
             self.cameras = {}
         if backend is not None:
-            backend.close()
+            try:
+                backend.close()
+            except Exception as error:
+                with self.lock:
+                    self.error = f"Hardware cleanup failed: {error}"
+                raise ValueError(self.error) from error
 
     def close(self):
         with self.lifecycle:

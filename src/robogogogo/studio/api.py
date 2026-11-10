@@ -61,12 +61,12 @@ def create_app(*, project_dir=None, static_dir=None, initial_scene="arm", hardwa
         try:
             yield
         finally:
-            await asyncio.to_thread(app.state.hardware.close)
             task.cancel()
             try:
                 await task
             except asyncio.CancelledError:
                 pass
+            await asyncio.to_thread(app.state.hardware.close)
 
     app = FastAPI(title="robogogogo Studio API", version="0.1.0", lifespan=lifespan)
     app.add_middleware(
