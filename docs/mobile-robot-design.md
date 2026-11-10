@@ -173,3 +173,22 @@ Recorded joint-delta policy actions retain their direct-path semantics and canno
 interrupt an active plan. They are not silently replaced with detours, which would
 mislabel the recorded actions. This planner covers arm/torso self-collision proxies,
 not unknown environmental obstacles, carried objects, navigation, or physical safety.
+
+
+### Studio control behavior
+
+Move arm, Move torso, posture and Cartesian movement buttons plan and start execution
+in one command. Wheel buttons start a three-simulation-second drive immediately.
+Pause freezes simulation and clears drive; Resume continues the arm queue. Reset
+clears faults and returns to home. An active arm plan disables wheel buttons until
+completion or cancellation. The displayed base position and speed confirm motion.
+
+The arm/torso controller now solves the coupled base/wheel acceleration before
+computing holding torques. This compensates tire-induced inertial loads rather than
+assuming a stationary base. Motor limits and independent collision/support guards
+still apply; the correction does not bypass rejected states.
+
+The three rule-based recording fixtures use checked elbow-flexion targets for this
+robot. Their position-IK baseline accepts continuous wheel-coordinate bounds but
+only commands arm joints. Debug movement ends the current recording; start a new
+episode before collecting another rule-based run.

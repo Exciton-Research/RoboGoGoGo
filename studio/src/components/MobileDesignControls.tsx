@@ -135,6 +135,14 @@ export function MobileDesignControls() {
             Finish or cancel the arm/torso motion before driving.
           </p>
         )}
+        {state && (
+          <p role="status" className="control-note">
+            Base position: X {state.q[0].toFixed(3)} m · Y{" "}
+            {state.q[1].toFixed(3)} m · yaw{" "}
+            {((state.q[2] * 180) / Math.PI).toFixed(1)}°. Speed:{" "}
+            {Math.hypot(state.qd[0], state.qd[1]).toFixed(3)} m/s.
+          </p>
+        )}
         {state?.mobile && (
           <p role="status" className="control-note">
             Stability: {state.mobile.guard} · margin{" "}

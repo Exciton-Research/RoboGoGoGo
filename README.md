@@ -28,7 +28,8 @@ workspace. `python -m robogogogo --headless --steps 100` runs the same robot.
   base coordinates. Physical left/right command groups each have seven joints.
 - **Simulation:** native JAX dynamics, steering and tire friction, support-margin
   monitoring, arm self-collision checks, and bounded arm/torso detour planning.
-  Set joint or torso goals, then Run planned motion. Pause retains the queue;
+  Movement buttons plan and run joint/torso motions directly. Drive buttons also
+  start immediately. Pause retains the arm queue;
   Cancel releases ownership. Base driving and arm planning are serialized.
 - **Data:** capture synchronized simulated RGB and joint states, execute an
   explicit joint-delta action, capture the next observation, then save/export.

@@ -152,7 +152,9 @@ export function VlaPanel(props: Props) {
       {episode?.done && (
         <div className="episode-result">
           {episode.success ? <Check size={13} /> : <Square size={11} />}
-          <span>{episode.reason}</span>
+          <span>
+            {episode.reason}. Start a new episode above to collect again.
+          </span>
         </div>
       )}
       <div className="vla-block">

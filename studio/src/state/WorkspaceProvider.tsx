@@ -68,6 +68,15 @@ function useWorkspaceState() {
     }
   }, [snapshot]);
   useEffect(() => {
+    if (!snapshot || goalDirty || busy) return;
+    const motion = snapshot.state.motion;
+    setGoals(
+      motion && ["ready", "running", "paused"].includes(motion.status)
+        ? motion.final_goal
+        : snapshot.state.goal,
+    );
+  }, [snapshot, goalDirty, busy]);
+  useEffect(() => {
     if (snapshot?.model.scene === "mobile_dual_arm") setInspector("control");
   }, [snapshot?.model.scene]);
   useEffect(() => {
