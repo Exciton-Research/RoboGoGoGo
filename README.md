@@ -816,9 +816,10 @@ python -m robogogogo.server --port 8765 \
 
 Then open `http://127.0.0.1:8765/hardware/`, select `ros2`, and connect. An optional
 `--ros-domain-id` selects the DDS domain. The adapter subscribes to `JointState`
-and RGB `CompressedImage` PNG/JPEG topics with sensor-data QoS. Raw `Image`,
-compressed depth, `CameraInfo`, TF, recording, and synchronized sensor bundles
-are not implemented in this first hardware integration. ROS 2 is optional and
+and RGB `CompressedImage` PNG/JPEG topics with sensor-data QoS. Raw `Image`, compressed depth, moving-base TF, and hardware recording are not
+implemented. CameraInfo validation, calibrated stereo, and acquisition-time
+synchronization are available through a measured hardware profile; see the
+[hardware calibration guide](docs/hardware-perception.md). ROS 2 is optional and
 imported only when connecting; missing installations produce a visible error.
 See the official [rclpy subscription example](https://github.com/ros2/tutorials/blob/master/rclpy_tutorials/topics/listener_qos_py.py)
 and [sensor message definitions](https://index.ros.org/p/sensor_msgs/).
@@ -868,3 +869,16 @@ camera images exercise the same SDK adapter and API. They are not robot measurem
 Run `pytest tests/test_hardware.py` for contract and integration tests. Real ROS DDS
 connectivity and vendor-specific behavior still require validation on the target
 robot; mock tests do not establish real-hardware readiness.
+
+
+### Calibrated hardware observations and scene memory
+
+Use a measured, versioned hardware profile to fuse real camera observations with
+joint history. Studio reports calibration and synchronization readiness independently
+of camera preview. No simulation pose or synthetic depth is used by this path.
+
+The [hardware calibration and synchronization guide](docs/hardware-perception.md)
+covers checkerboard intrinsic calibration with held-out validation, measured mount
+transforms, clock-domain requirements, ROS CameraInfo validation, profile setup,
+uncertainty rejection, scene export, and audit records. Hardware remains read-only;
+fixed-base kinematics is required until timestamped moving-base localization is added.
