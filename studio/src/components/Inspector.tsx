@@ -98,7 +98,7 @@ export function Inspector() {
             <>
               <div className="inspector-title">
                 <div className="section-kicker">ROBOT CONTROLLER</div>
-                <h2>Joint position</h2>
+                <h2>Robot motion</h2>
                 <p>
                   Debug controls · using these ends the current robot episode.
                 </p>

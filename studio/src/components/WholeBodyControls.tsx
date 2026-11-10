@@ -75,6 +75,24 @@ export function WholeBodyControls() {
       >
         Use current hands
       </button>
+      {motion?.kind === "whole_body" && active && (
+        <div className="whole-body-actions">
+          <button
+            className="button"
+            disabled={disabled}
+            onClick={() => void command(state?.running ? "pause" : "run")}
+          >
+            {state?.running ? "Pause reach" : "Resume reach"}
+          </button>
+          <button
+            className="button"
+            disabled={disabled}
+            onClick={() => void command("cancel_plan")}
+          >
+            Cancel reach
+          </button>
+        </div>
+      )}
       <div className="whole-body-tags">
         <span>4 wheel drives</span>
         <span>Articulated torso</span>
@@ -89,9 +107,9 @@ export function WholeBodyControls() {
         </p>
       )}
       <small>
-        Local position-only reach. Keeps the initial hand spacing.
-        Self-collision and support guards stay active. No environment obstacle
-        or payload planning.
+        Local position-only reach. Preserves final hand spacing; no rigid-object
+        constraint. Self-collision and support guards stay active. No
+        environment obstacle or payload planning.
       </small>
     </section>
   );

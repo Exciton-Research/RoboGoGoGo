@@ -105,7 +105,7 @@ export function addRobotHardware(
         for (let i = 0; i < 9; i++) {
           add(body, new THREE.BoxGeometry(0.006, 0.002, 0.035), dark, [
             -0.15 + i * 0.018,
-            side * 0.421,
+            side * 0.371,
             -0.005,
           ]);
         }
@@ -113,7 +113,7 @@ export function addRobotHardware(
           body,
           new RoundedBoxGeometry(0.48, 0.012, 0.018, 2, 0.004),
           dark,
-          [0, side * 0.425, 0.045],
+          [0, side * 0.375, 0.045],
         );
         rail.material.roughness = 0.6;
       }
