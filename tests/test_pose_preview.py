@@ -54,3 +54,16 @@ def test_invalid_preview_is_marked_without_moving_and_frozen_coordinates_stay_fi
     for values in ([0], [float("nan")] * 31, [100] * 31):
         with pytest.raises(ValueError):
             w.preview_pose(values)
+
+
+def test_trajectory_export_identifies_assumed_actuator_parameters(workspace, tmp_path):
+    path = workspace.session.export(tmp_path / "drive.npz")
+    with np.load(path, allow_pickle=False) as recording:
+        assert recording["arm_actuator_revision"].item() == "assumed-arm-drive-1"
+        assert "not component-specified" in recording["arm_actuator_provenance"].item()
+        speeds = recording["arm_no_load_speed_rad_s"]
+        friction = recording["arm_coulomb_friction_nm"]
+        assert speeds.shape == friction.shape == (31,)
+        assert np.isfinite(speeds).sum() == 14
+        assert np.all(friction[np.isfinite(speeds)] > 0)
+        assert np.all(friction[~np.isfinite(speeds)] == 0)
