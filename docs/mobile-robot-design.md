@@ -84,10 +84,10 @@ robot. In particular:
   geometry. Earlier contact experiments do not validate this mobile mechanism.
 - Posture presets pass self-collision checks but are not hardware stability-certified. Automated task
   planning is rejected for this scene until whole-body planning is implemented.
-  Select the legacy dual-arm scene for the existing handover experiments.
+  Legacy fixed-base handover experiments are numerical test fixtures, not product workflows.
 - Real ROS/SDK telemetry remains read-only. The separate command execution test
-  backend still represents two six-joint arms, and cannot drive this seven-joint
-  mobile design. Its watchdogs do not constitute physical safety certification.
+  backend represents two seven-joint arms and two grippers. Base and torso
+  hardware execution are not implemented. Its watchdogs do not constitute physical safety certification.
 
 ## Path to a physical robot
 
@@ -156,7 +156,20 @@ the depth limit is rejected. Continuous wheel angles are supported without angle
 wrapping; prismatic bounds remain finite. This checks the simulation's piecewise
 joint-space motion, not unmodeled continuous-time impacts or compliant deformation.
 
-Studio reports the closest checked capsule pair and clearance. This feature avoids
-unsafe motion by rejecting it; it does not yet find automatic detours, coordinate
-recovery, or avoid external obstacles. The earlier coordinated mobile task planner
-remains disabled until those capabilities and whole-body planning are implemented.
+Studio reports the closest checked capsule pair and clearance. Arm and torso goals
+now use a bounded planner: try the direct path, then a collision-checked neutral
+retreat, then deterministic seeded RRT-Connect. The search has a 12-second budget;
+invalid endpoints or exhausted searches preserve the previous goal. Wheels, base
+and head stay fixed during planning. Stop driving and let velocities settle first.
+
+Run executes synchronized quintic references through the waypoints. Each segment
+is revalidated from actual joint positions; every predicted dynamics substep still
+passes the collision and dynamic support guards before it is committed. A tracking
+or stability failure blocks the motion. Pause preserves the plan; Cancel discards
+it and commands a hold. Driving is unavailable while a plan owns the robot.
+Checkpoint saves require completion or cancellation so a queue cannot be lost.
+
+Recorded joint-delta policy actions retain their direct-path semantics and cannot
+interrupt an active plan. They are not silently replaced with detours, which would
+mislabel the recorded actions. This planner covers arm/torso self-collision proxies,
+not unknown environmental obstacles, carried objects, navigation, or physical safety.

@@ -14,8 +14,7 @@ export function addResearchRobotDetails(model: RobotModel, add: AddMesh) {
   const mobile = model.scene === "mobile_dual_arm";
   const graphite = "#22313d",
     metal = "#8799a6",
-    shell = "#dce3e7",
-    accent = "#ed8251";
+    shell = "#dce3e7";
   const box = (
     body: number,
     size: number[],
@@ -35,22 +34,6 @@ export function addResearchRobotDetails(model: RobotModel, add: AddMesh) {
       color,
       position,
     );
-  const cylinder = (
-    body: number,
-    radius: number,
-    depth: number,
-    color: string,
-    position: number[],
-  ) => {
-    const mesh = add(
-      body,
-      new THREE.CylinderGeometry(radius, radius, depth, 48),
-      color,
-      position,
-    );
-    mesh.rotation.x = Math.PI / 2;
-    return mesh;
-  };
   model.names.forEach((name, body) => {
     if (mobile && (name.startsWith("left_") || name.startsWith("right_"))) {
       if (name.endsWith("waist")) {

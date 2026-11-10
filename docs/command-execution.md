@@ -19,7 +19,7 @@ move either of them.
 
 1. Arm a manual lease or a policy test lease. Both require a fresh control epoch
    and a previously acknowledged stop. The policy test lease does not run a model.
-2. Send the coordinated test pose. Both six-joint arms and both grippers use the
+2. Send the coordinated test pose. Both seven-joint arms and both grippers use the
    same two-second quintic motion clock. Watch the measured test state update.
 3. Take over manually while a policy command is active. The complete group stops
    first; the old lease is revoked before a new manual lease is granted.
@@ -47,7 +47,7 @@ physical stopping performance.
 - `studio/execution.py`: strict local API and explicit opt-in application lifecycle.
 - `studio/app/execution`: operator console. It is not the motor controller.
 
-A test command always includes all six joints of each arm and both gripper goals.
+A test command always includes all seven joints of each arm and both gripper goals.
 Missing targets, nonfinite values and bounds violations are rejected before any
 backend delivery. There is no queue and no implicit command replacement: stop the
 current group first. The test limits are fixture values, not future robot limits.
