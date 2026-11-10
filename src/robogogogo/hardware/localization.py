@@ -153,7 +153,10 @@ class LocalizationBuffer:
                         raise ValueError(
                             "Out-of-order localization discontinuity; reconnect required"
                         )
-                    self._reset("Localization pose jumped or exceeded configured motion bounds", sample.timestamp)
+                    self._reset(
+                        "Localization pose jumped or exceeded configured motion bounds",
+                        sample.timestamp,
+                    )
                     break
             queue.append(item)
             queue.sort(key=lambda value: value[0])
@@ -184,9 +187,7 @@ class LocalizationBuffer:
             if edge in self.static:
                 a = b = self.static[edge]
             else:
-                if sample.timestamp < self.epoch_start:
-                return
-            queue = self.dynamic[edge]
+                queue = self.dynamic[edge]
                 before = [item for item in queue if item[0] <= timestamp]
                 after = [item for item in queue if item[0] >= timestamp]
                 if not before or not after:
