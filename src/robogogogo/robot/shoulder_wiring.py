@@ -165,7 +165,7 @@ def cover_specs(model):
                 side=package["name"].split("_")[0],
                 body=package["body"],
                 start=(b + axis * 0.005).tolist(),
-                end=(b + axis * 0.045).tolist(),
+                end=(b + axis * 0.015).tolist(),
                 inner_radius=0.056 if package["shoulder_axis"] == "pitch" else 0.060,
                 radius=0.058 if package["shoulder_axis"] == "pitch" else 0.062,
             )
