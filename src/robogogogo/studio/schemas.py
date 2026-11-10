@@ -24,6 +24,7 @@ class Command(Payload):
         "drive",
         "brake",
         "cancel_plan",
+        "whole_body",
     ]
     start: bool = False
     duration: float = Field(default=3.0, gt=0, le=5)

@@ -241,6 +241,23 @@ class Session:
         self._advance_motion_goal()
         twist = self.drive_twist if self.elapsed < self.drive_until else np.zeros(3)
         reference, velocity, reference_acceleration = self._motion_reference()
+        if self._whole_body_active():
+            if self.elapsed > self.segment_time + self.segment_duration + 15:
+                raise FloatingPointError(
+                    "Whole-body tracking timed out; traction or joint limits prevented reaching the target"
+                )
+            base = self.mobile.base
+            error = np.asarray(reference - self.state.q)[base]
+            world_velocity = np.asarray(velocity)[base[:2]] + 1.2 * error[:2]
+            world_velocity *= min(1.0, 0.18 / max(np.linalg.norm(world_velocity), 1e-9))
+            body_velocity = np.asarray(self.mobile.rotation(self.state.q)).T @ world_velocity
+            twist = np.r_[
+                body_velocity, np.clip(float(velocity[base[2]]) + 1.2 * error[2], -0.25, 0.25)
+            ]
+            self.motion_plan["base_error_m"] = float(
+                np.linalg.norm(np.asarray(self.target_q - self.state.q)[base[:2]])
+            )
+
         following, acc, margin, torque, diagnostics, positions = self.mobile.predict(
             self.state,
             reference,
@@ -311,7 +328,12 @@ class Session:
             collision_pair=list(closest.pair),
         )
         self.state, self.com_acceleration = following, acc
-        self.target_q = self.target_q.at[self.mobile.driven].set(following.q[self.mobile.driven])
+        tracking = (
+            np.r_[np.asarray(self.mobile.steer), np.asarray(self.mobile.wheels)]
+            if self._whole_body_active()
+            else self.mobile.driven
+        )
+        self.target_q = self.target_q.at[tracking].set(following.q[tracking])
         self.last_torque = np.asarray(jnp.clip(torque, -self.model.effort, self.model.effort))
         self.elapsed += float(self.model.dt) * self.substeps
         self._record()
@@ -432,11 +454,53 @@ class Session:
         self.target_q = self.motion_waypoints[1]
         self._begin_motion_segment()
 
+    def _whole_body_active(self):
+        return (
+            self.motion_plan is not None
+            and self.motion_plan.get("kind") == "whole_body"
+            and self.motion_plan["status"] in ("ready", "running", "paused")
+        )
+
+    def set_whole_body_target(self, center):
+        if self.mobile is None:
+            raise ValueError("Whole-body reaching requires RG Mobile Duo")
+        if np.max(np.abs(np.asarray(self.state.qd))) > 0.03 or (
+            self.elapsed < self.drive_until and np.any(self.drive_twist)
+        ):
+            raise ValueError("Brake and let the robot settle before whole-body planning")
+        from .planning.whole_body import WholeBodyPlanner
+
+        if not hasattr(self, "whole_body_planner"):
+            self.whole_body_planner = WholeBodyPlanner(self.mobile, self.arms)
+        plan, targets = self.whole_body_planner.plan(self.state.q, center)
+        self.stop_drive()
+        self.motion_waypoints = [jnp.asarray(q) for q in plan.waypoints]
+        self.motion_plan = dict(
+            status="ready",
+            kind="whole_body",
+            method=plan.method,
+            waypoint=1,
+            waypoint_count=len(plan.waypoints) - 1,
+            checks=plan.checks,
+            final_goal=list(plan.waypoints[-1]),
+            target_center=np.asarray(center).tolist(),
+            target_positions=targets.tolist(),
+            base_error_m=0.0,
+        )
+        self.targets = {arm.name: target for arm, target in zip(self.arms, targets)}
+        self.target_q = self.motion_waypoints[1]
+        self._begin_motion_segment()
+
     def _advance_motion_goal(self):
         if not self.motion_plan or self.motion_plan["status"] not in ("ready", "running", "paused"):
             return
         self.motion_plan["status"] = "running"
-        driven = self.mobile.driven
+        whole = self._whole_body_active()
+        driven = (
+            np.r_[np.asarray(self.mobile.steer), np.asarray(self.mobile.wheels)]
+            if whole
+            else self.mobile.driven
+        )
         indices = np.setdiff1d(np.arange(len(self.state.q)), driven)
         error = np.max(np.abs(np.asarray(self.target_q - self.state.q)[indices]))
         speed = np.max(np.abs(np.asarray(self.state.qd)[indices]))
@@ -448,7 +512,19 @@ class Session:
             return
         goal = self.motion_waypoints[next_index].at[driven].set(self.state.q[driven])
         try:
-            self.mobile.validate_goal(np.asarray(self.state.q), np.asarray(goal))
+            if whole:
+                import time
+
+                world = self.whole_body_planner.world(
+                    np.asarray(self.state.q), time.monotonic() + 3
+                )
+                indices = self.whole_body_planner.indices
+                if not world.edge_free(
+                    np.asarray(self.state.q)[indices], np.asarray(goal)[indices]
+                ):
+                    raise ValueError("Whole-body segment no longer passes collision/support checks")
+            else:
+                self.mobile.validate_goal(np.asarray(self.state.q), np.asarray(goal))
         except ValueError as error:
             self.motion_plan["status"] = "blocked"
             self.stop_drive()
@@ -462,6 +538,14 @@ class Session:
         self.segment_time = self.elapsed
         distance = float(jnp.max(jnp.abs(self.target_q - self.segment_start)))
         self.segment_duration = max(0.5, 1.875 * distance / 0.3, (5.774 * distance / 0.2) ** 0.5)
+        if self._whole_body_active():
+            travel = np.asarray(self.target_q - self.segment_start)[self.mobile.base]
+            self.segment_duration = max(
+                self.segment_duration,
+                1.875 * np.linalg.norm(travel[:2]) / 0.10,
+                1.875 * abs(travel[2]) / 0.15,
+                2.0,
+            )
 
     def _motion_reference(self):
         if not self.motion_plan or self.motion_plan["status"] not in ("ready", "running", "paused"):

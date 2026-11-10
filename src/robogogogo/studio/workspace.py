@@ -219,7 +219,7 @@ class Studio:
         with self.lock:
             op = command.op
             if command.start:
-                if op not in ("drive", "joints", "posture", "home", "target"):
+                if op not in ("drive", "joints", "posture", "home", "target", "whole_body"):
                     raise ValueError("Start is only valid for movement commands")
                 if self.error:
                     raise ValueError("Reset the failed simulation before moving")
@@ -309,6 +309,11 @@ class Studio:
                     q[index] = preset[index]
                 self.session.set_joints(q)
                 self.message = "Arm/torso path planned. Run to execute with live collision and stability guards."
+            elif op == "whole_body":
+                if command.values is None:
+                    raise ValueError("A world-frame bimanual target center is required")
+                self.session.set_whole_body_target(command.values)
+                self.message = "Whole-body path ready: wheels, torso and both arms share one target"
             elif op == "target":
                 if self.scene == "drop":
                     raise ValueError("Cartesian control is unavailable in the contact experiment")
