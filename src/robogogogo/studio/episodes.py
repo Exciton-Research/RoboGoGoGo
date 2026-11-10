@@ -1,12 +1,12 @@
 """robot episode lifecycle, aligned actions, and dataset persistence."""
 
-import json
 from dataclasses import fields
 from typing import TYPE_CHECKING
 
 import jax.numpy as jnp
 import numpy as np
 
+from robogogogo.data.store import EpisodeStore
 from robogogogo.robot.cameras import mounted_rig
 
 from .. import spatial as sp
@@ -21,6 +21,7 @@ class EpisodeService:
 
     def __init__(self, workspace: "Studio"):
         self.workspace = workspace
+        self.store = EpisodeStore(workspace.directory / "episodes")
 
     def start_episode(self, request: NewEpisode):
         workspace = self.workspace
@@ -227,35 +228,15 @@ class EpisodeService:
         with workspace.lock:
             if not workspace.episode:
                 raise ValueError("No episode to export")
-            directory = workspace.directory / "episodes"
-            directory.mkdir(exist_ok=True)
-            path = directory / f"{workspace.episode.id}.zip"
             arrays = {
                 f.name: np.asarray(getattr(workspace.session.model, f.name))
                 for f in fields(workspace.session.model)
                 if f.name not in ("parents", "kinds", "indices", "names")
             }
-            temporary = path.with_suffix(".tmp")
-            workspace.episode.export(temporary, model=workspace.model_info, model_arrays=arrays)
-            temporary.replace(path)
-            summary = dict(
-                id=workspace.episode.id,
-                instruction=workspace.episode.instruction,
-                observations=len(workspace.episode.observations),
-                actions=len(workspace.episode.actions),
-                success=workspace.episode.success,
-                created=workspace.episode.created,
+            return self.store.save(
+                workspace.episode, model=workspace.model_info, model_arrays=arrays
             )
-            path.with_suffix(".json").write_text(json.dumps(summary))
-            return summary
 
     def episodes(self):
-        workspace = self.workspace
-        with workspace.lock:
-            result = []
-            for path in (workspace.directory / "episodes").glob("*.json"):
-                try:
-                    result.append(json.loads(path.read_text()))
-                except (ValueError, OSError):
-                    continue
-            return sorted(result, key=lambda e: e["created"], reverse=True)
+        with self.workspace.lock:
+            return self.store.list()

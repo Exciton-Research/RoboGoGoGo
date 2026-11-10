@@ -80,6 +80,7 @@ class Episode:
 
     def summary(self):
         return dict(
+            environment="simulation",
             id=self.id,
             instruction=self.instruction,
             task=self.task_plan["kind"]
@@ -240,6 +241,7 @@ class Episode:
         manifest = dict(
             format="robogogogo-episode-v2" if self.multiview else "robogogogo-episode-v1",
             camera_convention="position/look_at/up in mount coordinates; null mount is world; optical +X right, +Y down, +Z forward",
+            environment="simulation",
             id=self.id,
             created=self.created,
             instruction=self.instruction,
