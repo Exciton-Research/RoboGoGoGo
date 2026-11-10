@@ -83,14 +83,22 @@ def plan_motion(world, start, goal, *, seed=0, max_iterations=1500, step_size=0.
                 # Deterministic greedy shortcutting retains certified edges.
                 shortened = [path[0]]
                 cursor = 0
-                while cursor < len(path) - 1:
-                    endpoint = len(path) - 1
-                    while endpoint > cursor + 1 and not world.edge_free(
-                        path[cursor], path[endpoint]
-                    ):
-                        endpoint -= 1
-                    shortened.append(path[endpoint])
-                    cursor = endpoint
+                try:
+                    while cursor < len(path) - 1:
+                        endpoint = len(path) - 1
+                        while endpoint > cursor + 1 and not world.edge_free(
+                            path[cursor], path[endpoint]
+                        ):
+                            endpoint -= 1
+                        shortened.append(path[endpoint])
+                        cursor = endpoint
+                except (PlanningError, TimeoutError) as error:
+                    if "budget" not in str(error).lower():
+                        raise
+                    # Every raw tree edge was already certified before insertion.
+                    # Optional shortcutting must not discard a valid found path
+                    # when the tighter internal geometry exhausts its time budget.
+                    shortened = path
                 return MotionPlan(
                     tuple(tuple(q) for q in shortened), "rrt_connect", world.checks - initial
                 )
