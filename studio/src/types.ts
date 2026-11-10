@@ -45,6 +45,10 @@ export interface SimState {
   motion?: {
     status:
       "ready" | "running" | "paused" | "complete" | "cancelled" | "blocked";
+    kind?: "whole_body";
+    base_error_m?: number;
+    target_center?: Vec3;
+    target_positions?: Vec3[];
     method: string;
     waypoint: number;
     waypoint_count: number;

@@ -48,7 +48,7 @@ export function MobileDesignControls() {
         </button>
       </div>
       <p className="control-note">
-        Joint and torso goals automatically plan a checked path. Detours may
+        Individual joint and torso goals plan a checked path. Detours may
         reposition both arms and the torso; wheel driving is locked while a plan
         is active.
       </p>
@@ -56,7 +56,7 @@ export function MobileDesignControls() {
         <section aria-label="Robot motion plan">
           <p role="status" className="control-note">
             Plan: {state.motion.status} ·
-            {state.motion.method === "direct"
+            {state.motion.method.endsWith("direct")
               ? " direct path"
               : " collision-free detour"}{" "}
             · waypoint {state.motion.waypoint} / {state.motion.waypoint_count}

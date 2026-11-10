@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { WholeBodyControls } from "./WholeBodyControls";
 import { MobileDesignControls } from "./MobileDesignControls";
 import { VlaPanel } from "../VlaPanel";
 import {
@@ -104,6 +105,7 @@ export function Inspector() {
               </div>
               {
                 <>
+                  <WholeBodyControls />
                   <MobileDesignControls />
                   <div className="control-mode">
                     <span className="mode-dot" />
