@@ -183,6 +183,7 @@ class LocalizationBuffer:
         if problem:
             raise ValueError(problem)
         composed, max_gap, provenance = np.eye(4), 0.0, []
+        edge_poses = []
         for edge in self.edges:
             if edge in self.static:
                 a = b = self.static[edge]
@@ -201,9 +202,9 @@ class LocalizationBuffer:
             if gap > self.config["max_gap_s"]:
                 raise ValueError("Localization TF interpolation gap exceeds limit")
             fraction = (timestamp - a[0]) / gap if gap else 0.0
-            composed = composed @ matrix(
-                a[1] + fraction * (b[1] - a[1]), slerp(a[2], b[2], fraction)
-            )
+            edge_pose = matrix(a[1] + fraction * (b[1] - a[1]), slerp(a[2], b[2], fraction))
+            edge_poses.append(edge_pose)
+            composed = composed @ edge_pose
             max_gap = max(max_gap, gap)
             provenance.append(
                 dict(
@@ -214,16 +215,28 @@ class LocalizationBuffer:
                     static=edge in self.static,
                 )
             )
-        # Speed bounds describe the composed world-to-base trajectory; sums of
-        # bracket gaps conservatively account for independently timed chain edges.
-        total_gap = sum(item["after"] - item["before"] for item in provenance)
+        # A rotating upstream frame also displaces downstream translations.
+        # Bound that lever arm by the sum of downstream edge lengths, including
+        # their interpolation errors, rather than treating rotations as local.
+        linear = self.config["max_linear_speed_m_s"]
+        angular = self.config["max_angular_speed_rad_s"]
+        translation_error = linear * time_uncertainty_s
+        rotation_error = angular * time_uncertainty_s
+        downstream_length = 0.0
+        for edge_pose, item in zip(reversed(edge_poses), reversed(provenance)):
+            half_gap = (item["after"] - item["before"]) / 2
+            edge_translation = linear * half_gap
+            edge_rotation = angular * half_gap
+            translation_error += edge_translation + edge_rotation * downstream_length
+            rotation_error += edge_rotation
+            downstream_length += float(np.linalg.norm(edge_pose[:3, 3])) + edge_translation
         return BaseEstimate(
             composed,
             max_gap,
             self.epoch,
             self.config["translation_uncertainty_m"],
             self.config["rotation_uncertainty_rad"],
-            self.config["max_linear_speed_m_s"] * (total_gap / 2 + time_uncertainty_s),
-            self.config["max_angular_speed_rad_s"] * (total_gap / 2 + time_uncertainty_s),
+            translation_error,
+            rotation_error,
             tuple(provenance),
         )

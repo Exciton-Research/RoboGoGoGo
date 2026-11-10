@@ -318,6 +318,7 @@ class HardwarePerception:
             skew_s=bundle.skew_s,
             joint_gap_s=bundle.joint_gap_s,
             localization_epoch=bundle.localization_epoch,
+            localization_gap_s=max((b.gap_s for b in bundle.base_poses.values()), default=0.0),
             localization={
                 n: dict(
                     world_from_base=b.world_from_base.tolist(),
