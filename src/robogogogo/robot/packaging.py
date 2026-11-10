@@ -138,7 +138,7 @@ def assembly_parts(model):
                     "bracket",
                 )
         if drive["shoulder_axis"]:
-            from .shoulder_wiring import adapter_layout, connector_interfaces
+            from .shoulder_wiring import adapter_layout, connector_interfaces, fixed_adapter_path
 
             side, suffix = owner.split("_", 1)
             center, exit_axis = adapter_layout(suffix, 1 if side == "left" else -1)
@@ -167,15 +167,9 @@ def assembly_parts(model):
                     interface=interface,
                     provenance="manufacturer connector family; rear-face clocking requires vendor CAD",
                 )
-                p0, p3 = port_end, center - exit_axis * 0.01
-                p1, p2 = p0 + axis * 0.020, p3 - exit_axis * 0.020
-                t = np.linspace(0.0, 1.0, 17)[:, None]
-                points = (
-                    (1 - t) ** 3 * p0
-                    + 3 * (1 - t) ** 2 * t * p1
-                    + 3 * (1 - t) * t * t * p2
-                    + t**3 * p3
-                )
+                p0 = port_end
+                p3 = center - exit_axis * 0.01 + np.array([0.0, lateral * 0.30, 0.0])
+                points = fixed_adapter_path(p0, p3, axis, exit_axis)
                 for i, (start, end) in enumerate(zip(points[:-1], points[1:])):
                     part(
                         f"drive_lead_{port_index}_{i}",
@@ -185,7 +179,7 @@ def assembly_parts(model):
                         "wire",
                     )
                     result[-1].update(
-                        mass_kg=0.005 / (16 * len(interfaces)),
+                        mass_kg=0.005 / ((len(points) - 1) * len(interfaces)),
                         provenance="custom cut-to-length fixed adapter lead; not flex-rated stock lead",
                     )
             continue

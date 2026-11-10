@@ -283,3 +283,27 @@ def internal_clearance(model, q, pose, world, routes=None):
                 gaps[np.ix_(aa, bb)] = np.inf
             keep(np.min(gaps), (first["name"], second["name"]))
     return best
+
+
+def fixed_adapter_path(start, end, source_axis, target_axis, radius=0.010):
+    """Two filleted bends in a rear service bay, without cubic tangent cusps."""
+    start, end, source_axis, target_axis = map(np.asarray, (start, end, source_axis, target_axis))
+    corners = [start, start + source_axis * 0.050, end - target_axis * 0.050, end]
+    transitions = []
+    for a, b, c in zip(corners, corners[1:], corners[2:]):
+        incoming, outgoing = b - a, c - b
+        incoming /= np.linalg.norm(incoming)
+        outgoing /= np.linalg.norm(outgoing)
+        angle = np.arccos(np.clip(np.dot(incoming, outgoing), -1, 1))
+        distance = radius * np.tan(angle / 2)
+        before, after = b - incoming * distance, b + outgoing * distance
+        normal = np.cross(incoming, outgoing)
+        normal /= np.linalg.norm(normal)
+        center = before + np.cross(normal, incoming) * radius
+        radial = before - center
+        ts = np.linspace(0, angle, 13)
+        arc = center + np.cos(ts)[:, None] * radial + np.sin(ts)[:, None] * np.cross(normal, radial)
+        transitions.append((distance, arc))
+    if transitions[0][0] + transitions[1][0] >= np.linalg.norm(corners[2] - corners[1]):
+        raise ValueError("Fixed lead bends cannot fit between tray and device")
+    return np.vstack((start, transitions[0][1], transitions[1][1], end))
