@@ -304,7 +304,7 @@ def internal_clearance(model, q, pose, world, routes=None, external=()):
 def fixed_adapter_path(start, end, source_axis, target_axis, radius=0.010):
     """Two filleted bends in a rear service bay, without cubic tangent cusps."""
     start, end, source_axis, target_axis = map(np.asarray, (start, end, source_axis, target_axis))
-    corners = [start, start + source_axis * 0.055, end - target_axis * 0.050, end]
+    corners = [start, start + source_axis * 0.055, end - target_axis * 0.055, end]
     transitions = []
     for a, b, c in zip(corners, corners[1:], corners[2:]):
         incoming, outgoing = b - a, c - b
