@@ -48,6 +48,7 @@ def mobile_collision_world(model):
             ("forearm", "wrist_pitch"),
             ("wrist_roll", "wrist_pitch"),
             ("wrist_roll", "wrist_tip"),
+            ("wrist_roll", "hand"),
             ("wrist_pitch", "wrist_tip"),
             ("wrist_pitch", "hand"),
             ("wrist_tip", "hand"),
