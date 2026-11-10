@@ -254,3 +254,22 @@ def test_delayed_arming_and_takeover_cannot_override_a_newer_stop():
     with pytest.raises(ValueError, match="changed"):
         executor.takeover(expected_epoch=old_epoch)
     assert executor.snapshot()["mode"] == "stopped"
+
+
+def test_stop_does_not_confirm_a_moving_gripper():
+    _, backend, executor = setup()
+    stopped = backend.stop
+    backend.stop = lambda: replace(stopped(), gripper_velocity=(0.01, 0.0))
+    state = executor.stop()
+    assert state["mode"] == "fault" and not state["stop_confirmed"]
+
+
+def test_wrong_command_acknowledgement_faults_the_entire_group():
+    _, backend, executor = setup()
+    lease = executor.arm("policy")
+    submit(executor, lease)
+    backend.command_id = "obsolete-command"
+    executor.tick()
+    state = executor.snapshot()
+    assert state["mode"] == "fault" and state["stop_confirmed"]
+    assert "acknowledgement" in state["reason"]
