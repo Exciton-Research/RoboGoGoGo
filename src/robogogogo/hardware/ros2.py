@@ -18,6 +18,7 @@ def joint_sample(message):
         tuple(message.velocity),
         tuple(message.effort),
         message.header.frame_id,
+        "ros",
     )
 
 
@@ -26,7 +27,9 @@ def camera_sample(name, message):
     if "compressedDepth" in message.format:
         raise ValueError("Configure RGB compressed topics, not compressedDepth")
     media_type = "image/png" if data.startswith(b"\x89PNG\r\n\x1a\n") else "image/jpeg"
-    return CameraSample(name, timestamp(message.header), data, media_type, message.header.frame_id)
+    return CameraSample(
+        name, timestamp(message.header), data, media_type, message.header.frame_id, "ros"
+    )
 
 
 class ROS2Backend:

@@ -136,6 +136,13 @@ class CalibrationProfile:
             raise ValueError("Profile requires world frame, clock domain and calibration date")
         self.tree = KinematicTree(robot_xml)
         self.world_from_base = transform(d["world_from_base"])
+        self.speed_limits = d["joint_speed_limits"]
+        if set(self.speed_limits) != set(self.tree.names) or any(
+            not np.isfinite(v) or not 0 < v <= 100 for v in self.speed_limits.values()
+        ):
+            raise ValueError(
+                "Measured robot joint speed limits are required for every movable joint"
+            )
         self.max_skew = float(d.get("max_skew_s", 0.01))
         self.max_gap = float(d.get("max_joint_gap_s", 0.05))
         if not 0 < self.max_skew <= 0.03 or not 0 < self.max_gap <= 0.1:

@@ -12,6 +12,7 @@ class JointSample:
     velocity: tuple[float, ...] = ()
     effort: tuple[float, ...] = ()
     frame_id: str = ""
+    clock_domain: str = ""
 
 
 @dataclass(frozen=True)
@@ -21,6 +22,7 @@ class CameraSample:
     data: bytes
     media_type: str
     frame_id: str = ""
+    clock_domain: str = ""
 
 
 @dataclass(frozen=True)
