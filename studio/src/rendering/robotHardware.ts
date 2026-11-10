@@ -25,52 +25,20 @@ export function addRobotHardware(
       addArmActuator(model, joint.body, add);
       continue;
     }
-    if (
-      !/(waist|upper_roll|shoulder|elbow|wrist_pitch|torso_lower|torso_upper|_steer)$/.test(
-        joint.name,
-      )
-    )
+    if (!/(wrist_pitch|torso_lower|torso_upper|_steer)$/.test(joint.name))
       continue;
     const axis = new THREE.Vector3(...model.axes[joint.body]).normalize();
     const orientation = new THREE.Quaternion().setFromUnitVectors(axisY, axis);
     const wrist = joint.name.includes("wrist"),
       steering = joint.name.endsWith("steer");
-    const shoulderAxis = /_(waist|upper_roll|shoulder)$/.test(joint.name);
-    const radius = shoulderAxis
-      ? 0.033
-      : wrist
-        ? 0.035
-        : steering
-          ? 0.043
-          : 0.057;
-    const offset = shoulderAxis
-      ? 0.082
-      : wrist
-        ? 0.038
-        : steering
-          ? 0.045
-          : 0.073;
-    // Three exposed actuator endbells follow the actual yaw, roll and pitch frames.
-    // These are concept housings, not selected stepper or servo specifications.
-    // One accessible end cover per shoulder axis; opposite ends are inside the assembly.
-    const ends = shoulderAxis
-      ? [
-          joint.name.endsWith("shoulder") && joint.name.startsWith("right_")
-            ? -1
-            : 1,
-        ]
-      : [-1, 1];
-    for (const side of ends) {
+    const radius = wrist ? 0.035 : steering ? 0.043 : 0.057;
+    const offset = wrist ? 0.038 : steering ? 0.045 : 0.073;
+    for (const side of [-1, 1]) {
       const center = axis.clone().multiplyScalar(side * offset);
       const cap = add(
         joint.body,
-        new THREE.CylinderGeometry(
-          radius,
-          radius,
-          shoulderAxis ? 0.012 : 0.009,
-          40,
-        ),
-        shoulderAxis ? metal : dark,
+        new THREE.CylinderGeometry(radius, radius, 0.009, 40),
+        dark,
         center.toArray(),
       );
       cap.quaternion.copy(orientation);
