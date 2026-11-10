@@ -133,6 +133,36 @@ def assembly_parts(model):
                     0.004,
                     "bracket",
                 )
+        if drive["shoulder_axis"]:
+            from .shoulder_wiring import adapter_layout, connector_interfaces
+
+            side, suffix = owner.split("_", 1)
+            center, exit_axis = adapter_layout(suffix, 1 if side == "left" else -1)
+            center, exit_axis = np.asarray(center), np.asarray(exit_axis)
+            # Our keyed adapter/junction is mounted on the rear service tray.
+            # Device-side socket clocking is provisional, explicitly separate.
+            part("connector_standoff", rear + other * spacing, center, 0.003, "bracket")
+            part("power_can_connector", center - exit_axis * 0.01,
+                 center + exit_axis * 0.01, 0.009, "connector")
+            result[-1]["provenance"] = "custom keyed power/CAN adapter; roll tray includes pass-through junction"
+            interfaces = connector_interfaces(suffix)
+            for port_index, interface in enumerate(interfaces):
+                lateral = (port_index - (len(interfaces) - 1) / 2) * 0.024
+                port = b + radial * lateral
+                port_start, port_end = port + axis * 0.002, port + axis * 0.016
+                radius = 0.007 if port_index == 0 else 0.004
+                part(f"device_port_{port_index}", port_start, port_end, radius, "connector")
+                result[-1].update(interface=interface, provenance="manufacturer connector family; rear-face clocking requires vendor CAD")
+                p0, p3 = port_end, center - exit_axis * 0.01
+                p1, p2 = p0 + axis * 0.020, p3 - exit_axis * 0.020
+                t = np.linspace(0., 1., 17)[:, None]
+                points = (1-t)**3*p0 + 3*(1-t)**2*t*p1 + 3*(1-t)*t*t*p2 + t**3*p3
+                for i, (start, end) in enumerate(zip(points[:-1], points[1:])):
+                    part(f"drive_lead_{port_index}_{i}", start, end,
+                         0.003 if port_index == 0 else 0.0015, "wire")
+                    result[-1].update(mass_kg=0.005 / (16 * len(interfaces)),
+                                     provenance="custom cut-to-length fixed adapter lead; not flex-rated stock lead")
+            continue
         # Panel-side connector sits in a retaining cradle on the rear saddle tie.
         # This is our connector mount, not a guessed actuator PCB socket location.
         mount = rear + other * spacing
