@@ -33,7 +33,7 @@ def harness_spans():
                 "torso",
                 f"{side}_shoulder",
                 [-0.28, sign * 0.58, 0.22],
-                [0.23, sign * 0.14, 0.14],
+                [0.23, sign * 0.16, 0.14],
                 0.75,
                 ("waist", "upper_roll", "shoulder"),
                 (0.0, 0.0, 0.6),
@@ -201,7 +201,9 @@ def harness_routes(model, q, pose):
                 scope="grouped 48 V/24 V branches and CAN; link-mounted strain relief",
             )
         )
-    return result
+    from .shoulder_wiring import internal_routes
+
+    return result + internal_routes(model, q, pose)
 
 
 def harness_clearance(model, q, pose, world, routes=None):
@@ -213,6 +215,8 @@ def harness_clearance(model, q, pose, world, routes=None):
     from ..planning.collision import Clearance, segment_distance
 
     routes = harness_routes(model, q, pose) if routes is None else routes
+    internal = [r for r in routes if r.get("internal")]
+    routes = [r for r in routes if not r.get("internal")]
     for route in routes:
         if not route["valid"]:
             return Clearance(-1.0, (route["name"], "cable_bend_or_twist"))
@@ -267,4 +271,7 @@ def harness_clearance(model, q, pose, world, routes=None):
             float(separation[index]),
             (routes[groups[i[index]]]["name"], routes[groups[j[index]]]["name"]),
         )
-    return best
+    from .shoulder_wiring import internal_clearance
+
+    internal_report = internal_clearance(model, q, pose, world, internal or None, external=routes)
+    return min((best, internal_report), key=lambda report: report.distance)

@@ -34,6 +34,11 @@ class MobileDynamics:
         from ..robot.self_collision import mobile_collision_world
 
         self.collision_world = mobile_collision_world(model)
+        from ..robot.shoulder_wiring import fixed_wiring_report
+
+        self.fixed_wiring = fixed_wiring_report(model)
+        if not self.fixed_wiring["valid"]:
+            raise ValueError("Shoulder fixed wiring fails installation clearance")
         self._harness_cache = None
         self.step = jax.jit(self._step)
         self.predict = jax.jit(self._predict)

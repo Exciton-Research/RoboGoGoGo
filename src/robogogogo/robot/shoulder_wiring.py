@@ -187,7 +187,7 @@ def _cylinder_distance(points, start, end, radius):
     )
 
 
-def internal_clearance(model, q, pose, world, routes=None):
+def internal_clearance(model, q, pose, world, routes=None, external=()):
     """Guard-equivalent clearance; 1 mm internal installation gap.
 
     Interior cables check solid actuator cylinders, not enclosing motor-cover
@@ -282,6 +282,22 @@ def internal_clearance(model, q, pose, world, routes=None):
                 bb = np.linalg.norm((b[:-1] + b[1:]) / 2 - b[0], axis=1) < 0.025
                 gaps[np.ix_(aa, bb)] = np.inf
             keep(np.min(gaps), (first["name"], second["name"]))
+    for first in routes:
+        a = np.asarray(first["points"])
+        for second in external:
+            b = np.asarray(second["points"])
+            gap = (
+                segment_distance(
+                    np.repeat(a[:-1], len(b) - 1, axis=0),
+                    np.repeat(a[1:], len(b) - 1, axis=0),
+                    np.tile(b[:-1], (len(a) - 1, 1)),
+                    np.tile(b[1:], (len(a) - 1, 1)),
+                )
+                - first["radius"]
+                - second["radius"]
+                - 0.002
+            )
+            keep(np.min(gap), (first["name"], second["name"]))
     return best
 
 
