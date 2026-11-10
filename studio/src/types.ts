@@ -17,8 +17,7 @@ export interface Visual {
 }
 export interface RobotModel {
   name: string;
-  scene:
-    "arm" | "dual_arm" | "dual_arm_head" | "mobile_dual_arm" | "drop" | "urdf";
+  scene: "mobile_dual_arm";
   mobile_design?: {
     name: string;
     architecture: string;

@@ -77,12 +77,6 @@ export function Inspector() {
         <div className="inspector-scroll">
           {inspector === "task" ? (
             <VlaPanel
-              coordination={snapshot?.coordination ?? null}
-              taskRunning={vla.taskRunning}
-              onPlanTask={(kind, grip) => void vla.planTask(kind, grip)}
-              manipulation={snapshot?.manipulation ?? null}
-              materials={snapshot?.object_materials ?? {}}
-              onRunTask={() => void vla.runTask()}
               episode={snapshot?.episode ?? null}
               model={model ?? null}
               disabled={disabled}

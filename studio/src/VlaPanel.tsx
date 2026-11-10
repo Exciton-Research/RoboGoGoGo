@@ -15,20 +15,10 @@ import {
   PerceptionPanel,
   type StereoReport,
 } from "./components/PerceptionPanel";
-import type { Coordination } from "./types";
 import { CameraMountEditor } from "./components/CameraMountEditor";
 import type { CameraConfig, RobotModel, EpisodeSummary } from "./types";
 
 interface Props {
-  materials: Record<string, import("./types").MaterialParameters>;
-  coordination: Coordination | null;
-  taskRunning: boolean;
-  onPlanTask: (
-    kind: "inspection" | "handover" | "material_grasp",
-    grip: import("./types").GripParameters,
-  ) => void;
-  manipulation: import("./types").ManipulationState | null;
-  onRunTask: () => void;
   episode: EpisodeSummary | null;
   model: RobotModel | null;
   disabled: boolean;
@@ -54,16 +44,12 @@ export function VlaPanel(props: Props) {
   );
   const [cameras, setCameras] = useState<CameraConfig[]>([]);
   const [variant, setVariant] = useState("a");
-  const [action, setAction] = useState("[0.05, 0, 0, 0, 0, 0]");
+  const [action, setAction] = useState("[]");
   useEffect(() => {
     if (episode) {
       setInstruction(episode.instruction);
       setCameras(episode.cameras);
-      setAction(
-        JSON.stringify(
-          episode.action_spec.names.map((_, i) => (i === 0 ? 0.05 : 0)),
-        ),
-      );
+      setAction(JSON.stringify(episode.action_spec.names.map(() => 0)));
     }
   }, [episode?.id]);
   const execute = () => {
@@ -75,7 +61,7 @@ export function VlaPanel(props: Props) {
         !values.every((v) => typeof v === "number" && Number.isFinite(v))
       )
         throw new Error(
-          `Enter an array of ${episode?.action_spec.dimensions ?? 6} finite joint deltas.`,
+          `Enter an array of ${episode?.action_spec.dimensions ?? 31} finite joint deltas.`,
         );
       props.onAct(values);
     } catch (error) {
@@ -211,7 +197,7 @@ export function VlaPanel(props: Props) {
           <div>
             <span className="contract-dot state" />
             <strong>proprioception</strong>
-            <span>q + q̇ · {episode?.action_spec.dimensions ?? 6} joints</span>
+            <span>q + q̇ · {episode?.action_spec.dimensions ?? 31} joints</span>
           </div>
         </div>
         <button
@@ -245,7 +231,7 @@ export function VlaPanel(props: Props) {
           onChange={(e) => setAction(e.target.value)}
         />
         <div className="action-details">
-          <span>{episode?.action_spec.dimensions ?? 6} values · rad / m</span>
+          <span>{episode?.action_spec.dimensions ?? 31} values · rad / m</span>
           <span>
             {episode?.action_spec.default_control_ticks ?? 10} control ticks
           </span>

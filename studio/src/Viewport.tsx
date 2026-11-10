@@ -93,12 +93,7 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
       controls.minDistance = 0.3;
       controls.maxDistance = 10;
       controls.maxPolarAngle = Math.PI * 0.52;
-      const defaultTarget =
-        model.scene === "drop"
-          ? new THREE.Vector3(0, 0, 0.3)
-          : model.scene === "mobile_dual_arm"
-            ? new THREE.Vector3(0.15, 0, 0.85)
-            : new THREE.Vector3(0.3, 0, 0.62);
+      const defaultTarget = new THREE.Vector3(0.15, 0, 0.85);
       const home = (view: "perspective" | "top" | "front") => {
         const framedTarget = defaultTarget.clone();
         if (model.scene === "mobile_dual_arm") {
@@ -205,11 +200,7 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
         bodyMaterials.push({ body, material: mat });
         return mesh;
       };
-      const builtIn =
-        model.scene === "arm" ||
-        model.scene === "dual_arm" ||
-        model.scene === "dual_arm_head" ||
-        model.scene === "mobile_dual_arm";
+      const builtIn = true;
       const mobile = model.scene === "mobile_dual_arm";
       for (const visual of model.visuals) {
         const linkName = model.names[visual.body];
@@ -254,16 +245,15 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
       }
       for (const joint of model.joints) {
         if (
-          model.scene === "drop" ||
-          (mobile &&
-            (joint.name.startsWith("left_") ||
-              joint.name.startsWith("right_") ||
-              joint.name.startsWith("base_") ||
-              joint.name.endsWith("_wheel") ||
-              joint.name.endsWith("_steer") ||
-              joint.name.endsWith("_waist") ||
-              joint.name.endsWith("_upper_roll") ||
-              joint.name.endsWith("_shoulder")))
+          mobile &&
+          (joint.name.startsWith("left_") ||
+            joint.name.startsWith("right_") ||
+            joint.name.startsWith("base_") ||
+            joint.name.endsWith("_wheel") ||
+            joint.name.endsWith("_steer") ||
+            joint.name.endsWith("_waist") ||
+            joint.name.endsWith("_upper_roll") ||
+            joint.name.endsWith("_shoulder"))
         )
           continue;
         const size = builtIn
@@ -475,7 +465,7 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
         });
         toolTargets.forEach(({ arm, marker }) => {
           const target = snapshot.state.targets[arm.name];
-          marker.visible = model.scene !== "drop" && !!target;
+          marker.visible = !!target;
           if (target) marker.position.fromArray(target);
         });
       };
@@ -610,7 +600,7 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
         toolTargets.forEach(({ arm, marker }) => {
           // An embodiment update can arrive before this scene's effect is replaced.
           const target = state.targets[arm.name];
-          marker.visible = model.scene !== "drop" && !!target;
+          marker.visible = !!target;
           if (target) marker.position.fromArray(target);
         });
         grid.visible = showGrid;

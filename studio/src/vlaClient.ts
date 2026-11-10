@@ -12,7 +12,6 @@ export function useVla(options: {
   setNotice: (notice: string) => void;
 }) {
   const [stereo, setStereo] = useState<StereoReport | null>(null);
-  const [taskRunning, setTaskRunning] = useState(false);
   const [collecting, setCollecting] = useState(false);
   const [episodes, setEpisodes] = useState<DatasetEpisode[]>([]);
   const stop = useRef(false);
@@ -159,64 +158,6 @@ export function useVla(options: {
         }),
       );
     });
-  const planTask = (
-    kind: "inspection" | "handover" | "material_grasp" = "inspection",
-    grip?: import("./types").GripParameters,
-  ) =>
-    handle(async () => {
-      await pausedState();
-      const next = await request<Snapshot>("/tasks/plan", { kind, ...grip });
-      options.accept(next);
-      options.setNotice(
-        "Task planned with collision-checked paths. Run it to record observations, actions, and task events.",
-      );
-    });
-  const runTask = async () => {
-    setTaskRunning(true);
-    stop.current = false;
-    await handle(async () => {
-      let snapshot = await pausedState();
-      if (snapshot.coordination?.status === "paused") {
-        snapshot = await request<Snapshot>("/tasks/resume", {});
-        options.accept(snapshot);
-      }
-      let captured = await captureState(snapshot);
-      for (
-        let i = 0;
-        i < 450 &&
-        !stop.current &&
-        ["ready", "running"].includes(
-          captured.snapshot.coordination?.status ?? "",
-        );
-        i++
-      ) {
-        const next = await request<Snapshot>("/tasks/step", {
-          observation: captured.observation,
-        });
-        options.accept(next);
-        captured =
-          next.coordination?.status === "blocked" &&
-          next.episode?.actions === captured.snapshot.episode?.actions
-            ? { ...captured, snapshot: next }
-            : await captureState(next);
-      }
-      if (
-        ["ready", "running"].includes(
-          captured.snapshot.coordination?.status ?? "",
-        )
-      ) {
-        options.accept(await request<Snapshot>("/tasks/pause", {}));
-        options.setNotice(
-          "Coordinated task paused. Resume to continue the current stage.",
-        );
-      } else {
-        options.setNotice(
-          `Coordinated task ${captured.snapshot.coordination?.status}: ${captured.snapshot.episode?.actions ?? 0} aligned actions recorded.`,
-        );
-      }
-    });
-    setTaskRunning(false);
-  };
   const save = () =>
     handle(async () => {
       const result = await request<DatasetEpisode>("/vla/save", {});
@@ -231,9 +172,6 @@ export function useVla(options: {
       return result;
     });
   return {
-    planTask,
-    runTask,
-    taskRunning,
     stereo,
     analyzeStereo,
     capture,

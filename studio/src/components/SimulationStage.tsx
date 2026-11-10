@@ -111,7 +111,7 @@ export function SimulationStage() {
           <div className="viewport-top">
             <div className="view-label">
               <span className={`status-dot ${status.toLowerCase()}`} />
-              {vla.taskRunning ? "TASK RUNNING" : status}
+              {status}
               <span className="small-divider" />
               <span className="view-subtitle">
                 {replay !== null ? "Recorded state" : "Perspective viewport"}
@@ -185,7 +185,7 @@ export function SimulationStage() {
             <span>·</span>
             <span>Scroll to zoom</span>
           </div>
-          {busy && !vla.taskRunning && (
+          {busy && (
             <div className="busy-badge">
               <LoaderCircle size={14} className="spin" />
               Applying changes…
