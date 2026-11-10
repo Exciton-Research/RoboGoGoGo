@@ -42,7 +42,7 @@ def harness_spans():
                 "elbow",
                 f"{side}_shoulder",
                 f"{side}_elbow",
-                [0.17, sign * 0.14, -0.06],
+                [0.185, sign * 0.14, -0.06],
                 [0.18, sign * 0.14, -0.06],
                 0.50,
                 ("elbow",),
@@ -163,9 +163,12 @@ def harness_clearance(model, q, pose, world, routes=None):
             return Clearance(-1.0, (route["name"], "cable_bend_or_twist"))
     # 48 chords per loop; 2 mm inflation exceeds the cubic interpolation error
     # for this fixed-size arch (bulge <= .8 m, radius .2 m).
-    starts, ends, groups = [], [], []
+    starts, ends, groups, from_start, from_end = [], [], [], [], []
     for i, route in enumerate(routes):
         points = np.array(route["points"])
+        arc = np.concatenate(([0.0], np.cumsum(np.linalg.norm(np.diff(points, axis=0), axis=1))))
+        from_start.extend(arc[:-1])
+        from_end.extend(arc[-1] - arc[1:])
         starts.extend(points[:-1])
         ends.extend(points[1:])
         groups.extend([i] * (len(points) - 1))
@@ -176,6 +179,15 @@ def harness_clearance(model, q, pose, world, routes=None):
         np.repeat(a, k, axis=0), np.repeat(b, k, axis=0), np.tile(c, (n, 1)), np.tile(d, (n, 1))
     ).reshape(n, k)
     distances -= RADIUS + 0.002 + world.radii[None, :]
+    # Only the named clamp/standoff within 60 mm of its own cable end may touch.
+    # The remainder of that cable still checks the same fixture.
+    for group, route in enumerate(routes):
+        for endpoint, prefix in enumerate(route.get("attachments", [])):
+            arc = np.array(from_start if endpoint == 0 else from_end)
+            attached = (groups == group) & (arc < 0.06)
+            for col, capsule in enumerate(world.capsules):
+                if capsule.name.startswith(prefix + "_"):
+                    distances[attached, col] = np.inf
     row, col = np.unravel_index(np.argmin(distances), distances.shape)
     best = Clearance(
         float(distances[row, col]), (routes[groups[row]]["name"], world.capsules[col].name)

@@ -31,29 +31,6 @@ export function createHarnessVisuals(scene: THREE.Scene) {
       );
       cable.castShadow = true;
       group.add(cable);
-      for (const index of [0, points.length - 1]) {
-        const adjacent = index === 0 ? 1 : index - 1;
-        const tangent = points[adjacent].clone().sub(points[index]).normalize();
-        const clamp = new THREE.Mesh(
-          new THREE.CylinderGeometry(
-            route.radius * 1.8,
-            route.radius * 1.8,
-            0.018,
-            16,
-          ),
-          new THREE.MeshStandardMaterial({
-            color: "#9aa6ad",
-            metalness: 0.7,
-            roughness: 0.4,
-          }),
-        );
-        clamp.position.copy(points[index]);
-        clamp.quaternion.setFromUnitVectors(
-          new THREE.Vector3(0, 1, 0),
-          tangent,
-        );
-        group.add(clamp);
-      }
     }
   };
   return {

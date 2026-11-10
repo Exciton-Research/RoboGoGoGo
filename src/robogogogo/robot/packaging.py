@@ -135,5 +135,46 @@ def assembly_parts(model):
 def assembly_capsules(model):
     return [
         Capsule(p["name"], p["body"], tuple(p["start"]), tuple(p["end"]), p["radius"])
-        for p in assembly_parts(model)
+        for p in assembly_parts(model) + harness_fixtures(model)
     ]
+
+
+def harness_fixtures(model):
+    """Bolted standoffs and split clamps at the dress-pack's explicit anchors.
+
+    Custom geometry, shared with the renderer and motion checks. The root is on
+    the host link; only the cable's short local attachment region is exempt.
+    """
+    from .harness import harness_spans
+
+    fixtures = []
+    for span in harness_spans():
+        normal = np.array(span["normal"])
+        for endpoint, (name, point) in enumerate(zip(span["bodies"], span["anchors"])):
+            anchor = np.array(point)
+            root = anchor.copy()
+            if name == "torso":
+                root = np.array([-0.14, normal[1] * 0.24, 0.20])
+            else:
+                root[1:] *= 0.4
+            prefix = f"{span['owner']}_harness_{endpoint}"
+            for tag, a, b, radius, kind in (
+                ("support", root, anchor, 0.004, "bracket"),
+                ("clamp", anchor - normal * 0.01, anchor + normal * 0.01, 0.022, "clamp"),
+            ):
+                fixtures.append(
+                    dict(
+                        name=f"{prefix}_{tag}",
+                        owner=span["owner"],
+                        body=model.names.index(name),
+                        start=a.tolist(),
+                        end=b.tolist(),
+                        radius=radius,
+                        kind=kind,
+                        mass_kg=0.025
+                        if kind == "clamp"
+                        else float(np.pi * 0.004**2 * np.linalg.norm(b - a) * 2700),
+                        provenance="custom split clamp and link-mounted aluminum standoff",
+                    )
+                )
+    return fixtures
