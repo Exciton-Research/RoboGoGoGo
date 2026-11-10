@@ -307,3 +307,97 @@ def fixed_adapter_path(start, end, source_axis, target_axis, radius=0.010):
     if transitions[0][0] + transitions[1][0] >= np.linalg.norm(corners[2] - corners[1]):
         raise ValueError("Fixed lead bends cannot fit between tray and device")
     return np.vstack((start, transitions[0][1], transitions[1][1], end))
+
+
+def fixed_wiring_report(model):
+    """Check each fixed lead in its host frame, including its own motor and tray.
+
+    Relative motion against other links is covered by assembly_capsules in the
+    ordinary collision world. Same-host interference cannot be skipped here.
+    """
+    from collections import defaultdict
+    from ..planning.collision import segment_distance
+    from .packaging import assembly_parts, shoulder_packages
+
+    parts, covers = assembly_parts(model), cover_specs(model)
+    packages = {p["name"].removesuffix("_drive_package"): p for p in shoulder_packages(model)}
+    groups = defaultdict(list)
+    for part in parts:
+        if "_drive_lead_" in part["name"] and packages[part["owner"]]["shoulder_axis"]:
+            groups[part["name"].rsplit("_", 1)[0]].append(part)
+    failures, leads = [], []
+    for name, segments in groups.items():
+        owner, body = segments[0]["owner"], segments[0]["body"]
+        points = np.array([segments[0]["start"]] + [s["end"] for s in segments])
+        sampled = np.vstack(
+            [
+                np.linspace(a, b, max(2, int(np.ceil(np.linalg.norm(b - a) / 0.001)) + 1))[:-1]
+                for a, b in zip(points[:-1], points[1:])
+            ]
+            + [points[-1:]]
+        )
+        mid = (sampled[:-1] + sampled[1:]) / 2
+        pad = np.linalg.norm(np.diff(sampled, axis=0), axis=1) / 2
+        radius = segments[0]["radius"]
+        cover_gap = np.full(len(mid), -np.inf)
+        for cover in covers:
+            if cover["body"] != body:
+                continue
+            a, b = np.array(cover["start"]), np.array(cover["end"])
+            gap = (
+                cover["inner_radius"]
+                - segment_distance(
+                    mid, mid, np.broadcast_to(a, mid.shape), np.broadcast_to(b, mid.shape)
+                )
+                - radius
+                - pad
+            )
+            cover_gap = np.maximum(cover_gap, gap)
+        package = packages[owner]
+        motor_gap = (
+            _cylinder_distance(
+                mid, np.array(package["start"]), np.array(package["end"]), package["radius"]
+            )
+            - radius
+            - pad
+        )
+        best = (float(np.min(cover_gap)), "cover_inner_wall")
+        if np.min(motor_gap) < best[0]:
+            best = (float(np.min(motor_gap)), owner + "_drive_package")
+        port = name.rsplit("_", 1)[1]
+        for part in parts:
+            if part["body"] != body or part["name"].startswith(name + "_"):
+                continue
+            a, b = np.array(part["start"]), np.array(part["end"])
+            gap = (
+                segment_distance(
+                    sampled[:-1],
+                    sampled[1:],
+                    np.broadcast_to(a, mid.shape),
+                    np.broadcast_to(b, mid.shape),
+                )
+                - radius
+                - part["radius"]
+            )
+            if part["name"] == f"{owner}_device_port_{port}":
+                gap[np.linalg.norm(mid - points[0], axis=1) < 0.012] = np.inf
+            if part["name"] in (f"{owner}_power_can_connector", f"{owner}_connector_standoff"):
+                gap[np.linalg.norm(mid - points[-1], axis=1) < 0.018] = np.inf
+            if np.min(gap) < best[0]:
+                best = (float(np.min(gap)), part["name"])
+        record = dict(
+            name=name,
+            length_m=float(np.linalg.norm(np.diff(points, axis=0), axis=1).sum()),
+            minimum_gap_m=best[0],
+            nearest=best[1],
+        )
+        leads.append(record)
+        if best[0] < 0.001:
+            failures.append(record)
+    return dict(
+        valid=not failures,
+        installation_gap_m=0.001,
+        leads=leads,
+        failures=failures,
+        scope="fixed leads, same-host hardware and inner cavities; supplier qualification pending",
+    )
