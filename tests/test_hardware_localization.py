@@ -255,3 +255,63 @@ def test_localization_history_is_bounded_and_moving_profile_is_strict():
         mutate(d)
         with pytest.raises(ValueError):
             CalibrationProfile(d, XML)
+
+
+def test_studio_localization_epoch_export_and_old_session_callbacks(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from robogogogo.studio.api import create_app
+
+    pipelines = []
+    # Drive the worker explicitly so HTTP epoch transitions are deterministic.
+    monkeypatch.setattr(HardwarePerception, "start", lambda self: pipelines.append(self))
+
+    class Backend:
+        def start(self, sink):
+            self.sink = sink
+
+        def close(self):
+            pass
+
+    backend = Backend()
+    app = create_app(
+        project_dir=tmp_path,
+        hardware_backends={"robot": lambda: backend},
+        hardware_profiles={"robot": moving_profile()},
+    )
+    left, right = textured_frames()
+
+    def send_observation(t, x):
+        backend.sink.localization(pose(t + 0.01, x))
+        backend.sink.joints(joint(t))
+        backend.sink.joints(joint(t + 0.02))
+        backend.sink.camera(frame("head", t + 0.01, left))
+        backend.sink.camera(frame("wrist", t + 0.01, right))
+        pipelines[-1].step()
+
+    with TestClient(app) as client:
+        client.post("/api/hardware/connect", json={"backend": "robot"}).raise_for_status()
+        backend.sink.localization(static_map())
+        send_observation(1.0, 0.0)
+        scene = client.get("/api/hardware/scene")
+        assert scene.status_code == 200 and scene.json()["localization_epoch"] == 0
+        backend.sink.localization(pose(1.03, 1.0))
+        assert client.get("/api/hardware/scene").status_code == 409
+        status = client.get("/api/hardware").json()["perception"]
+        assert status["localization"]["epoch"] == 1
+        assert status["localization"]["last_reset"] and status["state"] == "blocked"
+        send_observation(1.04, 1.0)
+        scene = client.get("/api/hardware/scene")
+        assert scene.status_code == 200 and scene.json()["localization_epoch"] == 1
+        old_sink = backend.sink
+        client.post("/api/hardware/connect", json={"backend": "robot"}).raise_for_status()
+        old_sink.localization(static_map())
+        old_sink.localization(pose(2.0))
+        assert not pipelines[-1].sync.localization.static
+        assert client.get("/api/hardware/scene").status_code == 409
+        backend.sink.localization(static_map())
+        send_observation(3.0, 0.0)
+        assert client.get("/api/hardware/scene").status_code == 200
+        backend.sink.localization(pose(3.02, parent="wrong_parent"))
+        assert client.get("/api/hardware/scene").status_code == 409
+        assert client.get("/api/hardware").json()["perception"]["state"] == "fault"
