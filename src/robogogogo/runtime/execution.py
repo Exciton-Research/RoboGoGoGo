@@ -50,7 +50,12 @@ class CommandExecutor:
     def _validate_feedback(self, value):
         n = self.backend.limits.joints_per_arm
         numbers = (
-            value.left + value.right + value.left_velocity + value.right_velocity + value.grippers
+            value.left
+            + value.right
+            + value.left_velocity
+            + value.right_velocity
+            + value.grippers
+            + value.gripper_velocity
         )
         if (
             any(
@@ -110,7 +115,10 @@ class CommandExecutor:
             if (
                 value.sequence <= old_sequence
                 or value.moving
-                or any(abs(v) > 1e-6 for v in value.left_velocity + value.right_velocity)
+                or any(
+                    abs(v) > 1e-6
+                    for v in value.left_velocity + value.right_velocity + value.gripper_velocity
+                )
             ):
                 raise ValueError("Backend did not acknowledge a fresh stationary stop")
             self.feedback = value
@@ -144,8 +152,13 @@ class CommandExecutor:
                 if not feedback.moving:
                     if any(abs(a - b) > 1e-4 for a, b in zip(target, actual)):
                         raise ValueError("Command stopped before reaching coordinated targets")
-                    if any(abs(v) > 1e-4 for v in feedback.left_velocity + feedback.right_velocity):
-                        raise ValueError("Command completion has nonzero arm velocity")
+                    if any(
+                        abs(v) > 1e-4
+                        for v in feedback.left_velocity
+                        + feedback.right_velocity
+                        + feedback.gripper_velocity
+                    ):
+                        raise ValueError("Command completion has nonzero arm or gripper velocity")
                     self.active = None
                     self.mode = "armed"
                     self._event("completed", command_id=identifier)

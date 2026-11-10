@@ -232,3 +232,14 @@ def test_background_watchdog_runs_without_status_polling_and_shutdown_stops():
     assert executor.mode == "fault"  # Inspect state without invoking a polling method.
     executor.close()
     assert backend.closed and executor.mode == "closed" and executor.token is None
+
+
+def test_invalid_gripper_feedback_and_uncommissioned_adapters_are_rejected():
+    _, backend, executor = setup()
+    sample = backend.read()
+    for velocity in ((float("nan"), 0.0), (0.5, 0.0)):
+        with pytest.raises(ValueError):
+            executor._validate_feedback(replace(sample, gripper_velocity=velocity))
+    backend.is_test = False
+    with pytest.raises(ValueError, match="commissioning"):
+        CommandExecutor(backend)
