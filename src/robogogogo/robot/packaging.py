@@ -1,7 +1,7 @@
 """Shared catalog arm dimensions and custom fitting collision geometry.
 
-Vendor mounting holes and connector clocking need CAD confirmation. Rigid cable
-passages and moving proximal loops are separate from the unfinished wrist loom.
+Vendor mounting holes and connector clocking need CAD confirmation. Moving grouped spans, their link fixtures and panel connectors share this model.
+Complete electrical branches and vendor drive leads remain unqualified.
 """
 
 import numpy as np
@@ -64,7 +64,7 @@ def arm_cable_passages(model):
             end=[length - 0.025, 0, 0],
             radius=0.018,
             bundle_radius=0.015,
-            status="rigid loom passage; proximal external service loops modeled; distal joint harness unresolved",
+            status="rigid channel; grouped wrist span modeled; intermediate electrical branches unresolved",
         )
         for side in ("left", "right")
         for link, length in (("shoulder", 0.32), ("elbow", 0.28))

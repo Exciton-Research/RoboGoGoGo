@@ -1,4 +1,4 @@
-"""Constant-length external service loops for proximal joint harness analysis.
+"""Link-anchored shoulder, elbow and wrist dress packs for harness analysis.
 
 Kinematic centreline model, not cable elasticity/fatigue or electrical validation.
 Uses conservative CFROBOT2.07.04.C diameter 8.5 mm (older manufacturer sheet;
@@ -161,8 +161,8 @@ def harness_clearance(model, q, pose, world, routes=None):
     for route in routes:
         if not route["valid"]:
             return Clearance(-1.0, (route["name"], "cable_bend_or_twist"))
-    # 48 chords per loop; 2 mm inflation exceeds the cubic interpolation error
-    # for this fixed-size arch (bulge <= .8 m, radius .2 m).
+    # 64 chords per span; 2 mm padding covers cubic interpolation error for
+    # the bounded 1 m tangent control lengths.
     starts, ends, groups, from_start, from_end = [], [], [], [], []
     for i, route in enumerate(routes):
         points = np.array(route["points"])

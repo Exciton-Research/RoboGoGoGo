@@ -122,3 +122,22 @@ def test_clamp_contact_exemption_does_not_hide_midspan_penetration(model):
     )
     routes[0]["points"][32] = ((a[clamp] + b[clamp]) / 2).tolist()
     assert harness_clearance(model, q, pose, world, routes).distance < world.margin
+
+
+def test_fixed_fixture_mass_preserves_parallel_axis_inertia():
+    import xml.etree.ElementTree as ET
+
+    from robogogogo.robot.fixture_inertia import add_fixture_inertia
+
+    xml = ET.fromstring(
+        '<robot><link name="host"><inertial><mass value="2"/><origin xyz="0 0 0"/><inertia ixx=".1" iyy=".1" izz=".1" ixy="0" ixz="0" iyz="0"/></inertial></link></robot>'
+    )
+    add_fixture_inertia(
+        xml, [dict(body_name="host", mass_kg=1.0, start=[1, -0.1, 0], end=[1, 0.1, 0], radius=0.01)]
+    )
+    inertial = xml.find("link/inertial")
+    assert float(inertial.find("mass").get("value")) == 3.0
+    np.testing.assert_allclose(
+        np.fromstring(inertial.find("origin").get("xyz"), sep=" "), [1 / 3, 0, 0]
+    )
+    assert float(inertial.find("inertia").get("iyy")) == pytest.approx(0.1 + 0.01**2 / 2 + 2 / 3)

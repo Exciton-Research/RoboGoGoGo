@@ -114,7 +114,7 @@ export function SimulationStage() {
           </div>
           {showInternals && (
             <div className="engineering-note">
-              14 catalog drives · mounting saddles · connector envelopes
+              Grouped harness · fixed clamps · range qualification pending
             </div>
           )}
           {shown ? (

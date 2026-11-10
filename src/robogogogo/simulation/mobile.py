@@ -52,6 +52,8 @@ class MobileDynamics:
         report = dict(
             routes=routes,
             clearance_m=clearance.distance,
+            clearance_kind="guard-equivalent; own attachment pairs have zero free-space margin",
+            qualification="simulation only; nominal range and complete electrical loom unqualified",
             pair=list(clearance.pair),
             valid=clearance.distance >= self.collision_world.margin,
         )
