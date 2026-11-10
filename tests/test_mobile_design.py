@@ -133,3 +133,16 @@ def test_compact_humanlike_shoulder_has_coincident_three_axes(model):
         assert float(
             jnp.linalg.norm(pose.position[elbow] - pose.position[bodies[-1]])
         ) == pytest.approx(0.32)
+
+
+def test_reference_arm_silhouette_has_low_elbows_forward_hands_and_short_wrists(model):
+    pose = sp.forward_kinematics(model, model.home)
+    for side in ("left", "right"):
+        shoulder, elbow, wrist, hand = [
+            np.asarray(pose.position[model.names.index(f"{side}_{part}")])
+            for part in ("shoulder", "elbow", "wrist_roll", "tool")
+        ]
+        assert elbow[2] < shoulder[2] - 0.25
+        assert hand[0] > elbow[0] + 0.3
+        assert np.linalg.norm(hand - wrist) < 0.12
+        assert abs(shoulder[1]) == pytest.approx(0.28)

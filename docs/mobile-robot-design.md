@@ -115,3 +115,16 @@ minimum predicted support margin, estimated tire loads and longitudinal slip.
 Raw URDF export only describes geometry and inertial joints: it does not encode
 the tire solver, guard, drive command lease or controller, which live in the native
 Python/JAX mobile session. External URDF consumers must supply their own dynamics.
+
+## Reference-inspired arm revision
+
+The mobile robot now uses chest-side shoulder mounts at y = ±0.28 m and
+z = 0.22 m relative to the torso frame. Its home pose places elbows below the
+shoulders, with the forearms reaching forward. Upper-arm and forearm lengths
+remain 0.32 m and 0.28 m. The distal three-joint assembly is shortened to
+0.11 m, with corresponding COM and cylindrical inertia approximations updated.
+Studio renders smooth rounded sleeves, enclosed elbow caps and compact wrist
+cuffs instead of exposed industrial link boxes and stacked motor housings.
+These are reference-inspired proportions, not measured vendor geometry. Shells
+remain presentation geometry rather than validated collision meshes. Existing
+saved joint angles retain their names but produce the revised geometry.
