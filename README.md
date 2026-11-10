@@ -5,7 +5,8 @@
 The product starts with one robot, two grippers, head stereo cameras and wrist
 cameras. The physical robot has not been selected. Studio now opens to a workflow
 overview with explicit readiness and missing integrations, and the simulation
-workspace starts with a dual-arm reference rig. A learned policy and a rule-based
+workspace starts with an [articulated mobile dual-arm concept](docs/mobile-robot-design.md):
+four steerable wheels, a folding torso and two seven-joint arms. A learned policy and a rule-based
 controller are parts of the same system.
 
 The Python code is separated into `robot`, `data`, `learning`, `runtime`, and
