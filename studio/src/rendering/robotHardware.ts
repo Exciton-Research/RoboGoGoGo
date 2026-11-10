@@ -21,7 +21,7 @@ export function addRobotHardware(
     rubber = "#202828";
   for (const joint of model.joints) {
     if (
-      !/(shoulder|elbow|wrist_pitch|torso_lower|torso_upper|_steer)$/.test(
+      !/(waist|upper_roll|shoulder|elbow|wrist_pitch|torso_lower|torso_upper|_steer)$/.test(
         joint.name,
       )
     )
@@ -30,13 +30,33 @@ export function addRobotHardware(
     const orientation = new THREE.Quaternion().setFromUnitVectors(axisY, axis);
     const wrist = joint.name.includes("wrist"),
       steering = joint.name.endsWith("steer");
-    const radius = wrist ? 0.035 : steering ? 0.043 : 0.057;
-    const offset = wrist ? 0.038 : steering ? 0.045 : 0.073;
+    const shoulderAxis = /_(waist|upper_roll|shoulder)$/.test(joint.name);
+    const radius = shoulderAxis
+      ? 0.033
+      : wrist
+        ? 0.035
+        : steering
+          ? 0.043
+          : 0.057;
+    const offset = shoulderAxis
+      ? 0.082
+      : wrist
+        ? 0.038
+        : steering
+          ? 0.045
+          : 0.073;
+    // Three exposed actuator endbells follow the actual yaw, roll and pitch frames.
+    // These are concept housings, not selected stepper or servo specifications.
     for (const side of [-1, 1]) {
       const center = axis.clone().multiplyScalar(side * offset);
       const cap = add(
         joint.body,
-        new THREE.CylinderGeometry(radius, radius, 0.009, 40),
+        new THREE.CylinderGeometry(
+          radius,
+          radius,
+          shoulderAxis ? 0.018 : 0.009,
+          40,
+        ),
         dark,
         center.toArray(),
       );

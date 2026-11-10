@@ -43,7 +43,7 @@ export function addResearchRobotDetails(model: RobotModel, add: AddMesh) {
           "#e4e6e2",
           [0, 0, 0],
         );
-        socket.scale.set(0.1, 0.105, 0.11);
+        socket.scale.set(0.08, 0.084, 0.088);
       }
       const upper = name.endsWith("shoulder");
       const forearm = name.endsWith("elbow");
@@ -173,6 +173,6 @@ export function addResearchRobotDetails(model: RobotModel, add: AddMesh) {
   const head = model.names.indexOf("head");
   if (head >= 0 && mobile) {
     const shellMesh = add(head, new THREE.SphereGeometry(1, 40, 24), shell);
-    shellMesh.scale.set(0.075, 0.105, 0.07);
+    shellMesh.scale.set(0.095, 0.13, 0.09);
   }
 }

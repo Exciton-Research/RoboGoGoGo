@@ -24,7 +24,7 @@ def mobile_collision_world(model):
     add("upper_torso", "torso_upper", (0, 0, 0.065), (0, 0, 0.375), 0.08)
     for name, z in (("chest_lower", 0.10), ("chest_middle", 0.14), ("chest_upper", 0.18)):
         add(name, "torso", (0, -0.11, z), (0, 0.11, z), 0.151)
-    add("head", "head", (0, 0, 0), (0, 0, 0), 0.11)
+    add("head", "head", (0, 0, 0), (0, 0, 0), 0.14)
     body_names = [c.name for c in capsules]
     # This guard addresses arm/body and arm/arm motion. The fixed design's body
     # assembly shares volumes at torso hinges; body/body validation is separate.

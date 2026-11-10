@@ -60,7 +60,7 @@ def mounted_rig(model, arms, *, wrists=True):
         dict(
             name=f"head_{side}",
             mount="head",
-            position=[0.08, y, 0],
+            position=[0.105, y, 0],
             rpy=[0, float(np.deg2rad(40)), 0],
             vertical_fov_degrees=70,
         )

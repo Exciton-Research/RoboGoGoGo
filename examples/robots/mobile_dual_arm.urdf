@@ -660,12 +660,12 @@
     <inertial>
       <origin xyz="0 0 0" />
       <mass value="0.6" />
-      <inertia ixx="0.003185" iyy="0.0022600000000000003" izz="0.003485" ixy="0" ixz="0" iyz="0" />
+      <inertia ixx="0.005" iyy="0.0034250000000000005" izz="0.005185" ixy="0" ixz="0" iyz="0" />
     </inertial>
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <box size="0.16 0.21 0.14" />
+        <box size="0.19 0.26 0.18" />
       </geometry>
     </visual>
   </link>

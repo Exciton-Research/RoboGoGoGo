@@ -249,7 +249,7 @@ def mobile_dual_arm_urdf():
         effort=10,
     )
     visual(neck, "cylinder", (0.045, 0.08), origin=(0, 0, -0.04))
-    head = link("head", 0.6, (0.16, 0.21, 0.14))
+    head = link("head", 0.6, (0.19, 0.26, 0.18))
     joint(
         "head_pitch_joint",
         "head_pan",
@@ -259,7 +259,7 @@ def mobile_dual_arm_urdf():
         limits=(-0.45, 0.45),
         effort=10,
     )
-    visual(head, "box", (0.16, 0.21, 0.14))
+    visual(head, "box", (0.19, 0.26, 0.18))
     ET.indent(robot)
     return ET.tostring(robot, encoding="unicode")
 
