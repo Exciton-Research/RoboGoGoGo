@@ -154,8 +154,12 @@ class MobileDynamics:
                 drive_torque + external[driven] - bias[driven],
             )
             torque = (bias + matrix[:, driven] @ drive_acc).at[driven].set(drive_torque)
-            torque = delivered_torque(torque, current.qd, model.effort, self.no_load_speed)
             friction = gearbox_friction(current.qd, self.coulomb)
+            # Nominal inverse-dynamics feedforward must include gearbox friction.
+            # Compensate BEFORE saturation: a limited motor cannot cancel arbitrary loss.
+            torque = delivered_torque(
+                torque - friction, current.qd, model.effort, self.no_load_speed
+            )
             qdd = acceleration(
                 model, current, torque, implicit_dt=model.dt, external_force=external + friction
             )

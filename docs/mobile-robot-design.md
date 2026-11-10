@@ -254,7 +254,9 @@ substep. Requested motor torque is limited by the URDF effort cap and a linear
 motoring torque-speed envelope. Full peak torque remains available for braking;
 there is no artificial joint velocity clamp. Smooth Coulomb gearbox friction is
 an external dissipative joint force, in addition to the existing viscous damping.
-The controller does not cancel this friction. Recorded torque is delivered motor
+The nominal inverse-dynamics controller compensates estimated friction before
+actuator saturation. The estimate currently equals the assumed plant value;
+robustness to identification error has not been established. Recorded torque is delivered motor
 torque, excluding passive friction; a control sample records the last substep,
 not every intervening torque sample.
 
