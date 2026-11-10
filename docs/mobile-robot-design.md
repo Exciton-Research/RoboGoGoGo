@@ -229,4 +229,19 @@ orientation; head stereo spacing is 64 mm in the default rig. Wrist cameras have
 mounting brackets. Joint actuator endcaps, fastening rings, hub covers, tread and
 service panels follow their actual link frames. These are illustrative rendering
 details, not a new collision mesh, measured actuator design, or manufacturing CAD.
-Turn on coordinate frames to show camera frustums; the normal view stays uncluttered.
+Camera field-of-view guidelines are visible by default and have a separate camera
+toggle in the viewport; coordinate axes are controlled independently.
+
+
+### Editing a gesture
+
+Joint and torso fields edit a pending pose. A debounced read-only preview computes
+kinematics and shows an outline over the current robot: green for a clear endpoint,
+red for a collision/support violation. An endpoint check does not prove the motion
+path is clear. Apply pose plans and executes the complete guarded path; Discard
+edits restores the current goal. Pause retains draft edits. Finish or cancel any
+active trajectory before applying a replacement pose, and let velocities settle.
+
+The draft cannot move base/wheel/head coordinates or modify the live robot,
+recordings, or controller state. Its outline is hidden from RGB/depth capture;
+recorded observations always depict the actual simulated robot.
