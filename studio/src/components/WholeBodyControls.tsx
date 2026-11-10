@@ -16,6 +16,10 @@ export function WholeBodyControls() {
     ) as Vec3;
   useEffect(() => {
     if (!model || !state) return;
+    if (state.motion?.kind === "whole_body" && state.motion.target_center) {
+      setTarget(state.motion.target_center);
+      return;
+    }
     const center = handCenter();
     setTarget([center[0] + 0.35, center[1], center[2] - 0.12]);
   }, [snapshot?.epoch]);
