@@ -154,6 +154,10 @@ export default function HardwarePage() {
     }
   }
   const offline = now - received > 2500;
+  const perceptionStale =
+    offline ||
+    (data?.perception?.age_s != null &&
+      data.perception.age_s + Math.max(0, now - received) / 1000 > 0.5);
   const stale = (stream: Stream) =>
     offline ||
     stream.stale ||
@@ -231,7 +235,7 @@ export default function HardwarePage() {
           <h2>Calibration & synchronization</h2>
           <span
             className={
-              data?.perception?.state === "observing" && !offline
+              data?.perception?.state === "observing" && !perceptionStale
                 ? styles.live
                 : styles.warning
             }
@@ -437,8 +441,8 @@ export default function HardwarePage() {
       <footer>
         Telemetry is separate from the simulation. Acquisition timestamps may
         use a robot clock; reception freshness does not establish camera/joint
-        synchronization. Camera calibration and robot motion are not enabled on
-        this page.
+        synchronization. Only the calibrated pipeline combines acquisition times
+        and measured robot poses. Robot motion remains disabled.
       </footer>
     </main>
   );

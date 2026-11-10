@@ -36,6 +36,17 @@ class HardwarePerception:
             path.mkdir(parents=True, exist_ok=False)
             (path / "calibration.json").write_text(json.dumps(profile.document, indent=2))
             (path / "robot.urdf").write_text(profile.robot_xml)
+            (path / "manifest.json").write_text(
+                json.dumps(
+                    dict(
+                        schema_version=1,
+                        calibration_digest=profile.digest,
+                        calibration_file="calibration.json",
+                        robot_file="robot.urdf",
+                    ),
+                    indent=2,
+                )
+            )
             self.audit = RotatingFileHandler(
                 path / "observations.jsonl", maxBytes=10_000_000, backupCount=2
             )
@@ -238,6 +249,7 @@ class HardwarePerception:
                 timestamp=bundle.timestamp,
                 calibration_digest=self.profile.digest,
                 world_frame=self.profile.document["world_frame"],
+                has_current_depth=bool(clouds),
                 points=observation.view_evidence.points.tolist(),
                 normals=observation.view_evidence.normals.tolist(),
                 confidence=observation.view_evidence.confidence.tolist(),

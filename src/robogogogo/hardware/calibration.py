@@ -6,6 +6,8 @@ Floating and mimic joints are rejected rather than assigning invented poses.
 
 import hashlib
 import json
+import re
+from datetime import datetime
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -127,9 +129,36 @@ class KinematicTree:
 
 class CalibrationProfile:
     def __init__(self, document, robot_xml):
+        try:
+            self._initialize(document, robot_xml)
+        except (KeyError, TypeError, IndexError, AttributeError, ET.ParseError) as error:
+            raise ValueError(f"Malformed hardware calibration profile: {error}") from error
+
+    def _initialize(self, document, robot_xml):
         # JSON round-trip prevents subsequent caller mutation and rejects NaN.
         self.document = json.loads(json.dumps(document, allow_nan=False))
         d = self.document
+        allowed = {
+            "schema_version",
+            "revision",
+            "fixed_base",
+            "world_frame",
+            "clock_domain",
+            "calibrated_at",
+            "robot_urdf",
+            "world_from_base",
+            "joint_speed_limits",
+            "max_skew_s",
+            "max_joint_gap_s",
+            "max_scene_speed_m_s",
+            "cameras",
+            "stereo_pairs",
+        }
+        if not isinstance(d, dict) or set(d) - allowed:
+            raise ValueError("Unknown calibration profile fields")
+        stamp = datetime.fromisoformat(d["calibrated_at"].replace("Z", "+00:00"))
+        if stamp.tzinfo is None:
+            raise ValueError("Calibration date must include its timezone")
         if d.get("schema_version") != 1 or not d.get("revision") or d.get("fixed_base") is not True:
             raise ValueError("A versioned measured profile with fixed_base=true is required")
         if not d.get("world_frame") or not d.get("clock_domain") or not d.get("calibrated_at"):
@@ -154,6 +183,30 @@ class CalibrationProfile:
         if not isinstance(self.cameras, dict) or not 2 <= len(self.cameras) <= 8:
             raise ValueError("Configure two to eight calibrated cameras")
         for name, camera in self.cameras.items():
+            allowed_camera = {
+                "width",
+                "height",
+                "intrinsics",
+                "distortion",
+                "distortion_model",
+                "frame_id",
+                "mount_link",
+                "mount_from_optical",
+                "clock_domain",
+                "time_offset_s",
+                "time_uncertainty_s",
+                "reprojection_error_px",
+                "extrinsic_uncertainty_m",
+                "require_camera_info",
+            }
+            if (
+                not re.fullmatch(r"[a-zA-Z0-9_-]{1,64}", name)
+                or set(camera) - allowed_camera
+                or type(camera["width"]) is not int
+                or type(camera["height"]) is not int
+                or type(camera.get("require_camera_info", False)) is not bool
+            ):
+                raise ValueError(f"Invalid camera profile fields: {name}")
             k = np.asarray(camera["intrinsics"], float)
             distortion = np.asarray(camera["distortion"], float)
             if (
@@ -162,9 +215,10 @@ class CalibrationProfile:
                 or min(k[0, 0], k[1, 1]) <= 0
                 or not np.allclose(k[2], [0, 0, 1])
                 or abs(k[0, 1]) + abs(k[1, 0]) > 1e-9
-                or distortion.shape not in ((4,), (5,), (8,))
+                or (camera.get("distortion_model"), distortion.size)
+                not in (("plumb_bob", 4), ("plumb_bob", 5), ("rational_polynomial", 8))
+                or distortion.ndim != 1
                 or not np.isfinite(distortion).all()
-                or camera.get("distortion_model") != "plumb_bob"
                 or not 32 <= camera["width"] <= 1920
                 or not 32 <= camera["height"] <= 1080
                 or not camera.get("frame_id")
@@ -182,6 +236,7 @@ class CalibrationProfile:
             if (
                 camera["clock_domain"] != d["clock_domain"]
                 or not np.isfinite(camera["time_offset_s"])
+                or abs(camera["time_offset_s"]) > 1
                 or not 0 <= camera["time_uncertainty_s"] <= self.max_skew / 4
             ):
                 raise ValueError(
@@ -233,3 +288,34 @@ class CalibrationProfile:
                 bound += self.speed_limits[joint_name] * timing * lever
             link = joint["parent"]
         return bound + self.document["max_scene_speed_m_s"] * (skew + camera["time_uncertainty_s"])
+
+
+def main():
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Validate a measured hardware calibration profile without connecting a robot"
+    )
+    parser.add_argument("profile", type=Path)
+    args = parser.parse_args()
+    try:
+        profile = CalibrationProfile.load(args.profile)
+    except (ValueError, OSError) as error:
+        parser.error(str(error))
+    print(
+        json.dumps(
+            dict(
+                revision=profile.document["revision"],
+                sha256=profile.digest,
+                world_frame=profile.document["world_frame"],
+                joints=profile.tree.names,
+                cameras=list(profile.cameras),
+                stereo_pairs=profile.pairs,
+            ),
+            indent=2,
+        )
+    )
+
+
+if __name__ == "__main__":
+    main()
