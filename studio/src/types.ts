@@ -43,6 +43,14 @@ export interface RobotModel {
   max_samples: number;
 }
 export interface SimState {
+  motion?: {
+    status:
+      "ready" | "running" | "paused" | "complete" | "cancelled" | "blocked";
+    method: string;
+    waypoint: number;
+    waypoint_count: number;
+    final_goal: number[];
+  } | null;
   mobile?: {
     collision_guard?: "clear" | "blocked";
     collision_clearance_m?: number | null;

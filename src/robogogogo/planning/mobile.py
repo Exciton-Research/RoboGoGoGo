@@ -41,8 +41,11 @@ class MobilePlanningWorld:
         a, b = np.asarray(a), np.asarray(b)
         if min(self.clearance(a).distance, self.clearance(b).distance) < self.margin:
             return False
-        if not self.collision.edge_free(self.full(a), self.full(b)):
-            return False
+        try:
+            if not self.collision.edge_free(self.full(a), self.full(b), deadline=self.deadline):
+                return False
+        except TimeoutError as error:
+            raise PlanningError(str(error)) from error
         # Static support is sampled separately; execution retains dynamic ZMP
         # and per-substep collision checks under actual coupled dynamics.
         count = max(2, int(np.ceil(np.max(np.abs(b - a)) / 0.04)) + 1)

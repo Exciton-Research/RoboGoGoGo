@@ -1,5 +1,6 @@
 """Conservative capsule geometry for planning, independent of contact dynamics."""
 
+import time
 from dataclasses import dataclass
 
 import jax
@@ -355,7 +356,9 @@ class CollisionWorld:
             best = Clearance(float(distances[k]), (self.capsules[k].name, "floor"))
         return best
 
-    def edge_free(self, start, end, *, max_depth=14, object_start=None, object_end=None):
+    def edge_free(
+        self, start, end, *, max_depth=14, object_start=None, object_end=None, deadline=None
+    ):
         start, end = np.asarray(start, dtype=float), np.asarray(end, dtype=float)
         first = self.clearance(start, object_start)
         last = self.clearance(end, object_end)
@@ -365,6 +368,8 @@ class CollisionWorld:
             return False
 
         def check(a, b, da, db, oa, ob, depth):
+            if deadline is not None and time.monotonic() > deadline:
+                raise TimeoutError("Collision edge certification exceeded the planning budget")
             bound = 2 * float(np.dot(self.weights, np.abs(b - a)))
             if oa is not None:
                 bound += 2 * float(np.max(np.linalg.norm(ob - oa, axis=1)))

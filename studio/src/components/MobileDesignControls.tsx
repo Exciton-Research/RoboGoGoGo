@@ -34,9 +34,35 @@ export function MobileDesignControls() {
           disabled={disabled}
           onClick={() => void command(state?.running ? "pause" : "run")}
         >
-          {state?.running ? "Pause motion" : "Run posture motion"}
+          {state?.running ? "Pause motion" : "Run planned motion"}
         </button>
       </div>
+      <p className="control-note">
+        Joint and torso goals automatically plan a checked path. Detours may
+        reposition both arms and the torso; wheel driving is locked while a plan
+        is active.
+      </p>
+      {state?.motion && (
+        <section aria-label="Robot motion plan">
+          <p role="status" className="control-note">
+            Plan: {state.motion.status} ·
+            {state.motion.method === "direct"
+              ? " direct path"
+              : " collision-free detour"}{" "}
+            · waypoint {state.motion.waypoint} / {state.motion.waypoint_count}
+          </p>
+          <button
+            className="button"
+            disabled={
+              disabled ||
+              !["ready", "running", "paused"].includes(state.motion.status)
+            }
+            onClick={() => void command("cancel_plan")}
+          >
+            Cancel plan
+          </button>
+        </section>
+      )}
       <div style={{ marginTop: 14 }}>
         <div className="section-kicker">WHEEL DRIVE · BODY FRAME</div>
         <label>
@@ -168,8 +194,8 @@ export function MobileDesignControls() {
         </button>
       </details>
       <p className="control-note">
-        Presets set torque-controller goals; press Run to move. These are design
-        exploration controls. The separate command test fixture still has
+        Presets plan arm/torso motion; press Run to execute. Paths are
+        simulation-checked. The separate command test fixture still has
         six-joint arms.
       </p>
     </section>

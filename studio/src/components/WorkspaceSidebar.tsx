@@ -13,7 +13,6 @@ import {
   FolderOpen,
   Grid2X2,
   Layers3,
-  Plus,
   Save,
   Square,
 } from "lucide-react";
@@ -31,15 +30,12 @@ export function WorkspaceSidebar() {
     setLeftTab,
     projects,
     treeOpen,
-    upload,
     vla,
     disabled,
     loadProjects,
     perform,
     save,
-    importFile,
     chooseBody,
-    command,
     model,
   } = useWorkspace();
   return (
