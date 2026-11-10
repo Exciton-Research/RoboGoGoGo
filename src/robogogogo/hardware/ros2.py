@@ -3,7 +3,7 @@
 import re
 import threading
 
-from .contracts import CameraInfoSample, CameraSample, JointSample, TelemetrySink
+from .contracts import CameraInfoSample, CameraSample, JointSample, TelemetrySink, TransformSample
 
 
 def timestamp(header):
@@ -34,7 +34,15 @@ def camera_sample(name, message):
 
 class ROS2Backend:
     def __init__(
-        self, *, joint_topic="/joint_states", cameras=None, domain_id=None, camera_info_topics=None
+        self,
+        *,
+        joint_topic="/joint_states",
+        cameras=None,
+        domain_id=None,
+        camera_info_topics=None,
+        localization_chain=None,
+        tf_topic="/tf",
+        tf_static_topic="/tf_static",
     ):
         self.joint_topic, self.cameras = joint_topic, dict(cameras or {})
         if len(self.cameras) > 8 or any(
@@ -53,6 +61,15 @@ class ROS2Backend:
             not t.startswith("/") for t in self.info_topics.values()
         ):
             raise ValueError("CameraInfo topics must correspond to configured cameras")
+        self.localization_chain = tuple(localization_chain or ())
+        if self.localization_chain and (
+            not 2 <= len(self.localization_chain) <= 8
+            or len(set(self.localization_chain)) != len(self.localization_chain)
+        ):
+            raise ValueError("ROS localization requires an explicit acyclic world-to-base TF chain")
+        if not tf_topic.startswith("/") or not tf_static_topic.startswith("/"):
+            raise ValueError("TF topics must be absolute names")
+        self.tf_topic, self.tf_static_topic = tf_topic, tf_static_topic
         self.domain_id = domain_id
         self.context = self.node = self.executor = self.thread = None
         self.stop = threading.Event()
@@ -136,6 +153,51 @@ class ROS2Backend:
                     lambda message, name=name: info(name, message),
                     qos_profile_sensor_data,
                 )
+        if self.localization_chain:
+            from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
+            from tf2_msgs.msg import TFMessage
+
+            def transforms(message, static):
+                try:
+                    if len(message.transforms) > 1024:
+                        raise ValueError("TF message exceeds telemetry transform budget")
+                    for item in message.transforms:
+                        if item.child_frame_id not in self.localization_chain[1:]:
+                            continue
+                        t, q = item.transform.translation, item.transform.rotation
+                        if sink.localization:
+                            sink.localization(
+                                TransformSample(
+                                    timestamp(item.header),
+                                    item.header.frame_id,
+                                    item.child_frame_id,
+                                    (t.x, t.y, t.z),
+                                    (q.x, q.y, q.z, q.w),
+                                    "ros",
+                                    static,
+                                )
+                            )
+                except Exception as error:
+                    sink.error(f"Invalid ROS localization TF: {error}")
+
+            self.node.create_subscription(
+                TFMessage,
+                self.tf_topic,
+                lambda message: transforms(message, False),
+                qos_profile_sensor_data,
+            )
+            # Static transforms must arrive for late subscribers as well.
+            static_qos = QoSProfile(
+                depth=100,
+                durability=DurabilityPolicy.TRANSIENT_LOCAL,
+                reliability=ReliabilityPolicy.RELIABLE,
+            )
+            self.node.create_subscription(
+                TFMessage,
+                self.tf_static_topic,
+                lambda message: transforms(message, True),
+                static_qos,
+            )
         self.executor = SingleThreadedExecutor(context=self.context)
         self.executor.add_node(self.node)
 

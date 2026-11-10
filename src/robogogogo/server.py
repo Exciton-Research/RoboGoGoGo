@@ -76,6 +76,11 @@ def main():
             cameras=cameras,
             domain_id=args.ros_domain_id,
             camera_info_topics=info_topics,
+            localization_chain=(
+                profiles["ros2"].localization["tf_chain"]
+                if "ros2" in profiles and profiles["ros2"].localization
+                else None
+            ),
         )
     if args.hardware_profile:
         from .hardware.calibration import CalibrationProfile

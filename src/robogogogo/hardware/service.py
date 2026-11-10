@@ -53,6 +53,7 @@ class HardwareService:
                 lambda value: self._receive(generation, value),
                 lambda message: self._error(generation, message),
                 lambda info: self._calibration(generation, info),
+                lambda pose: self._localization(generation, pose),
             )
             try:
                 backend = self.backends[name]()
@@ -74,6 +75,11 @@ class HardwareService:
                     self.error = str(error)
                 raise ValueError(f"Hardware connection failed: {error}") from error
             return self.snapshot()
+
+    def _localization(self, generation, pose):
+        with self.lock:
+            if generation == self.generation and self.perception:
+                self.perception.ingest(pose)
 
     def _calibration(self, generation, info):
         with self.lock:
