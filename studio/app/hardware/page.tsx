@@ -38,6 +38,17 @@ type Telemetry = {
     bundles?: number;
     skew_s?: number;
     joint_gap_s?: number;
+    localization_gap_s?: number;
+    localization?: {
+      mode: "fixed" | "moving";
+      epoch: number;
+      resets?: number;
+      chain?: string[];
+      reason?: string | null;
+      last_reset?: string | null;
+      translation_uncertainty_m?: number;
+      rotation_uncertainty_rad?: number;
+    };
     dropped?: number;
     rejected?: number;
     last_rejection?: string;
@@ -261,6 +272,52 @@ export default function HardwarePage() {
             <p className={styles.digest}>
               SHA-256: {data.perception.calibration_digest}
             </p>
+            {data.perception.localization && (
+              <div aria-label="Base localization">
+                <p>
+                  Base localization:{" "}
+                  <strong>{data.perception.localization.mode}</strong>
+                  {" · "}Memory epoch {data.perception.localization.epoch}
+                  {" · "}
+                  {data.perception.localization.resets ?? 0} resets
+                </p>
+                {data.perception.localization.chain && (
+                  <p>
+                    TF chain: {data.perception.localization.chain.join(" → ")}
+                  </p>
+                )}
+                {data.perception.localization.reason && (
+                  <p className={styles.warning}>
+                    {data.perception.localization.reason}
+                  </p>
+                )}
+                {data.perception.localization.last_reset && (
+                  <p>
+                    Last memory reset: {data.perception.localization.last_reset}
+                  </p>
+                )}
+                {data.perception.localization.mode === "moving" && (
+                  <p>
+                    Configured localization uncertainty:{" "}
+                    {(
+                      (data.perception.localization.translation_uncertainty_m ??
+                        0) * 1000
+                    ).toFixed(2)}{" "}
+                    mm
+                    {" / "}
+                    {(
+                      (data.perception.localization.rotation_uncertainty_rad ??
+                        0) * 1000
+                    ).toFixed(2)}{" "}
+                    mrad
+                    {" · "}TF bracket:{" "}
+                    {data.perception.localization_gap_s == null
+                      ? "—"
+                      : `${(data.perception.localization_gap_s * 1000).toFixed(2)} ms`}
+                  </p>
+                )}
+              </div>
+            )}
             <div className={styles.metrics}>
               <div>
                 <small>Accepted bundles</small>
