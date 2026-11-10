@@ -88,6 +88,13 @@ export function addInternalPackaging(model: RobotModel, add: AddMesh) {
       );
       fitting.material.metalness = 0.05;
     }
+    if (p.kind === "clamp") {
+      fitting.geometry.dispose();
+      const ring = new THREE.TorusGeometry(0.0185, 0.0035, 12, 40);
+      ring.rotateX(Math.PI / 2);
+      fitting.geometry = ring;
+      fitting.material.color.set("#7d919c");
+    }
     // Saddles and plugs sit outside the module cover and remain physical in RGB.
     fitting.userData.inspectionOnly = false;
     fitting.visible = true;

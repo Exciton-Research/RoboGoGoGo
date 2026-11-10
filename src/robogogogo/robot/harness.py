@@ -187,6 +187,9 @@ def harness_clearance(model, q, pose, world, routes=None):
             attached = (groups == group) & (arc < 0.06)
             for col, capsule in enumerate(world.capsules):
                 if capsule.name.startswith(prefix + "_"):
+                    # Designed attachments use zero free-space margin beyond the
+                    # clamped end, but penetration is still rejected there.
+                    distances[groups == group, col] += world.margin
                     distances[attached, col] = np.inf
     row, col = np.unravel_index(np.argmin(distances), distances.shape)
     best = Clearance(
