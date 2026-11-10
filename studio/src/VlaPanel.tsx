@@ -194,8 +194,10 @@ export function VlaPanel(props: Props) {
         ))}
         <p className="vla-caption">
           One action vector controls all arms. Success requires every tool to
-          reach its target. Collision checking is enabled in coordinated tasks;
-          standalone manual and reach actions remain unguarded.
+          reach its target.{" "}
+          {props.model?.scene === "mobile_dual_arm"
+            ? "Mobile arm and torso actions use self-collision path and physics-substep guards. External obstacle avoidance is not implemented."
+            : "Collision checking is enabled in coordinated tasks; standalone manual and reach actions remain unguarded."}
         </p>
       </div>
       <div className="vla-block">
