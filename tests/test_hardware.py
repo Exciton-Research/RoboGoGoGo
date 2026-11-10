@@ -196,7 +196,7 @@ def test_cleanup_failure_disconnects_telemetry_and_reports_fault():
 def test_ros_backend_subscribes_and_cleans_up_owned_context(monkeypatch):
     import sys
 
-    nodes, executors, initialized = [], [], []
+    nodes, executors, initialized, qos_profiles = [], [], [], {}
 
     class Context:
         def __init__(self):
@@ -217,6 +217,7 @@ def test_ros_backend_subscribes_and_cleans_up_owned_context(monkeypatch):
 
         def create_subscription(self, message_type, topic, callback, qos):
             self.subscriptions.append((topic, callback))
+            qos_profiles[topic] = qos
 
         def destroy_node(self):
             self.destroyed = True
@@ -240,7 +241,14 @@ def test_ros_backend_subscribes_and_cleans_up_owned_context(monkeypatch):
         "rclpy.context": SimpleNamespace(Context=Context),
         "rclpy.node": SimpleNamespace(Node=Node),
         "rclpy.executors": SimpleNamespace(SingleThreadedExecutor=Executor),
-        "rclpy.qos": SimpleNamespace(qos_profile_sensor_data=object()),
+        "rclpy.qos": SimpleNamespace(
+            qos_profile_sensor_data=object(),
+            QoSProfile=SimpleNamespace,
+            DurabilityPolicy=SimpleNamespace(TRANSIENT_LOCAL="transient_local"),
+            ReliabilityPolicy=SimpleNamespace(RELIABLE="reliable"),
+        ),
+        "tf2_msgs": SimpleNamespace(),
+        "tf2_msgs.msg": SimpleNamespace(TFMessage=object()),
         "sensor_msgs": SimpleNamespace(),
         "sensor_msgs.msg": SimpleNamespace(
             JointState=object(), CompressedImage=object(), CameraInfo=object()
@@ -253,6 +261,7 @@ def test_ros_backend_subscribes_and_cleans_up_owned_context(monkeypatch):
             "ros2": lambda: ROS2Backend(
                 cameras={"head": "/head/image/compressed"},
                 domain_id=5,
+                localization_chain=["map", "odom", "base"],
                 camera_info_topics={"head": "/head/camera_info"},
             )
         }
@@ -260,7 +269,16 @@ def test_ros_backend_subscribes_and_cleans_up_owned_context(monkeypatch):
     service.connect("ros2")
     assert initialized[0]["domain_id"] == 5
     callbacks = dict(nodes[0].subscriptions)
-    assert set(callbacks) == {"/joint_states", "/head/image/compressed", "/head/camera_info"}
+    assert set(callbacks) == {
+        "/joint_states",
+        "/head/image/compressed",
+        "/head/camera_info",
+        "/tf",
+        "/tf_static",
+    }
+    assert qos_profiles["/tf_static"].durability == "transient_local"
+    assert qos_profiles["/tf_static"].reliability == "reliable"
+    assert qos_profiles["/tf"] is modules["rclpy.qos"].qos_profile_sensor_data
     header = SimpleNamespace(stamp=SimpleNamespace(sec=1, nanosec=0), frame_id="robot")
     callbacks["/joint_states"](
         SimpleNamespace(header=header, name=["joint1"], position=[0.1], velocity=[], effort=[])
@@ -270,6 +288,39 @@ def test_ros_backend_subscribes_and_cleans_up_owned_context(monkeypatch):
     assert service.snapshot()["cameras"][0]["name"] == "head"
     service.close()
     assert nodes[0].destroyed and executors[0].closed and not initialized[0]["context"].ok()
+
+    # Exercise conversion and filtering without the service's optional profile.
+    from robogogogo.hardware import TelemetrySink
+
+    samples, errors = [], []
+    backend = ROS2Backend(localization_chain=["map", "odom", "base"])
+    backend.start(
+        TelemetrySink(lambda _: None, lambda _: None, errors.append, localization=samples.append)
+    )
+    callbacks = dict(nodes[-1].subscriptions)
+    transform = SimpleNamespace(
+        header=SimpleNamespace(stamp=SimpleNamespace(sec=3, nanosec=500000000), frame_id="odom"),
+        child_frame_id="base",
+        transform=SimpleNamespace(
+            translation=SimpleNamespace(x=1.0, y=2.0, z=3.0),
+            rotation=SimpleNamespace(x=0.0, y=0.0, z=0.0, w=1.0),
+        ),
+    )
+    try:
+        callbacks["/tf"](SimpleNamespace(transforms=[transform]))
+        callbacks["/tf_static"](SimpleNamespace(transforms=[transform]))
+        assert len(samples) == 2 and not errors
+        assert samples[0].timestamp == 3.5 and samples[0].clock_domain == "ros"
+        assert samples[0].translation == (1.0, 2.0, 3.0)
+        assert not samples[0].static and samples[1].static
+        transform.child_frame_id = "wrist"
+        callbacks["/tf"](SimpleNamespace(transforms=[transform]))
+        assert len(samples) == 2
+        callbacks["/tf"](SimpleNamespace(transforms=[transform] * 1025))
+        assert "budget" in errors[-1]
+    finally:
+        backend.close()
+    assert nodes[-1].destroyed and executors[-1].closed
 
 
 def test_camera_budget_is_bounded():

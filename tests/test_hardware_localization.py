@@ -223,3 +223,35 @@ def test_stale_localization_blocks_scene_export_even_before_scene_timeout():
     with pytest.raises(ValueError):
         pipeline.scene_snapshot()
     assert pipeline.snapshot()["localization"]["reason"].startswith("Stale")
+
+
+def test_upstream_rotation_uncertainty_includes_downstream_lever_arm():
+    loc = LocalizationBuffer(moving_profile().localization, "robot")
+    loc.add(pose(1.0, parent="map", child="odom"), 0.0)
+    loc.add(pose(1.02, yaw=0.002, parent="map", child="odom"), 0.0)
+    loc.add(pose(0.0, 10.0, static=True), 0.0)
+    result = loc.at(1.01, 0.01)
+    # 2 mm upstream translation plus 2 mrad rotation around a 10 m lever.
+    assert result.interpolation_translation_m == pytest.approx(0.022)
+
+
+def test_localization_history_is_bounded_and_moving_profile_is_strict():
+    loc = LocalizationBuffer(moving_profile().localization, "robot")
+    loc.add(static_map(), 0.0)
+    for i in range(300):
+        loc.add(pose(1.0 + i * 0.001), 0.01)
+    assert len(loc.dynamic[("odom", "base")]) == 256
+    assert loc.fault is None
+    import copy
+
+    base = moving_profile().document
+    for mutate in (
+        lambda d: d.update(world_from_base=np.eye(4).tolist()),
+        lambda d: d["localization"].update(tf_chain=["map", "odom", "wrong"]),
+        lambda d: d["localization"].update(max_gap_s=0.5),
+        lambda d: d["localization"].update(translation_uncertainty_m=0),
+    ):
+        d = copy.deepcopy(base)
+        mutate(d)
+        with pytest.raises(ValueError):
+            CalibrationProfile(d, XML)
