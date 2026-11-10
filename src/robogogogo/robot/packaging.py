@@ -145,7 +145,26 @@ def assembly_parts(model):
             center, exit_axis = np.asarray(center), np.asarray(exit_axis)
             # Our keyed adapter/junction is mounted on the rear service tray.
             # Device-side socket clocking is provisional, explicitly separate.
-            part("connector_standoff", rear + other * spacing, center, 0.003, "bracket")
+            root = rear + other * spacing
+            if suffix == "upper_roll":
+                foot = center.copy()
+                foot[1] = -0.04 if side == "left" else 0.04
+                foot[2] = root[2]
+                top = foot.copy()
+                top[2] = center[2]
+                for tag, first, last in (
+                    ("foot", root, foot),
+                    ("riser", foot, top),
+                    ("tip", top, center),
+                ):
+                    part("connector_standoff_" + tag, first, last, 0.003, "bracket")
+            elif suffix == "shoulder":
+                foot = center.copy()
+                foot[2] = root[2]
+                part("connector_standoff_foot", root, foot, 0.003, "bracket")
+                part("connector_standoff_tip", foot, center, 0.003, "bracket")
+            else:
+                part("connector_standoff", root, center, 0.003, "bracket")
             part(
                 "power_can_connector",
                 center - exit_axis * 0.01,
@@ -168,7 +187,15 @@ def assembly_parts(model):
                     provenance="manufacturer connector family; rear-face clocking requires vendor CAD",
                 )
                 p0 = port_end
-                p3 = center - exit_axis * 0.01 + np.array([0.0, lateral * 0.30, 0.0])
+                p3 = (
+                    center
+                    - exit_axis * 0.01
+                    + np.array(
+                        [0.0, 0.0, lateral * 0.50]
+                        if suffix == "shoulder"
+                        else [0.0, lateral * 0.50, 0.0]
+                    )
+                )
                 points = fixed_adapter_path(p0, p3, axis, exit_axis)
                 for i, (start, end) in enumerate(zip(points[:-1], points[1:])):
                     part(

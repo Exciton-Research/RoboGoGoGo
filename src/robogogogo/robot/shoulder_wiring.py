@@ -127,7 +127,7 @@ def cover_specs(model):
             (
                 "yaw_transfer",
                 parent,
-                [[-0.025, 0, 0.226], [-0.13, 0, 0.20], [-0.17, 0, 0.06]],
+                [[-0.025, 0, 0.226], [-0.13, 0, 0.20], [-0.17, -0.012 if sign < 0 else 0.0, 0.06]],
                 0.080,
             ),
             (
@@ -136,9 +136,9 @@ def cover_specs(model):
                 [
                     [-0.17, sign * 0.03, 0.055 if sign > 0 else 0.025],
                     [-0.15, sign * 0.15, 0.065 if sign > 0 else 0.025],
-                    [-0.035, sign * 0.20, 0.065 if sign > 0 else 0.025],
+                    [-0.035, sign * 0.20, 0.055 if sign > 0 else 0.015],
                 ],
-                0.055,
+                0.060,
             ),
         ]
         for name, body, points, radius in paths:
@@ -296,7 +296,7 @@ def fixed_adapter_path(start, end, source_axis, target_axis, radius=0.010):
         outgoing /= np.linalg.norm(outgoing)
         angle = np.arccos(np.clip(np.dot(incoming, outgoing), -1, 1))
         distance = radius * np.tan(angle / 2)
-        before, after = b - incoming * distance, b + outgoing * distance
+        before = b - incoming * distance
         normal = np.cross(incoming, outgoing)
         normal /= np.linalg.norm(normal)
         center = before + np.cross(normal, incoming) * radius
@@ -316,6 +316,7 @@ def fixed_wiring_report(model):
     ordinary collision world. Same-host interference cannot be skipped here.
     """
     from collections import defaultdict
+
     from ..planning.collision import segment_distance
     from .packaging import assembly_parts, shoulder_packages
 
