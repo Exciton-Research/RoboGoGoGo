@@ -1,9 +1,6 @@
-"""Native articulated two-arm structural grasp and guarded load-transfer benchmark."""
+"""Internal numerical regression fixture; not a supported robot workflow."""
 
-import argparse
-import json
 
-import jax
 import numpy as np
 
 from robogogogo import spatial as sp
@@ -82,19 +79,3 @@ def run(
         maximum_bend_m=maximum_bend,
         **grasp.summary(),
     )
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--material",
-        default="soft_elastomer",
-        choices=["soft_foam", "soft_elastomer", "fragile_shell"],
-    )
-    parser.add_argument("--force", type=float, default=16.0)
-    parser.add_argument("--lift", type=float, default=0.1)
-    parser.add_argument("--no-adaptive", action="store_true")
-    args = parser.parse_args()
-    jax.config.update("jax_enable_x64", True)
-    result = run(args.material, args.force, args.lift, adaptive=not args.no_adaptive)
-    print(json.dumps(result, indent=2))

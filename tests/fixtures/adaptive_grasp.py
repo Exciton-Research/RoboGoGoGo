@@ -1,12 +1,6 @@
-"""Compare adaptive and fixed 8 N grasps after a friction change at 0.8 seconds.
+"""Internal numerical regression fixture; not a supported robot workflow."""
 
-Run: python examples/adaptive_grasp.py
-A three-axis articulated fixture holds a bar horizontally between side pads.
-"""
 
-import json
-
-import jax
 import jax.numpy as jnp
 import numpy as np
 
@@ -55,8 +49,3 @@ def run(adaptive=True, friction=0.14, damage_force=55.0):
         feedback=grasp.summary()["adaptive_grasp"],
         damage_limit_exceeded=grasp.damage_limit_exceeded,
     )
-
-
-if __name__ == "__main__":
-    jax.config.update("jax_enable_x64", True)
-    print(json.dumps([run(True), run(False)], indent=2))

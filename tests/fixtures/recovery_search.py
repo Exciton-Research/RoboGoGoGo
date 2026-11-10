@@ -1,12 +1,6 @@
-"""Recovery search on two articulated Cartesian arms with explicit collision proxies.
+"""Internal numerical regression fixture; not a supported robot workflow."""
 
-These gripper fixtures exercise the same planner used by Studio's full robot world.
-"""
 
-import argparse
-import json
-
-import jax
 import numpy as np
 
 from robogogogo import spatial as sp
@@ -124,12 +118,3 @@ def run(scenario="helper", camera_provider=None, fixture_factory=fixture):
         if m.failure or (m.recovery and (m.recovery.placed or m.recovery.secured)):
             break
     return dict(time_s=s.elapsed, **m.summary())
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--scenario", choices=["helper", "support"], default="helper")
-    args = parser.parse_args()
-    jax.config.update("jax_enable_x64", True)
-    result = run(args.scenario)
-    print(json.dumps(result, indent=2))

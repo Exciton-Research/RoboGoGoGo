@@ -1,12 +1,6 @@
-"""Native wrist-camera exploration: a top view lacks the second grasp flank.
+"""Internal numerical regression fixture; not a supported robot workflow."""
 
-A fixed reference camera sees one flank; the free wrist must move sideways to
-observe the other. Rendered RGB-D is an analytic test sensor, not hardware data.
-"""
 
-import json
-
-import jax
 import numpy as np
 from camera_recovery import render_camera
 from recovery_search import fixture
@@ -70,13 +64,3 @@ def run():
         if m.failure or (m.recovery and (m.recovery.secured or m.recovery.placed)):
             break
     return dict(initial_grasps=initial_count, time_s=session.elapsed, **m.summary())
-
-
-if __name__ == "__main__":
-    jax.config.update("jax_enable_x64", True)
-    result = run()
-    print(
-        json.dumps(
-            {k: result[k] for k in ("initial_grasps", "time_s", "failure", "recovery")}, indent=2
-        )
-    )

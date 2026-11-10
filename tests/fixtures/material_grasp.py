@@ -1,13 +1,6 @@
-"""Native articulated material grasp benchmark; no renderer or external engine.
+"""Internal numerical regression fixture; not a supported robot workflow."""
 
-python examples/material_grasp.py --material soft_foam --force 4
-python examples/material_grasp.py --material fragile_shell --force 40 --no-adaptive
-"""
 
-import argparse
-import json
-
-import jax
 import jax.numpy as jnp
 import numpy as np
 
@@ -71,16 +64,3 @@ def run(material="soft_foam", force=None, adaptive=True, duration=2.0, force_thr
         feedback=result["adaptive_grasp"],
         events=result["events"],
     )
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--material", choices=MATERIALS, default="soft_foam")
-    parser.add_argument("--force", type=float)
-    parser.add_argument("--no-adaptive", action="store_true")
-    args = parser.parse_args()
-    jax.config.update("jax_enable_x64", True)
-    result = run(args.material, args.force, not args.no_adaptive)
-    for key in ("indentation_m", "permanent_m", "damage"):
-        result["object"]["material"].pop(key, None)
-    print(json.dumps(result, indent=2))

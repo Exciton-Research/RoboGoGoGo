@@ -1,13 +1,6 @@
-"""Run physical recovery benchmarks: --scenario regrasp, put_down, or warning.
+"""Internal numerical regression fixture; not a supported robot workflow."""
 
-The put_down scenario seeds a known 2% bond flaw after a physical lift to test
-recovery from detected pre-existing damage. It does not claim to produce that flaw.
-"""
 
-import argparse
-import json
-
-import jax
 
 try:
     from .structural_handover import make_rig
@@ -66,11 +59,3 @@ def run(scenario="regrasp"):
         minimum_helper_load_n=minimum_helper_load if minimum_helper_load != float("inf") else None,
         **grasp.summary(),
     )
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--scenario", choices=["regrasp", "put_down", "warning"], default="regrasp")
-    args = parser.parse_args()
-    jax.config.update("jax_enable_x64", True)
-    print(json.dumps(run(args.scenario), indent=2))
