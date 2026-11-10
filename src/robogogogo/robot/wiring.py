@@ -7,8 +7,9 @@ This validates electrical topology, not a production loom or connector crimp.
 from collections import defaultdict, deque
 
 from .components import ARM_COMPONENTS
+from .shoulder_wiring import branch_specs, connector_interfaces
 
-WIRING_REVISION = "dual-arm-power-can-1"
+WIRING_REVISION = "dual-arm-power-can-2"
 SOURCE = "https://img.cubemars.com/products/cubemars-product-parameter/AK-Series-Module-Product-Manual-v3.0.0-Download.pdf"
 
 
@@ -39,6 +40,10 @@ def robot_wiring(model):
             host = model.names[model.parents[body]]
             connector(panel, ["V+", "V-", "CAN_H", "CAN_L"], host, "panel")
             connector(drive, ["V+", "V-", "CAN_H", "CAN_L"], host, "drive")
+            connectors[-1]["physical_interfaces"] = connector_interfaces(suffix)
+            connectors[-1]["placement_qualification"] = (
+                "rear-face adapter layout; vendor socket clocking unverified"
+            )
             # Each voltage rail has an individual branch to the panel; no wrist
             # gets the proximal 48 V rail. Protection ratings are a separate BOM.
             for polarity in ("+", "-"):
@@ -62,8 +67,19 @@ def robot_wiring(model):
                 )
             )
         terminations.append(dict(connector=previous, resistance_ohm=120))
+    branches = branch_specs(model)
+    for lead in wires:
+        target, pin = lead["target"]
+        for side in ("left", "right"):
+            if target == f"{side}_upper_roll_panel":
+                lead["route_ids"] = [f"{side}_yaw_roll_internal"]
+            elif target == f"{side}_shoulder_panel":
+                lead["route_ids"] = (
+                    [f"{side}_yaw_roll_internal"] if pin in ("V+", "V-") else []
+                ) + [f"{side}_roll_pitch_internal"]
     result = dict(
         revision=WIRING_REVISION,
+        shoulder_interconnects=branches,
         connectors=connectors,
         wires=wires,
         devices=devices,
@@ -74,6 +90,8 @@ def robot_wiring(model):
             physical_pin_numbering="verify device revision and terminal legends",
             branch_protection="hardware BOM and bus-current measurements required",
             complete_3d_branch_routing=False,
+            shoulder_interconnect_geometry=True,
+            moving_cable="custom 16 mm microloom envelope, 40 mm bend requirement; supplier qualification pending",
         ),
     )
     errors = validate_wiring(result)
@@ -90,9 +108,19 @@ def validate_wiring(wiring):
         if connector["name"] in nodes:
             errors.append(f"Duplicate connector: {connector['name']}")
         nodes[connector["name"]] = set(connector["terminals"])
+    routes = {route["name"] for route in wiring.get("shoulder_interconnects", [])}
+    expected_routes = {
+        f"{side}_{span}_internal"
+        for side in ("left", "right")
+        for span in ("yaw_roll", "roll_pitch")
+    }
+    if routes != expected_routes:
+        errors.append("Missing shoulder interconnect geometry")
     graph = defaultdict(set)
     for wire in wiring["wires"]:
         a, b = tuple(wire["source"]), tuple(wire["target"])
+        if any(route not in routes for route in wire.get("route_ids", [])):
+            errors.append("Unknown physical shoulder route")
         if any(name not in nodes or pin not in nodes[name] for name, pin in (a, b)):
             errors.append(f"Unknown wire endpoint: {a} -> {b}")
             continue
@@ -109,7 +137,9 @@ def validate_wiring(wiring):
                     queue.append(node)
         return visited
 
-    expected_devices = {f"{side}_{suffix}" for side in ("left", "right") for suffix in ARM_COMPONENTS}
+    expected_devices = {
+        f"{side}_{suffix}" for side in ("left", "right") for suffix in ARM_COMPONENTS
+    }
     names = [device["name"] for device in wiring["devices"]]
     if set(names) != expected_devices or len(names) != len(expected_devices):
         errors.append("Expected exactly the fourteen arm drives")
