@@ -1,6 +1,6 @@
 # Engineering 4: shoulder clearance and arm wiring
 
-The arm roots move 50 mm outward on each side. Yaw and pitch drives have separate axial offsets; the roll drive mounts aft of the shoulder. Collision checks now include the proximal drive housings against the moving upper arms. Catalog cylinders retain enclosing collision proxies and the existing 12 mm guard margin.
+The arm roots move 50 mm outward on each side. Yaw and pitch drives have separate axial offsets; the roll drive mounts aft of the shoulder. Collision checks now include the proximal drive housings against the moving upper arms. Catalog cylinders and their 4 mm cover allowance retain enclosing collision proxies and the existing 12 mm guard margin. Each shoulder contains exactly three catalog motors (yaw, roll, pitch) inside segmented covers; duplicate illustrative shoulder actuator details have been removed. The shoulder housing articulates with those axes instead of using a single rigid enclosure.
 
 Rear shoulder harness supports run behind the roll drives. Shoulder and elbow bundles land on separate planes of the upper arm. Shoulder fairleads have a 45-degree angular envelope, shown in Studio using the backend guide directions. Cable length and bend limits remain enforced. Curve selection is quasistatic and discrete; it does not model cable loads, fatigue, or guarantee continuous motion between sampled configurations.
 
