@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "robogogogo"
 version = "0.2.0"
-description = "Native Python/JAX 3D articulated robotics dynamics and research environments"
+description = "Dual-arm robotics development workflow with Python/JAX simulation and read-only hardware integration"
 requires-python = ">=3.11"
 dependencies = ["jax>=0.4.35", "numpy>=1.26"]
 

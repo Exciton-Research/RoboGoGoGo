@@ -1,0 +1,11 @@
+{
+  "name": "Dual-arm robot",
+  "model": null,
+  "backend": null,
+  "left_joints": [],
+  "right_joints": [],
+  "left_gripper": null,
+  "right_gripper": null,
+  "cameras": [],
+  "schema_version": 1
+}

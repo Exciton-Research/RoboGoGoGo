@@ -1,18 +1,27 @@
 # robogogogo
 
-**A robotics control and perception platform, built on native Python/JAX physics.**
+**A development workflow for one dual-arm robot: simulation, data, learning, runtime, and deployment.**
 
-A robot is a system: sensing, perception, task planning, motion control, actuation,
-and evaluation. VLA is one possible policy within that system. robogogogo supports
-classical rule-based controllers and model adapters through shared contracts.
-No external physics engine is used. Optional OpenCV powers stereo perception only.
+The product starts with one robot, two grippers, head stereo cameras and wrist
+cameras. The physical robot has not been selected. Studio now opens to a workflow
+overview with explicit readiness and missing integrations, and the simulation
+workspace starts with a dual-arm reference rig. A learned policy and a rule-based
+controller are parts of the same system.
 
-**Robotics Studio** is a Next.js/TypeScript workbench connected to Python/FastAPI/JAX.
-The current implementation supports multi-arm reaching, calibrated camera rigs,
-stereo estimation, renderer-derived depth, supervised joint actions and aligned
-recordings. This is an early research foundation: full humanoid locomotion,
-general mesh/contact planning, pretrained VLA adapters, training jobs and RL trainers
-are not implemented yet.
+The Python code is separated into `robot`, `data`, `learning`, `runtime`, and
+`studio` layers. The native Python/JAX simulation engine remains available, with
+no external physics engine. Next.js/TypeScript provides the workbench.
+
+**Implemented:** reference simulation, aligned simulation episodes, dataset
+validation, read-only ROS/SDK telemetry, calibration, and moving-base perception.
+**Still required:** physical teleoperation/recording, hardware command execution,
+training, checkpoint inference, and real-robot evaluation. Simulation contact and
+recovery features are not physical robot integrations.
+
+Read the [single-robot platform guide](docs/platform.md) for package boundaries,
+the capture-to-learning-input workflow, deployment configuration and compatibility.
+The detailed simulation features below remain research capabilities, not claims
+that arbitrary robots can be deployed.
 
 ## Run Robotics Studio
 
