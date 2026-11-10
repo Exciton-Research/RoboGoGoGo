@@ -94,11 +94,13 @@ def passive_forces(model, state):
     return stop - model.damping * state.qd
 
 
-def acceleration(model, state, torque, *, implicit_dt=None):
+def acceleration(model, state, torque, *, implicit_dt=None, external_force=None):
     """Forward dynamics; optional implicit damping/stop linearization for stepping."""
     bias = inverse_dynamics(model, state.q, state.qd, jnp.zeros_like(state.q))
     matrix = mass_matrix(model, state.q)
     force = jnp.clip(torque, -model.effort, model.effort)
+    if external_force is not None:
+        force = force + external_force
     if implicit_dt is None:
         force = force + passive_forces(model, state)
     else:
