@@ -29,7 +29,11 @@ class MobileDynamics:
         self.wheels = jnp.array([index(n + "_wheel") for n in prefixes])
         self.driven = np.asarray(jnp.concatenate([self.base, self.steer, self.wheels]))
         self.mass = jnp.sum(model.mass)
+        from ..robot.self_collision import mobile_collision_world
+
+        self.collision_world = mobile_collision_world(model)
         self.step = jax.jit(self._step)
+        self.predict = jax.jit(self._predict)
         self.center = jax.jit(self._center)
         self.static_margin = jax.jit(lambda q: self.support(q, jnp.zeros(3))[0])
 
@@ -94,6 +98,9 @@ class MobileDynamics:
         return desired, speed / self.radius
 
     def _step(self, state, goal, twist, mu, previous_acceleration):
+        return self._predict(state, goal, twist, mu, previous_acceleration)[:5]
+
+    def _predict(self, state, goal, twist, mu, previous_acceleration):
         model = self.model
 
         def substep(carry, _):
@@ -118,7 +125,7 @@ class MobileDynamics:
             _, new_velocity = jax.jvp(self._center, (following.q,), (following.qd,))
             com_acc = (new_velocity - old_velocity) / model.dt
             predicted_margin = self.support(following.q, com_acc)[0]
-            return (following, com_acc), (predicted_margin, torque, diagnostics)
+            return (following, com_acc), (predicted_margin, torque, diagnostics, following.q)
 
         (following, com_acc), trace = jax.lax.scan(
             substep, (state, previous_acceleration), None, length=self.substeps
@@ -129,6 +136,7 @@ class MobileDynamics:
             jnp.min(trace[0]),
             trace[1][-1],
             jax.tree.map(lambda x: x[-1], trace[2]),
+            trace[3],
         )
 
     def validate_goal(self, start, goal):
@@ -140,3 +148,10 @@ class MobileDynamics:
             q = jnp.asarray(start + fraction * (goal - start))
             if float(self.static_margin(q)) < self.margin:
                 raise ValueError("Torso/arm path leaves the reserved support-polygon margin")
+
+        if not self.collision_world.edge_free(start, goal):
+            clearance = self.collision_world.clearance(goal)
+            raise ValueError(
+                "Self-collision guard rejected the joint path (endpoint closest pair: "
+                f"{clearance.pair[0]} / {clearance.pair[1]}); choose a different arm or torso goal"
+            )

@@ -446,7 +446,7 @@
   <joint name="left_mount" type="fixed">
     <parent link="torso" />
     <child link="left_pedestal" />
-    <origin xyz="0 0.28 0.22" />
+    <origin xyz="0 0.35 0.22" />
   </joint>
   <link name="left_upper_roll">
     <inertial>
@@ -618,7 +618,7 @@
   <joint name="right_mount" type="fixed">
     <parent link="torso" />
     <child link="right_pedestal" />
-    <origin xyz="0 -0.28 0.22" />
+    <origin xyz="0 -0.35 0.22" />
   </joint>
   <link name="right_upper_roll">
     <inertial>

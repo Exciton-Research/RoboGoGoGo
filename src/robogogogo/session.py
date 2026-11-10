@@ -229,7 +229,7 @@ class Session:
 
     def _advance_mobile(self):
         twist = self.drive_twist if self.elapsed < self.drive_until else np.zeros(3)
-        following, acc, margin, torque, diagnostics = self.mobile.step(
+        following, acc, margin, torque, diagnostics, positions = self.mobile.predict(
             self.state, self.target_q, jnp.asarray(twist), self.tire_mu, self.com_acceleration
         )
         if not all(
@@ -262,6 +262,33 @@ class Session:
             raise FloatingPointError(
                 "Mobile arena boundary reached; simulation frozen before virtual joint stops"
             )
+        from .planning.collision import CollisionViolation
+
+        world = self.mobile.collision_world
+        previous = np.asarray(self.state.q)
+        closest = world.clearance(previous)
+        for q in np.asarray(positions):
+            clearance = world.clearance(q)
+            if clearance.distance < closest.distance:
+                closest = clearance
+            if not world.edge_free(previous, q):
+                self.stop_drive()
+                self.mobile_status.update(
+                    guard="blocked",
+                    collision_guard="blocked",
+                    collision_clearance_m=clearance.distance,
+                    collision_pair=list(clearance.pair),
+                )
+                raise CollisionViolation(
+                    "Self-collision guard rejected predicted motion: "
+                    f"{clearance.pair[0]} / {clearance.pair[1]}. State was not advanced."
+                )
+            previous = q
+        self.mobile_status.update(
+            collision_guard="clear",
+            collision_clearance_m=closest.distance,
+            collision_pair=list(closest.pair),
+        )
         self.state, self.com_acceleration = following, acc
         self.target_q = self.target_q.at[self.mobile.driven].set(following.q[self.mobile.driven])
         self.last_torque = np.asarray(jnp.clip(torque, -self.model.effort, self.model.effort))

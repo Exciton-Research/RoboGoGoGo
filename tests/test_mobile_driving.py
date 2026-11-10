@@ -124,12 +124,13 @@ def test_guard_rejection_is_atomic_and_clears_drive(model):
     session.set_drive([0.1, 0, 0])
     before = session.state
     _, diagnostics = session.mobile.tire_forces(before, 0.7, jnp.zeros(3))
-    session.mobile.step = lambda *args: (
+    session.mobile.predict = lambda *args: (
         before._replace(q=before.q + 1),
         jnp.zeros(3),
         -0.1,
         jnp.zeros_like(before.q),
         diagnostics,
+        jnp.asarray([before.q + 1]),
     )
     with pytest.raises(FloatingPointError, match="Stability guard"):
         session.advance()
