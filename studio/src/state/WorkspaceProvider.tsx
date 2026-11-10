@@ -10,7 +10,7 @@ import {
 import { request, useSimulation } from "../api";
 import type { ViewportHandle } from "../Viewport";
 import { useVla } from "../vlaClient";
-import type { ProjectSummary, Snapshot, Vec3 } from "../types";
+import type { ProjectSummary, Snapshot, Vec3, PosePreview } from "../types";
 
 function useWorkspaceState() {
   const { snapshot, history, connection, accept } = useSimulation();
@@ -27,6 +27,27 @@ function useWorkspaceState() {
   const [goals, setGoals] = useState<number[]>([]);
   const [target, setTarget] = useState<Vec3>([0.6, 0.15, 0.5]);
   const [goalDirty, setGoalDirty] = useState(false);
+  const [posePreview, setPosePreview] = useState<PosePreview | null>(null);
+  const [posePreviewError, setPosePreviewError] = useState("");
+  useEffect(() => {
+    setPosePreview(null);
+    setPosePreviewError("");
+    if (!goalDirty || goals.length !== 31) return;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      void request<PosePreview>("/pose-preview", { values: goals })
+        .then((value) => {
+          if (!cancelled) setPosePreview(value);
+        })
+        .catch((error) => {
+          if (!cancelled) setPosePreviewError((error as Error).message);
+        });
+    }, 150);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [goals, goalDirty, snapshot?.epoch, snapshot?.state.running]);
   const [showGrid, setShowGrid] = useState(true);
   const [showAxes, setShowAxes] = useState(false);
   const [showCameraGuides, setShowCameraGuides] = useState(true);
@@ -85,16 +106,22 @@ function useWorkspaceState() {
   }, [snapshot?.project.id, snapshot?.project.name]);
 
   const perform = useCallback(
-    async (action: () => Promise<Snapshot>, success?: string) => {
+    async (
+      action: () => Promise<Snapshot>,
+      success?: string,
+      preserveDraft = false,
+    ) => {
       setBusy(true);
       setError("");
       setNotice("");
       try {
         const next = await action();
         accept(next);
-        setGoals(next.state.goal);
-        setTarget(next.state.target);
-        setGoalDirty(false);
+        if (!preserveDraft) {
+          setGoals(next.state.goal);
+          setTarget(next.state.target);
+          setGoalDirty(false);
+        }
         if (success) setNotice(success);
         return next;
       } catch (e) {
@@ -108,7 +135,11 @@ function useWorkspaceState() {
   );
   const command = useCallback(
     (op: string, extras: Record<string, unknown> = {}) =>
-      perform(() => request<Snapshot>("/command", { op, ...extras })),
+      perform(
+        () => request<Snapshot>("/command", { op, ...extras }),
+        undefined,
+        ["pause", "brake", "speed", "cancel_plan"].includes(op),
+      ),
     [perform],
   );
 
@@ -219,6 +250,9 @@ function useWorkspaceState() {
     target,
     setTarget,
     setGoalDirty,
+    goalDirty,
+    posePreview,
+    posePreviewError,
     showGrid,
     setShowGrid,
     showAxes,

@@ -1,3 +1,4 @@
+import type { PosePreview } from "./types";
 import { addRobotHardware } from "./rendering/robotHardware";
 import { createManipulationVisuals } from "./rendering/manipulation";
 import { captureDepth } from "./rendering/depthCapture";
@@ -26,6 +27,7 @@ interface Props {
   trail: Vec3[];
   selected: number | null;
   onSelect: (body: number) => void;
+  posePreview: PosePreview | null;
   showGrid: boolean;
   showAxes: boolean;
   showCameraGuides: boolean;
@@ -311,6 +313,27 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
           addMesh(i, new THREE.SphereGeometry(0.018, 16, 12), "#81988a"),
         );
       }
+      const ghost = new THREE.Group();
+      const ghostMaterial = new THREE.MeshBasicMaterial({
+        color: "#288b79",
+        wireframe: true,
+        transparent: true,
+        opacity: 0.28,
+        depthWrite: false,
+      });
+      const ghostBodies = bodyGroups.map((group) => {
+        const clone = group.clone(true);
+        clone.traverse((object) => {
+          if (object instanceof THREE.Mesh) {
+            object.material = ghostMaterial;
+            object.castShadow = false;
+          }
+        });
+        ghost.add(clone);
+        return clone;
+      });
+      ghost.visible = false;
+      scene.add(ghost);
       const toolAxes = new THREE.AxesHelper(0.11);
       bodyGroups[model.arms[0]?.body ?? bodyGroups.length - 1]?.add(toolAxes);
       const target = new THREE.Group();
@@ -437,6 +460,35 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
         return { config, camera, preview, wrapper, guide };
       });
       const applyPose = (snapshot: Snapshot) => {
+        const draft = current.current.posePreview;
+        ghost.visible = !!draft;
+        if (draft) {
+          ghostMaterial.color.set(draft.valid ? "#288b79" : "#c34b3c");
+          ghostBodies.forEach((group, i) => {
+            const p = draft.positions[i],
+              r = draft.rotations[i];
+            group.position.fromArray(p);
+            const rotation = new THREE.Matrix4().set(
+              r[0][0],
+              r[0][1],
+              r[0][2],
+              0,
+              r[1][0],
+              r[1][1],
+              r[1][2],
+              0,
+              r[2][0],
+              r[2][1],
+              r[2][2],
+              0,
+              0,
+              0,
+              0,
+              1,
+            );
+            group.quaternion.setFromRotationMatrix(rotation);
+          });
+        }
         updateManipulation(snapshot);
         const matrix = new THREE.Matrix4();
         bodyGroups.forEach((group, i) => {
@@ -478,6 +530,8 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
           toolAxes.visible,
           trail.visible,
         ];
+        const previewVisible = ghost.visible;
+        ghost.visible = false;
         grid.visible = false;
         origin.visible = false;
         toolAxes.visible = false;
@@ -538,6 +592,7 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
             );
           }
         }
+        ghost.visible = previewVisible;
         [grid.visible, origin.visible, toolAxes.visible, trail.visible] =
           visibility;
         sensors.forEach(

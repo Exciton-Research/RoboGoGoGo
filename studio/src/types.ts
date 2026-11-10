@@ -353,3 +353,13 @@ export interface ArmGroup {
   joint_indices: number[];
   joint_names: string[];
 }
+
+export interface PosePreview {
+  values: number[];
+  positions: Vec3[];
+  rotations: number[][][];
+  valid: boolean;
+  clearance_m: number;
+  support_margin_m: number;
+  pair: string[];
+}

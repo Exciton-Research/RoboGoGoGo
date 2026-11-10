@@ -24,6 +24,8 @@ export function SimulationStage() {
     history,
     busy,
     selected,
+    posePreview,
+    goalDirty,
     showGrid,
     setShowGrid,
     showAxes,
@@ -97,6 +99,7 @@ export function SimulationStage() {
               trail={trail}
               selected={selected}
               onSelect={chooseBody}
+              posePreview={replay === null && goalDirty ? posePreview : null}
               showGrid={showGrid}
               showAxes={showAxes}
               showCameraGuides={showCameraGuides}
@@ -117,7 +120,11 @@ export function SimulationStage() {
               {status}
               <span className="small-divider" />
               <span className="view-subtitle">
-                {replay !== null ? "Recorded state" : "Perspective viewport"}
+                {replay !== null
+                  ? "Recorded state"
+                  : goalDirty
+                    ? "POSE PREVIEW · outline only"
+                    : "Perspective viewport"}
               </span>
             </div>
             <div className="view-badge">

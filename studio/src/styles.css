@@ -2671,3 +2671,7 @@ textarea {
 
 .whole-body-actions { display: flex; gap: 6px; margin-top: 8px; }
 .whole-body-actions button { flex: 1; justify-content: center; }
+
+.pose-draft { position: sticky; top: 0; z-index: 3; padding: 12px; margin: 8px 0 12px; background: #edf6ef; border: 1px solid #9bbbae; border-radius: 8px; font-size: 12px; }
+.pose-draft p { font-size: 11px; line-height: 1.5; }
+.pose-draft-actions { display: flex; gap: 6px; margin-top: 8px; }

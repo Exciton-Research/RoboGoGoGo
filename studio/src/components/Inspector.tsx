@@ -1,3 +1,4 @@
+import { PoseDraftControls } from "./PoseDraftControls";
 import { useEffect, useState } from "react";
 import { WholeBodyControls } from "./WholeBodyControls";
 import { MobileDesignControls } from "./MobileDesignControls";
@@ -109,6 +110,7 @@ export function Inspector() {
               </div>
               {
                 <>
+                  <PoseDraftControls />
                   <WholeBodyControls />
                   <MobileDesignControls />
                   <div className="control-mode">
