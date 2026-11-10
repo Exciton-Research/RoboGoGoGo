@@ -50,13 +50,34 @@ export function addResearchRobotDetails(model: RobotModel, add: AddMesh) {
       if (upper || forearm) {
         const length = upper ? 0.32 : 0.28;
         const radius = upper ? 0.075 : 0.065;
-        const sleeve = add(
-          body,
-          new THREE.CapsuleGeometry(radius, length - 2 * radius, 12, 32),
-          "#e4e6e2",
-          [length / 2, 0, 0],
-        );
+        // Turned shell profile leaves clearance around the bearing ends.
+        const profile = [
+          [0, 0.018],
+          [radius * 0.72, 0.018],
+          [radius * 0.94, 0.045],
+          [radius * 0.96, length * 0.35],
+          [radius * 0.8, length - 0.055],
+          [radius * 0.62, length - 0.025],
+          [0, length - 0.025],
+        ].map(([r, x]) => new THREE.Vector2(r, x));
+        const sleeve = add(body, new THREE.LatheGeometry(profile, 48), shell);
         sleeve.rotation.z = -Math.PI / 2;
+        sleeve.material.roughness = 0.42;
+        // Split housing seam and an inset service cover, fixed to this link.
+        const seam = add(
+          body,
+          new THREE.TorusGeometry(radius * 0.94, 0.0012, 8, 48),
+          graphite,
+          [0.047, 0, 0],
+        );
+        seam.rotation.y = Math.PI / 2;
+        box(
+          body,
+          [length * 0.38, 0.042, 0.006],
+          metal,
+          [length * 0.49, 0, radius * 0.86],
+          0.003,
+        );
         if (forearm) {
           add(
             body,
@@ -108,14 +129,22 @@ export function addResearchRobotDetails(model: RobotModel, add: AddMesh) {
       // Concept fingers are presentation geometry, not a contact/gripper model.
       if (mobile) {
         box(body, [0.055, 0.072, 0.045], graphite, [0.035, 0, 0]);
-        for (const side of [-1, 1])
+        for (const side of [-1, 1]) {
+          box(
+            body,
+            [0.05, 0.005, 0.026],
+            "#263334",
+            [0.092, side * 0.017, 0],
+            0.002,
+          );
           box(
             body,
             [0.06, 0.012, 0.032],
-            "#67aaa4",
+            "#8799a6",
             [0.09, side * 0.025, 0],
             0.004,
           );
+        }
       }
     }
   });
@@ -149,6 +178,24 @@ export function addResearchRobotDetails(model: RobotModel, add: AddMesh) {
       [0, 0, 0.14],
     );
     chest.scale.set(0.15, 0.26, 0.19);
+    const torso = model.names.indexOf("torso");
+    const neck = add(
+      torso,
+      new THREE.CylinderGeometry(0.044, 0.052, 0.07, 40),
+      graphite,
+      [0, 0, 0.345],
+    );
+    neck.rotation.x = Math.PI / 2;
+    box(torso, [0.012, 0.19, 0.19], graphite, [-0.132, 0, 0.15], 0.006);
+    for (let i = 0; i < 7; i++)
+      box(
+        torso,
+        [0.004, 0.12, 0.004],
+        metal,
+        [-0.14, 0, 0.1 + i * 0.013],
+        0.001,
+      );
+
     box(
       model.names.indexOf("torso"),
       [0.012, 0.12, 0.018],
@@ -174,5 +221,16 @@ export function addResearchRobotDetails(model: RobotModel, add: AddMesh) {
   if (head >= 0 && mobile) {
     const shellMesh = add(head, new THREE.SphereGeometry(1, 40, 24), shell);
     shellMesh.scale.set(0.095, 0.13, 0.09);
+    // Stereo lens origins remain at x=0.105, ahead of this recessed face plate.
+    box(head, [0.016, 0.17, 0.045], graphite, [0.085, 0, 0], 0.01);
+    for (const side of [-1, 1]) {
+      const ear = add(
+        head,
+        new THREE.CylinderGeometry(0.031, 0.031, 0.009, 32),
+        metal,
+        [0, side * 0.125, 0],
+      );
+      ear.material.metalness = 0.7;
+    }
   }
 }

@@ -47,17 +47,25 @@ export function addRobotHardware(
           : 0.073;
     // Three exposed actuator endbells follow the actual yaw, roll and pitch frames.
     // These are concept housings, not selected stepper or servo specifications.
-    for (const side of [-1, 1]) {
+    // One accessible end cover per shoulder axis; opposite ends are inside the assembly.
+    const ends = shoulderAxis
+      ? [
+          joint.name.endsWith("shoulder") && joint.name.startsWith("right_")
+            ? -1
+            : 1,
+        ]
+      : [-1, 1];
+    for (const side of ends) {
       const center = axis.clone().multiplyScalar(side * offset);
       const cap = add(
         joint.body,
         new THREE.CylinderGeometry(
           radius,
           radius,
-          shoulderAxis ? 0.018 : 0.009,
+          shoulderAxis ? 0.012 : 0.009,
           40,
         ),
-        dark,
+        shoulderAxis ? metal : dark,
         center.toArray(),
       );
       cap.quaternion.copy(orientation);
