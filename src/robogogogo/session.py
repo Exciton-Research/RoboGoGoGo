@@ -482,7 +482,7 @@ class Session:
             waypoint=1,
             waypoint_count=len(plan.waypoints) - 1,
             checks=plan.checks,
-            final_goal=list(plan.waypoints[-1]),
+            final_goal=np.asarray(plan.waypoints[-1]).tolist(),
             target_center=np.asarray(center).tolist(),
             target_positions=targets.tolist(),
             base_error_m=0.0,

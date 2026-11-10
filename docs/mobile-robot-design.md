@@ -192,3 +192,41 @@ The three rule-based recording fixtures use checked elbow-flexion targets for th
 robot. Their position-IK baseline accepts continuous wheel-coordinate bounds but
 only commands arm joints. Debug movement ends the current recording; start a new
 episode before collecting another rule-based run.
+
+
+## Coordinated whole-body reaching
+
+The Robot tab now offers a whole-body hand-center target. Both hand targets are
+translated by the requested displacement; their initial separation is preserved
+at the endpoint. Tool orientations and intermediate hand spacing are unconstrained,
+so this must not be used as a rigid-object carrying controller.
+
+Weighted position IK includes planar base coordinates, torso joints and both arms.
+Head and wheel coordinates remain outside IK. Candidate paths pass adaptive
+self-collision checks and sampled static support checks; bounded RRT-Connect is
+available when the direct edge is blocked. Targets are limited to local changes
+within one meter, with base translation/yaw bounded around the starting state.
+An infeasible endpoint or exhausted search leaves the previous target intact.
+
+Execution shares a slow quintic reference between the joint servos and a world-to-body
+base tracking controller. Base movement is produced by steering and wheel torques
+with tire friction, never by writing base positions. Speed is bounded to 0.18 m/s
+and 0.25 rad/s. Every actual integration substep retains collision and dynamic
+support validation. A segment that fails to settle within its reference duration
+plus 15 simulation seconds blocks execution. Pause freezes the trajectory clock;
+Cancel discards the queue and requests guarded braking. Manual wheel commands and
+recorded policy deltas cannot compete with an active plan.
+
+This is a local simulation controller, not a hardware whole-body QP/MPC controller
+or navigation system. Unknown obstacles, terrain, carried loads and contacts are
+not planned. Debug whole-body movement invalidates an aligned episode; NPZ physics
+trajectory export remains available. Hardware command execution is still disabled.
+
+### Hardware appearance
+
+Camera housings and lenses now use the episode's camera mount position and optical
+orientation; head stereo spacing is 64 mm in the default rig. Wrist cameras have
+mounting brackets. Joint actuator endcaps, fastening rings, hub covers, tread and
+service panels follow their actual link frames. These are illustrative rendering
+details, not a new collision mesh, measured actuator design, or manufacturing CAD.
+Turn on coordinate frames to show camera frustums; the normal view stays uncluttered.
