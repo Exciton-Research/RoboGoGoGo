@@ -141,6 +141,22 @@ def assembly_parts(model):
                 0.003,
                 "bracket",
             )
+        # Fixed four-conductor drive pigtail: rear adapter termination to panel.
+        # This models our adapter interface, not unverified vendor cavity coordinates.
+        p0 = b + axis * 0.004
+        p3 = mount + axis * 0.032
+        p1 = p0 + axis * 0.040
+        p2 = p3 + axis * 0.040
+        t = np.linspace(0.0, 1.0, 9)[:, None]
+        points = (
+            (1 - t) ** 3 * p0 + 3 * (1 - t) ** 2 * t * p1 + 3 * (1 - t) * t * t * p2 + t**3 * p3
+        )
+        for i, (start, end) in enumerate(zip(points[:-1], points[1:])):
+            part(f"drive_lead_{i}", start, end, 0.0047, "wire")
+            result[-1]["mass_kg"] = 0.005 / 8
+            result[-1]["provenance"] = (
+                "fixed adapter pigtail envelope; vendor 100 mm lead requires fit check"
+            )
     return result
 
 

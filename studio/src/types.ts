@@ -36,7 +36,7 @@ export interface PackagingVolume {
 export interface RobotModel {
   shoulder_packages: PackagingVolume[];
   assembly_parts: (PackagingVolume & {
-    kind: "bracket" | "connector" | "clamp";
+    kind: "bracket" | "connector" | "clamp" | "wire";
   })[];
   cable_passages: PackagingVolume[];
   name: string;

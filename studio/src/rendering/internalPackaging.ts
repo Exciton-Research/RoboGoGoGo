@@ -77,7 +77,7 @@ export function addInternalPackaging(model: RobotModel, add: AddMesh) {
       new THREE.Vector3(...p.start),
       new THREE.Vector3(...p.end),
       p.radius,
-      p.kind === "connector" ? "#232b30" : "#9aa8b1",
+      p.kind === "connector" || p.kind === "wire" ? "#232b30" : "#9aa8b1",
     );
     if (p.kind === "connector") {
       fitting.geometry.dispose();
