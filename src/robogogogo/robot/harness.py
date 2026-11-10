@@ -16,9 +16,9 @@ RADIUS = 0.015
 POWER_DIAMETER = 0.0085
 CAN_DIAMETER = 0.0075
 CAN_SOURCE = "https://us.misumi-ec.com/linked/pdf/vona/EU_Data_sheet_chainflex_CFROBOT8.pdf"
-FREE_LENGTH = 0.44
+FREE_LENGTH = 0.51
 MIN_BEND = 10 * POWER_DIAMETER + RADIUS + POWER_DIAMETER / 2
-NEUTRAL = {"waist": 0.0, "upper_roll": 0.0, "shoulder": 1.2, "elbow": -1.35}
+NEUTRAL = {"waist": 0.0, "upper_roll": 0.0, "shoulder": 0.6, "elbow": -0.675}
 
 
 def loop_points(axis, delta, samples=49):
@@ -27,7 +27,7 @@ def loop_points(axis, delta, samples=49):
     radial -= axis * np.dot(axis, radial)
     radial /= np.linalg.norm(radial)
     turned = radial * np.cos(delta) + np.cross(axis, radial) * np.sin(delta)
-    a, d = axis * 0.175 + radial * 0.12, axis * 0.175 - turned * 0.12
+    a, d = axis * 0.175 + radial * 0.15, axis * 0.175 - turned * 0.15
     t = np.linspace(0, 1, samples)[:, None]
 
     def curve(bulge):
