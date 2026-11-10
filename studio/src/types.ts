@@ -165,7 +165,16 @@ export interface ManipulationState {
       grasp_count: number;
       support_count: number;
       uncertainty_m: number;
-      diagnostics: { error?: string };
+      diagnostics: {
+        error?: string;
+        scene_memory?: {
+          surfaces: number;
+          remembered: number;
+          invalidated: number;
+          motion_evidence: number;
+          max_uncertainty_m: number;
+        };
+      };
     } | null;
     risk_hold: boolean;
     search_checks: number;

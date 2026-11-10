@@ -492,6 +492,34 @@ export function CoordinationPanel({
                     ` · ${manipulation.recovery.perception.diagnostics.error}`}
                 </span>
               )}
+              {manipulation.recovery.perception?.diagnostics.scene_memory && (
+                <span>
+                  Scene memory:{" "}
+                  {
+                    manipulation.recovery.perception.diagnostics.scene_memory
+                      .surfaces
+                  }{" "}
+                  surfaces
+                  {" · "}
+                  {
+                    manipulation.recovery.perception.diagnostics.scene_memory
+                      .remembered
+                  }{" "}
+                  remembered
+                  {" · "}
+                  {
+                    manipulation.recovery.perception.diagnostics.scene_memory
+                      .invalidated
+                  }{" "}
+                  invalidated
+                  {" · "}Max uncertainty{" "}
+                  {(
+                    manipulation.recovery.perception.diagnostics.scene_memory
+                      .max_uncertainty_m * 1000
+                  ).toFixed(1)}{" "}
+                  mm
+                </span>
+              )}
               <span>
                 Attempts {manipulation.recovery.attempts} · Helper{" "}
                 {manipulation.recovery.helper ?? "none"}

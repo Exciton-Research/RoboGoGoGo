@@ -753,3 +753,44 @@ regrasp. This uses the documented analytic RGB-D test sensor. View attempts, sel
 camera, predicted gain, newly visible probe count, candidate ranking, capture time,
 rejection reasons and actual joint targets are recorded. Predicted probe counts are
 not measured grasp counts; fresh images must confirm useful surfaces.
+
+
+### Temporal scene memory
+
+Camera-derived recovery now combines head and wrist measurements across captures
+in a bounded world-frame surface memory. `observe_recovery()` and Studio use the
+same implementation. Synchronized views can still be combined with `fuse()`;
+sequential views must have nondecreasing simulation timestamps and calibrated
+poses in the same world frame.
+
+Occluded and out-of-view geometry persists for up to eight seconds. Its position
+uncertainty grows with time; reobservation reduces uncertainty with a floor for
+correlated measurements. A measured depth ray extending past an old surface
+invalidates that surface. A nearer occluder or a missing depth pixel does not.
+Each fused camera keeps its own measured rays. Evidence that the selected object
+moved also raises uncertainty on its still-hidden surfaces; the system does not
+invent a new pose for them. Memory holds at most 4,000 surface samples and reserves
+space for hidden history when fresh observations fill the budget.
+
+Active perception discounts stale coverage and can seek another view of remembered
+surfaces. Uncertain old samples stop acting as definite visual occluders. Grasp and
+support proposals always use the current capture: remembered surfaces never
+independently authorize contact or placement. Studio displays remembered and
+invalidated sample counts and maximum position uncertainty.
+
+```python
+from robogogogo.perception import SceneMemory
+
+memory = SceneMemory(capacity=4000, lifetime_s=8.0)
+observation = memory.observe(head_cloud, seed=payload_selection_cue)
+observation = memory.observe(later_wrist_cloud, seed=payload_selection_cue)
+print(observation.diagnostics["scene_memory"])
+memory.clear()  # Required if reusing it after resetting the clock or world frame.
+```
+
+Recovery owns a fresh memory for each new controller/task. This is geometric scene
+memory with a selected-target mask, not semantic object identity tracking, SLAM,
+or a learned motion predictor. It cannot know how an entirely hidden object moved;
+uncertainty growth and expiration handle that lack of evidence. The bounded ray
+sampling and noise model are approximations, and robot collision checks remain
+independent. Run `pytest tests/test_scene_memory.py` for temporal fusion regressions.
