@@ -94,8 +94,12 @@ export function SimulationStage() {
           </div>
         </div>
         <div className="viewport-wrap">
+          {showInternals && (
+            <div className="viewport-label" style={{ top: 42, bottom: "auto" }}>
+              PACKAGING RESERVATIONS · JOINT HARNESS UNRESOLVED
+            </div>
+          )}
           {shown ? (
-            {showInternals && <div className="viewport-label" style={{top: 42, bottom: "auto"}}>PACKAGING RESERVATIONS · JOINT HARNESS UNRESOLVED</div>}
             <Viewport
               ref={viewport}
               snapshot={shown}
@@ -154,10 +158,15 @@ export function SimulationStage() {
             >
               <Axis3D size={18} />
             </button>
-            <button className={`icon-button ${showInternals ? "active" : ""}`}
-              aria-label="Toggle internal packaging" aria-pressed={showInternals}
+            <button
+              className={`icon-button ${showInternals ? "active" : ""}`}
+              aria-label="Toggle internal packaging"
+              aria-pressed={showInternals}
               title="Inspect assumed drive envelopes and reserved cable passages"
-              onClick={() => setShowInternals(!showInternals)}><Box size={16} /></button>
+              onClick={() => setShowInternals(!showInternals)}
+            >
+              <Box size={16} />
+            </button>
             <button
               className={`icon-button ${showCameraGuides ? "active" : ""}`}
               aria-label="Toggle camera guidelines"
