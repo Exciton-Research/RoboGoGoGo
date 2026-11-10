@@ -1,7 +1,7 @@
 """Versioned identity for the only supported product embodiment."""
 
 ROBOT_ID = "rg_mobile_duo"
-ROBOT_REVISION = "engineering-3"
+ROBOT_REVISION = "engineering-4"
 ARM_DOF = 7
 SIMULATION_DOF = 31
 
