@@ -31,6 +31,7 @@ const links: Record<string, { href: string; label: string }> = {
   robot: { href: "/hardware/", label: "Inspect hardware" },
   simulation: { href: "/simulation/", label: "Open simulation" },
   data: { href: "#episodes", label: "Review episodes" },
+  runtime: { href: "/execution/", label: "Test command execution" },
 };
 
 export default function WorkflowPage() {
@@ -86,6 +87,7 @@ export default function WorkflowPage() {
         <nav aria-label="Workspace">
           <a href="/simulation/">Simulation</a>
           <a href="/hardware/">Hardware</a>
+          <a href="/execution/">Command test</a>
         </nav>
       </header>
       <section className={styles.intro}>
