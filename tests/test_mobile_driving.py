@@ -139,3 +139,29 @@ def test_guard_rejection_is_atomic_and_clears_drive(model):
     assert len(session.history) == 1
     np.testing.assert_array_equal(session.drive_twist, 0)
     assert session.mobile_status["guard"] == "blocked"
+
+
+def test_unpowered_arms_fall_under_gravity_and_ignore_position_requests(model):
+    """Even extreme position commands cannot move a motor with zero available effort."""
+    unpowered = replace(model, effort=jnp.zeros_like(model.effort))
+    plant = MobileDynamics(unpowered, 1)
+    state = sp.initial_state(unpowered)
+    zero = jnp.zeros(3)
+    following, _, _, torque, _ = plant.step(state, state.q, zero, 0.7, zero)
+    requested = state.q.at[18].add(1.0)
+    commanded, _, _, commanded_torque, _ = plant.step(state, requested, zero, 0.7, zero)
+    np.testing.assert_array_equal(torque, 0)
+    np.testing.assert_array_equal(commanded_torque, 0)
+    np.testing.assert_allclose(commanded.q, following.q, atol=1e-7)
+    np.testing.assert_allclose(following.q, state.q + model.dt * following.qd, atol=1e-7)
+    assert np.linalg.norm(np.asarray(following.qd)[15:29]) > 1e-4
+    assert np.isfinite(following.q).all()
+    assert float(sp.energy(unpowered, following)) <= float(sp.energy(unpowered, state)) + 1e-4
+
+
+def test_powered_arms_hold_gravity_with_nonzero_bounded_motor_effort(model, mobile):
+    state = sp.initial_state(model)
+    following, _, _, torque, _ = mobile.step(state, state.q, jnp.zeros(3), 0.7, jnp.zeros(3))
+    np.testing.assert_allclose(following.q[15:29], state.q[15:29], atol=1e-5)
+    assert np.linalg.norm(np.asarray(torque)[15:29]) > 1.0
+    assert np.all(np.abs(torque) <= np.asarray(model.effort) + 1e-6)
