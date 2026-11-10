@@ -14,7 +14,7 @@ from test_vla import png_observation
 from robogogogo import control, models, urdf
 from robogogogo import spatial as sp
 from robogogogo.embodiment import resolve_arms
-from robogogogo.server import create_app
+from fixtures.api import create_app
 
 
 @pytest.mark.parametrize("count", [1, 2, 3])

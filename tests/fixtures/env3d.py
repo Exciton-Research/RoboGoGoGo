@@ -5,7 +5,7 @@ from typing import NamedTuple
 import jax
 import jax.numpy as jnp
 
-from . import spatial as sp
+from robogogogo import spatial as sp
 
 
 class EnvState(NamedTuple):

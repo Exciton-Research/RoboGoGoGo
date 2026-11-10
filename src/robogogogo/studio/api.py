@@ -45,12 +45,15 @@ def create_app(
     hardware_profiles=None,
     robot_profile=None,
     test_execution=False,
+    _workspace_factory=Studio,
 ):
     directory = Path(project_dir or Path.cwd() / "runs" / "studio")
 
     @asynccontextmanager
     async def lifespan(app):
-        app.state.studio = await asyncio.to_thread(Studio, directory, scene=initial_scene)
+        app.state.studio = await asyncio.to_thread(
+            _workspace_factory, directory, scene=initial_scene
+        )
         app.state.clients = 0
         app.state.execution = None
         if test_execution:

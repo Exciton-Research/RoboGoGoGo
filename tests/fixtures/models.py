@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from .spatial import ModelBuilder
+from robogogogo.spatial import ModelBuilder
 
 
 def rod_inertia(mass, length, radius=0.035):
@@ -75,7 +75,9 @@ def multi_arm_urdf(count=2):
 
     if not isinstance(count, int) or not 1 <= count <= 4:
         raise ValueError("Reference rig supports one to four arms")
-    template = ET.fromstring(files("robogogogo").joinpath("assets/arm6.urdf").read_text())
+    template = ET.fromstring(
+        files("robogogogo").joinpath("assets/mobile_arm_chain.urdf").read_text()
+    )
     robot = ET.Element("robot", name=f"RG-{count}x6 Research Rig")
     ET.SubElement(robot, "link", name="world")
     for i in range(count):

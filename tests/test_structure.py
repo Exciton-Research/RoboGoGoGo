@@ -84,7 +84,7 @@ def test_contact_driven_recipes(material, recipe):
 
 
 def test_standalone_structural_api_is_removed():
-    from robogogogo.studio.api import create_app
+    from fixtures.api import create_app
 
     app = create_app()
     assert not any(route.path.startswith("/api/structure") for route in app.routes)

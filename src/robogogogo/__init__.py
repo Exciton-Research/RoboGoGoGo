@@ -2,7 +2,7 @@
 
 from importlib import import_module
 
-_MODULES = {"control", "models", "spatial", "urdf", "env3d"}
+_MODULES = {"control", "spatial", "urdf"}
 
 
 def __getattr__(name):

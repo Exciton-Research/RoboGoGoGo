@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 
 from robogogogo.hardware import CameraSample, HardwareService, JointSample, SDKBackend
 from robogogogo.hardware.ros2 import ROS2Backend, camera_sample, joint_sample
-from robogogogo.studio.api import create_app
+from fixtures.api import create_app
 
 PNG = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a5WQAAAAASUVORK5CYII="

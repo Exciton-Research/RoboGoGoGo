@@ -10,7 +10,7 @@ CAMERA_ROLES = ("head_left", "head_right", "wrist_left", "wrist_right")
 
 @dataclass(frozen=True)
 class RobotProfile:
-    name: str = "Dual-arm robot"
+    name: str = "RG Mobile Duo"
     model: str | None = None
     backend: str | None = None
     left_joints: tuple[str, ...] = ()

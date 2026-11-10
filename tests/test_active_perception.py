@@ -108,7 +108,7 @@ def test_wrist_motion_reveals_missing_grasp_flank_and_completes_recovery():
 
 
 def test_motorized_head_moves_with_native_dynamics_and_preserves_arm_joints():
-    from robogogogo import models
+    from fixtures import models
     from robogogogo.manipulation import Manipulation
     from robogogogo.planning import Capsule, CollisionWorld
     from robogogogo.session import Session
@@ -156,7 +156,7 @@ def test_motorized_head_moves_with_native_dynamics_and_preserves_arm_joints():
 
 
 def test_motorized_studio_rig_keeps_two_arm_groups(tmp_path):
-    from robogogogo.studio.workspace import Studio
+    from fixtures.workspace import Studio
 
     workspace = Studio(tmp_path, scene="dual_arm_head")
     assert len(workspace.session.arms) == 2

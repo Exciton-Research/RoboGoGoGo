@@ -1,8 +1,7 @@
 """Studio cannot route command tests into read-only hardware or enable real motion."""
 
 from fastapi.testclient import TestClient
-
-from robogogogo.studio.api import create_app
+from fixtures.api import create_app
 
 
 def test_execution_is_disabled_by_default(tmp_path):
@@ -28,8 +27,8 @@ def test_local_api_coordinates_takeover_stop_and_revokes_old_commands(tmp_path):
             token=lease["token"],
             sequence=1,
             observation_sequence=state["feedback"]["sequence"],
-            left=[0.2] * 6,
-            right=[-0.2] * 6,
+            left=[0.2] * 7,
+            right=[-0.2] * 7,
             left_gripper={"width": 0.02, "force_limit": 5.0},
             right_gripper={"width": 0.04, "force_limit": 5.0},
             duration_s=2.0,

@@ -4,7 +4,7 @@ import jax.numpy as jnp
 import numpy as np
 import pytest
 
-from robogogogo import models
+from fixtures import models
 from robogogogo import spatial as sp
 from robogogogo.session import Session
 

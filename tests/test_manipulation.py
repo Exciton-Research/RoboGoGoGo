@@ -77,7 +77,7 @@ def test_contact_parameters_and_unknown_commands_are_validated_atomically():
 
 
 def test_payload_inertia_changes_native_mass_matrix_and_gravity():
-    from robogogogo.models import arm6
+    from fixtures.models import arm6
 
     model = arm6()
     obj = GraspObject()

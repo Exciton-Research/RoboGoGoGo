@@ -12,7 +12,7 @@ import pytest
 pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient
 
-from robogogogo.server import create_app
+from fixtures.api import create_app
 
 
 @pytest.fixture(scope="module")
@@ -140,7 +140,7 @@ def test_websocket_stream_clock_and_last_disconnect_pause(client):
 
 
 def test_imported_robot_is_real_and_bad_import_preserves_workspace(client):
-    xml = files("robogogogo").joinpath("assets/arm6.urdf").read_text()
+    xml = files("robogogogo").joinpath("assets/mobile_arm_chain.urdf").read_text()
     response = client.post("/api/robot", json={"xml": xml})
     response.raise_for_status()
     model = response.json()["model"]

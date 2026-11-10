@@ -52,7 +52,7 @@ class RobotWorkflow:
                     id="robot",
                     title="Configure the robot",
                     state="blocked" if robot["missing"] else "configured",
-                    detail="Select one physical robot and map both arms, grippers and four camera streams."
+                    detail="Commission RG Mobile Duo: map its seven-joint arms, grippers and four camera streams."
                     if robot["missing"]
                     else "Deployment identity configured; hardware commissioning is still required.",
                 ),
@@ -60,7 +60,7 @@ class RobotWorkflow:
                     id="simulation",
                     title="Rehearse in simulation",
                     state="available",
-                    detail="Dual-arm reference scene with head and wrist cameras. This is not a calibrated model of your future robot.",
+                    detail="RG Mobile Duo simulation with wheeled base, folding torso and seven-joint arms. Hardware calibration remains required.",
                 ),
                 dict(
                     id="data",

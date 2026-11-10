@@ -4,12 +4,13 @@ import jax.numpy as jnp
 import numpy as np
 import pytest
 
-from robogogogo import models, urdf
+from fixtures import models
+from robogogogo import urdf
 from robogogogo import spatial as sp
 
 
 def fixture():
-    return files("robogogogo").joinpath("assets/arm6.urdf").read_text()
+    return files("robogogogo").joinpath("assets/mobile_arm_chain.urdf").read_text()
 
 
 def test_load_bundled_robot_matches_native_dynamics():

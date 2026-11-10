@@ -19,8 +19,8 @@ class TestExecutionBackend:
         self.clock = clock
         self.limits = ExecutionLimits()
         self.lock = threading.RLock()
-        self.position = [0.0] * 12 + [0.06, 0.06]
-        self.velocity = [0.0] * 14
+        self.position = [0.0] * 14 + [0.06, 0.06]
+        self.velocity = [0.0] * 16
         self.sequence = 0
         self.command_id = None
         self.trajectory = None
@@ -46,7 +46,7 @@ class TestExecutionBackend:
                 self.trajectory = None
         if self.lease_until is not None and now >= self.lease_until:
             self.trajectory = None
-            self.velocity = [0.0] * 14
+            self.velocity = [0.0] * 16
             self.lease_until = None
             self.fault = "Backend lease expired"
 
@@ -59,12 +59,12 @@ class TestExecutionBackend:
             self.cached = ExecutionFeedback(
                 self.sequence,
                 self.clock(),
-                tuple(self.position[:6]),
-                tuple(self.position[6:12]),
-                tuple(self.velocity[:6]),
-                tuple(self.velocity[6:12]),
-                tuple(self.position[12:]),
-                tuple(self.velocity[12:]),
+                tuple(self.position[:7]),
+                tuple(self.position[7:14]),
+                tuple(self.velocity[:7]),
+                tuple(self.velocity[7:14]),
+                tuple(self.position[14:]),
+                tuple(self.velocity[14:]),
                 self.command_id,
                 self.trajectory is not None,
                 self.fault,
@@ -109,7 +109,7 @@ class TestExecutionBackend:
             if self.fail_stop:
                 raise RuntimeError("Injected unconfirmed stop")
             self.trajectory = None
-            self.velocity = [0.0] * 14
+            self.velocity = [0.0] * 16
             self.lease_until = None
             self.fault = None
             return self.read()

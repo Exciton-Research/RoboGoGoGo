@@ -196,7 +196,7 @@ export function MobileDesignControls() {
       <p className="control-note">
         Presets plan arm/torso motion; press Run to execute. Paths are
         simulation-checked. The separate command test fixture still has
-        six-joint arms.
+        seven-joint arms; base and torso hardware actuation remain unavailable.
       </p>
     </section>
   );

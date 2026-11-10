@@ -302,7 +302,7 @@ def test_studio_fuses_only_profiled_hardware_and_faults_on_calibration_change(tm
 
     from fastapi.testclient import TestClient
 
-    from robogogogo.studio.api import create_app
+    from fixtures.api import create_app
 
     class Backend:
         def start(self, sink):

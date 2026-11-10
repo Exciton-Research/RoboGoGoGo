@@ -260,7 +260,7 @@ def test_localization_history_is_bounded_and_moving_profile_is_strict():
 def test_studio_localization_epoch_export_and_old_session_callbacks(tmp_path, monkeypatch):
     from fastapi.testclient import TestClient
 
-    from robogogogo.studio.api import create_app
+    from fixtures.api import create_app
 
     pipelines = []
     # Drive the worker explicitly so HTTP epoch transitions are deterministic.

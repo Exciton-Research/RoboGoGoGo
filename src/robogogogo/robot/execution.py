@@ -41,7 +41,7 @@ class ExecutionFeedback:
 
 @dataclass(frozen=True)
 class ExecutionLimits:
-    joints_per_arm: int = 6
+    joints_per_arm: int = 7
     joint_lower: float = -1.5
     joint_upper: float = 1.5
     joint_speed: float = 1.0

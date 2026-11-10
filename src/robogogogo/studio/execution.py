@@ -35,8 +35,8 @@ class GripperRequest(StrictRequest):
 class CommandRequest(LeaseRequest):
     sequence: int = Field(ge=1)
     observation_sequence: int = Field(ge=1)
-    left: list[float] = Field(min_length=6, max_length=6)
-    right: list[float] = Field(min_length=6, max_length=6)
+    left: list[float] = Field(min_length=7, max_length=7)
+    right: list[float] = Field(min_length=7, max_length=7)
     left_gripper: GripperRequest
     right_gripper: GripperRequest
     duration_s: float = Field(ge=0.1, le=10)

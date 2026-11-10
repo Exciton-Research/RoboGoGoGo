@@ -3,10 +3,8 @@
 import tempfile
 import threading
 import time
-import xml.etree.ElementTree as ET
 from dataclasses import replace
 from datetime import datetime, timezone
-from importlib.resources import files
 from pathlib import Path
 from uuid import UUID, uuid4
 
@@ -16,8 +14,8 @@ import numpy as np
 from robogogogo.data.recording import Episode
 from robogogogo.robot.cameras import mounted_rig
 
-from .. import models, urdf
 from .. import spatial as sp
+from .. import urdf
 from ..session import Session
 from .episodes import EpisodeService
 from .schemas import CameraSpec, Command, NewEpisode, Project
@@ -28,7 +26,7 @@ class Studio:
 
     max_samples = 18001
 
-    def __init__(self, directory: Path, *, scene="arm"):
+    def __init__(self, directory: Path, *, scene="mobile_dual_arm"):
         self.directory = Path(directory)
         self.directory.mkdir(parents=True, exist_ok=True)
         self.lock = threading.RLock()
@@ -61,51 +59,13 @@ class Studio:
             mobile_home,
         )
 
-        if scene == "mobile_dual_arm":
-            xml, arms = mobile_dual_arm_urdf(), mobile_arm_definitions()
-        if scene in ("dual_arm", "dual_arm_head"):
-            xml = models.multi_arm_urdf(2)
-            arms = [
-                {"name": "left_arm", "tool": "left_tool"},
-                {"name": "right_arm", "tool": "right_tool"},
-            ]
-        if scene in ("urdf", "dual_arm", "dual_arm_head", "mobile_dual_arm"):
-            if not xml:
-                raise ValueError("URDF content is required")
-            try:
-                robot = urdf.loads(xml, dt=dt)
-            except (ET.ParseError, KeyError, TypeError) as error:
-                raise ValueError(f"Invalid URDF: {error}") from error
-            model, label = robot.model, robot.name
-            visuals = list(robot.visuals)
-            if scene == "mobile_dual_arm":
-                model = replace(model, home=jnp.asarray(mobile_home(model)))
-            if scene in ("dual_arm", "dual_arm_head"):
-                model = replace(model, home=jnp.tile(models.arm6(dt=dt).home, 2))
-        elif scene == "arm":
-            arms = arms or [{"name": "arm", "tool": "tool"}]
-            model, label = models.arm6(dt=dt), "RG-6 Research Arm"
-            visuals = list(
-                urdf.loads(files("robogogogo").joinpath("assets/arm6.urdf").read_text()).visuals
-            )
-        elif scene == "drop":
-            model, label, visuals = models.slider(dt=dt), "Guided sphere", []
-        else:
-            raise ValueError("Unknown scene")
-        if scene == "dual_arm_head":
-            model, visuals = models.with_pan_tilt_head(model, visuals)
-            label += " + Pan/Tilt Head"
-        elif scene in ("arm", "dual_arm"):
-            model, visuals = models.with_camera_mast(model, visuals)
-        if model.home.size > 48 or len(model.parents) > 128:
-            raise ValueError("Studio currently supports up to 48 moving joints and 128 links")
-        candidate = Session(
-            model,
-            scene="drop" if scene == "drop" else "arm",
-            substeps=substeps,
-            arms=arms,
-            mobile=scene == "mobile_dual_arm",
-        )
+        if scene != "mobile_dual_arm":
+            raise ValueError("RG Mobile Duo is the only supported robot")
+        xml, arms = mobile_dual_arm_urdf(), mobile_arm_definitions()
+        robot = urdf.loads(xml, dt=dt)
+        model = replace(robot.model, home=jnp.asarray(mobile_home(robot.model)))
+        label, visuals = robot.name, list(robot.visuals)
+        candidate = Session(model, substeps=substeps, arms=arms, mobile=True)
         self.session, self.scene, self.xml = candidate, scene, xml
         self.episode = None
         self.task = None

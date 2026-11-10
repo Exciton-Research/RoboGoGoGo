@@ -12,7 +12,7 @@ from test_vla import png_observation
 
 from robogogogo.robot.profile import RobotProfile
 from robogogogo.runtime.workflow import RobotWorkflow
-from robogogogo.studio.api import create_app
+from fixtures.api import create_app
 
 
 def test_legacy_imports_preserve_contract_identity():

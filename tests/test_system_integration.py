@@ -11,7 +11,7 @@ pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient
 
 from robogogogo.datasets import iter_transitions
-from robogogogo.server import create_app
+from fixtures.api import create_app
 
 cv = pytest.importorskip("cv2")
 

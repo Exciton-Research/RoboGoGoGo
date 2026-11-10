@@ -30,7 +30,7 @@ def setup():
 
 
 def goal():
-    return CoordinatedGoal((0.2,) * 6, (-0.2,) * 6, GripperGoal(0.02, 5), GripperGoal(0.04, 8), 2.0)
+    return CoordinatedGoal((0.2,) * 7, (-0.2,) * 7, GripperGoal(0.02, 5), GripperGoal(0.04, 8), 2.0)
 
 
 def submit(executor, lease, target=None, sequence=1, observation=None):
@@ -57,13 +57,13 @@ def test_atomic_dual_arm_gripper_progress_completion_and_force_caps():
     assert backend.force_caps == (5, 8)
     advance(clock, executor, lease, 1.0)
     sample = executor.snapshot()["feedback"]
-    assert sample["left"] == pytest.approx([0.1] * 6)
-    assert sample["right"] == pytest.approx([-0.1] * 6)
+    assert sample["left"] == pytest.approx([0.1] * 7)
+    assert sample["right"] == pytest.approx([-0.1] * 7)
     assert sample["grippers"] == pytest.approx([0.04, 0.05])
     advance(clock, executor, lease, 1.1)
     status = executor.snapshot()
     assert status["mode"] == "armed" and status["active_command"] is None
-    assert status["feedback"]["left"] == pytest.approx([0.2] * 6)
+    assert status["feedback"]["left"] == pytest.approx([0.2] * 7)
     assert status["feedback"]["grippers"] == pytest.approx([0.02, 0.04])
     assert status["events"][-1]["kind"] == "completed"
     assert "token" not in str(status)
@@ -73,8 +73,8 @@ def test_atomic_dual_arm_gripper_progress_completion_and_force_caps():
     "bad",
     [
         replace(goal(), left=(0.0,)),
-        replace(goal(), left=(float("nan"),) * 6),
-        replace(goal(), right=(2.0,) * 6),
+        replace(goal(), left=(float("nan"),) * 7),
+        replace(goal(), right=(2.0,) * 7),
         replace(goal(), duration_s=0.1),
         replace(goal(), left_gripper=GripperGoal(0.1, 5)),
         replace(goal(), right_gripper=GripperGoal(0.04, 100)),
@@ -86,7 +86,7 @@ def test_invalid_group_never_partially_executes(bad):
     with pytest.raises(ValueError):
         submit(executor, lease, bad)
     assert backend.accepted == []
-    assert backend.position == [0.0] * 12 + [0.06, 0.06]
+    assert backend.position == [0.0] * 14 + [0.06, 0.06]
 
 
 def test_ownership_busy_replay_and_stale_observations():
@@ -153,7 +153,7 @@ def test_backend_lease_clamps_motion_without_supervisor_tick():
     feedback = backend.read()
     assert feedback.fault == "Backend lease expired"
     assert not feedback.moving
-    assert feedback.left == pytest.approx([0.1] * 6)
+    assert feedback.left == pytest.approx([0.1] * 7)
     assert feedback.grippers == pytest.approx([0.04, 0.05])
 
 
