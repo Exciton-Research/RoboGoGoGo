@@ -9,12 +9,13 @@ from typing import Literal
 from uuid import UUID
 
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from starlette.background import BackgroundTask
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
+from ..hardware import HardwareService
 from ..simulation.structural_lab import StructuralLab
 from .schemas import (
     CameraObservation,
@@ -35,13 +36,18 @@ class StructuralReset(BaseModel):
     recipe: Literal["bend", "tear", "crush"] = "bend"
 
 
-def create_app(*, project_dir=None, static_dir=None, initial_scene="arm"):
+class HardwareConnection(BaseModel):
+    backend: str
+
+
+def create_app(*, project_dir=None, static_dir=None, initial_scene="arm", hardware_backends=None):
     directory = Path(project_dir or Path.cwd() / "runs" / "studio")
 
     @asynccontextmanager
     async def lifespan(app):
         app.state.studio = await asyncio.to_thread(Studio, directory, scene=initial_scene)
         app.state.clients = 0
+        app.state.hardware = HardwareService(hardware_backends or {})
 
         async def clock():
             while True:
@@ -55,6 +61,7 @@ def create_app(*, project_dir=None, static_dir=None, initial_scene="arm"):
         try:
             yield
         finally:
+            await asyncio.to_thread(app.state.hardware.close)
             task.cancel()
             try:
                 await task
@@ -116,6 +123,31 @@ def create_app(*, project_dir=None, static_dir=None, initial_scene="arm"):
                 structural_lab.export(),
                 headers={"Content-Disposition": 'attachment; filename="robogogogo-structure.json"'},
             )
+
+    @app.get("/api/hardware")
+    async def hardware_status():
+        return app.state.hardware.snapshot()
+
+    @app.post("/api/hardware/connect")
+    async def hardware_connect(body: HardwareConnection):
+        return await asyncio.to_thread(app.state.hardware.connect, body.backend)
+
+    @app.post("/api/hardware/disconnect")
+    async def hardware_disconnect():
+        await asyncio.to_thread(app.state.hardware.close)
+        return app.state.hardware.snapshot()
+
+    @app.get("/api/hardware/cameras/{name}")
+    async def hardware_camera(name: str):
+        try:
+            frame = app.state.hardware.image(name)
+        except FileNotFoundError:
+            return JSONResponse({"detail": "Camera frame unavailable"}, status_code=404)
+        return Response(
+            frame.data,
+            media_type=frame.media_type,
+            headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"},
+        )
 
     @app.get("/api/snapshot")
     async def snapshot():
