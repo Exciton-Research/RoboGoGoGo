@@ -250,7 +250,7 @@ recorded observations always depict the actual simulated robot.
 
 ### Catalog arm drives and 1 kg payload target
 
-Robot revision `engineering-2` uses `catalog-arm-drive-2`. Each arm selects:
+Robot revision `engineering-3` uses `catalog-arm-drive-2`. Each arm selects:
 
 - Shoulder yaw and elbow: [CubeMars AK60-39 V3.0 KV80](https://www.cubemars.com/product/ak60-39-v3-0-kv80-robotic-actuator.html),
   79 mm diameter × 67 mm length, 750 g, 39:1 planetary, 24 N m continuous.
@@ -269,9 +269,10 @@ couplings bridge the offset units to the co-located shoulder axes; their detaile
 bearings, mounts and structural sizing still require engineering CAD.
 
 With 1 kg applied at each tool at full extension, the current static calculation
-requires approximately 40.5 N m shoulder pitch, 17.1 N m elbow and 3.6 N m
-wrist pitch torque. Tests require at least 15% static reserve across the arms.
-The earlier 20% reserve calculation omitted the integrated wrist and saddle mass. This does not establish
+requires approximately 41.5 N m shoulder pitch with the added clamp and support mass.
+The minimum static reserve is now about 13.6%, below the 15% design target.
+The payload audit reports that target as **unmet**, separately from continuous
+torque compliance. Earlier reserve calculations omitted these fixtures. This does not establish
 acceleration capacity, thermal duty cycle, impact tolerance or fatigue life.
 
 Every physics substep limits torque to continuous URDF ratings and an assumed
@@ -300,47 +301,71 @@ adjacent drives and reject incompatible poses; containing structural shells are
 excluded from their own internal collision pairs. This does not certify every
 mechanical interface or the full nominal joint range.
 
-### Moving cable routing
+### Link-mounted grouped harness (engineering-3)
 
-Eight proximal joint service loops use constant-length 0.51 m cubic centrelines,
-with a 30 mm dress-pack envelope. The anchor radius is 150 mm (previously 210 mm), and axial offset 175 mm
-(previously 255 mm). Pitch/elbow neutral angles center the loop on the working
-range to reduce strain. Shoulder-roll loops route aft to clear extended forearms. Straight rigid passages have 36 mm internal diameter. Endpoint clamps are shown. The motor saddles are modeled, but the cable clamp
-supports and complete terminal-to-terminal routing remain unfinished.
+The former per-motor arches are replaced by three dress-pack spans per arm:
+shoulder group (600 mm), elbow (500 mm), and complete wrist (550 mm). The shoulder
+span runs from a rear torso fixture to an upper-arm fixture. Elbow and wrist spans
+run beside their links, rather than above individual motors. The wrist span follows
+all three wrist axes and terminates at the tool carrier. This covers the moving
+distal trunk; it does not complete every electrical branch to the shoulder motors.
 
-The cable selection is separately fused 48 V power branches, a separate 24 V
-wrist supply and a dedicated CAN cable. Power routing uses
-[igus CFROBOT2.07.04.C](https://www.igus.it/contentData/Product_Files/Download/pdf/Data_sheet_chainflex_CFROBOT2.pdf)
-with conservative 8.5 mm diameter from the older manufacturer sheet, 10× diameter
-dynamic bend and ±180 degrees/m torsion. Including bundle offsets gives a 104.25 mm
-centreline bend-radius requirement. CAN candidate CFROBOT8.022 uses the
-[manufacturer data sheet](https://us.misumi-ec.com/linked/pdf/vona/EU_Data_sheet_chainflex_CFROBOT8.pdf).
-The [AMASS catalog](https://www.china-amass.com/public/upload/20240723/c1ae9604bbe795ebfd366c9063019e3e.pdf)
-and [CubeMars driver manual](https://img.cubemars.com/products/cubemars-product-parameter/AK-Series-Module-Product-Manual-v3.0.0-Download.pdf)
-identify XT30(2+2) power/CAN connectors for compatible drivers. Studio models a
-conservative 18 mm diameter × 20 mm installation envelope at each rear interface;
-this is not a verified port position for every actuator revision. Connector
-clocking, pinouts, electrical derating, protection and terminations are pending.
+Each endpoint has an explicit host link and local anchor. Split clamps have a
+30 mm bore, and aluminum standoffs connect the fixtures to those host links. Their
+estimated masses are aggregated into the host COM and inertia with parallel-axis
+terms. Fixtures, bracket cradles and retained panel connectors share geometry
+between Studio and collision checks. The actuator-side pigtail locations still
+require vendor CAD: panel connectors must not be mistaken for verified PCB sockets.
 
-Each motor has an 8 mm rod aluminum U-saddle, two longitudinal rails, and front/rear
-ties. These fittings remain visible outside module covers in Exterior and sensor
-views. Their estimated mass is included; inertia remains an aggregate cylinder
-approximation. Brackets, connector envelopes and drive volumes are tested against
-other assemblies. Only named local mating/containing shells are exempt: opposite
-arms and remote torso surfaces remain checked. Tests sweep all three wrist axes
-together over ±0.2 rad around home. They do not prove the whole nominal joint range
-or validate bracket strength, mounting holes, cable fatigue or thermal operation.
+Cubic curves retain fixed length and link-attached endpoint tangents. Unreachable
+anchors fail instead of stretching the cable. The conservative bend limit remains
+104.25 mm for the existing 30 mm bundle and CFROBOT2 power/CFROBOT8 CAN selection.
+Summed joint excursion across each group supplies a conservative torsion proxy;
+this is not an elastic rod or fatigue model. Source cable data remains linked from
+each route. No smaller bend limit was invented to make the model look compact.
 
-Each route is sampled into 48 chords with 2 mm interpolation padding. Checks
-cover bend/twist, rigid robot geometry, floor and other loops. Planning samples
-cable feasibility along edges; simulation checks every predicted physics substep
-and rolls back rejected motion without committing state, time or trajectory data.
-These are kinematic checks, not continuous cable-contact certification, elastic
-cable dynamics or fatigue qualification. The current paths do not yet supply a
-complete wrist-joint harness or detailed connector clearance.
+Collision checking uses 64 chords per curve with 2 mm padding. Only the first/last
+60 mm of a cable may contact its **named** clamp and support. Outside that attachment
+region, the cable must not penetrate the fixture. Unrelated parts retain the 12 mm
+planning margin. The returned harness clearance is a *guard-equivalent* value:
+own-fixture pairs receive a margin adjustment, so it is not a universal physical
+gap measurement. Tests deliberately bend the middle of a cable into its own clamp
+to verify that the local attachment exemption does not hide that collision.
 
-Validation: `pytest tests/test_catalog_harness.py tests/test_shoulder_packaging.py
- tests/test_pose_preview.py tests/test_arm_actuators.py tests/test_whole_body.py`.
-The catalog test covers full-extension static payload, reference postures, bend,
-length, base-transform invariance and floor clearance. A separate regression
-checks atomic rollback on harness rejection.
+RGB observations include all external cables and fittings. Engineering mode exposes
+internal drive packages, while Exterior retains module covers. The UI labels range
+qualification as pending.
+
+### Range audit and unresolved release gates
+
+Run:
+
+```sh
+.venv/bin/python -m robogogogo.robot.validate_harness --output /tmp/harness-audit.json
+```
+
+The command returns exit code 2 when unsafe samples are found. The committed
+[engineering-3 report](validation/harness-engineering-3.json) contains 1,778 cases:
+29 samples across every nominal arm and torso joint range at Standing, Low and
+Reach; coupled wrist corners/midpoints; and 128 seeded coupled configurations.
+Every case checks rigid geometry and harness bend, reach, torsion and clearance.
+The report includes exact coordinates for reproducing failures.
+
+**This audit fails universal nominal-range clearance.** 696 samples pass both
+checks; 665 have rigid violations and 1,022 have harness violations (sets overlap).
+Some nominal arm poses collide with the torso or other drive assemblies; others
+exceed the available cable movement. Runtime path/physics guards reject such
+motions. Finite sampling neither proves every coupled configuration safe nor
+certifies clearance between samples. Joint limits have not been silently narrowed
+to manufacture a passing report.
+
+Remaining release gates are intermediate shoulder branch routing, drive-specific
+pigtail interfaces, electrical protection/termination, cable fatigue, mounting
+strength and the unmet static reserve target. The grouped wrist trunk and clamps
+are modeled, but the robot is **not yet an electrically complete, build-ready
+harness design**. Passing local motion regressions must not be presented as passing
+this broader mechanical qualification.
+
+Validation includes catalog mass/rating checks, fixture inertia, route length and
+anchor transforms, coordinated wrist sweeps, floor and attachment-penetration
+checks, simulation rollback, pose previews and whole-body control.
