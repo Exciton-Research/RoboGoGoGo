@@ -161,7 +161,8 @@ class CollisionWorld:
 
     Edges are certified using a conservative kinematic displacement bound and
     adaptive subdivision, not just endpoint checks. Uncertified edges are rejected.
-    The bound assumes fixed-base revolute/prismatic trees and finite joint bounds.
+    The bound assumes revolute/prismatic trees with finite prismatic joint bounds.
+    Continuous revolute coordinates are allowed; edges use their unwrapped values.
     """
 
     def __init__(
@@ -182,8 +183,13 @@ class CollisionWorld:
         if not self.capsules or not np.isfinite([margin, floor]).all() or margin < 0:
             raise ValueError("Require collision geometry and finite nonnegative margin")
         self.lower, self.upper = np.asarray(model.lower), np.asarray(model.upper)
-        if not np.isfinite([self.lower, self.upper]).all():
-            raise ValueError("Planner requires finite joint bounds")
+        prismatic = [
+            model.indices[b]
+            for b, kind in enumerate(model.kinds)
+            if kind == "prismatic" and model.indices[b] >= 0
+        ]
+        if not np.isfinite([self.lower[prismatic], self.upper[prismatic]]).all():
+            raise ValueError("Planner requires finite prismatic joint bounds")
         for c in self.capsules:
             if (
                 not 0 <= c.body < len(model.names)
