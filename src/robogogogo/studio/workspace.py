@@ -106,6 +106,7 @@ class Studio:
             masses=np.asarray(model.mass).tolist(),
             axes=np.asarray(model.axis).tolist(),
             shoulder_packages=shoulder_packages(model),
+            wiring=__import__("robogogogo.robot.wiring", fromlist=["robot_wiring"]).robot_wiring(model),
             assembly_parts=assembly_parts(model) + harness_fixtures(model),
             cable_passages=arm_cable_passages(model),
             joint_origins=np.asarray(model.origin).tolist(),
