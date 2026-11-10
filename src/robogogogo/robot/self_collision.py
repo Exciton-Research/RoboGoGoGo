@@ -54,7 +54,7 @@ def mobile_collision_world(model):
             ("wrist_tip", "hand"),
         ]
         exclusions.extend((f"{side}_{a}", f"{side}_{b}") for a, b in attached)
-    from .packaging import packaging_capsules, assembly_capsules
+    from .packaging import assembly_capsules, packaging_capsules
 
     internals = packaging_capsules(model) + assembly_capsules(model)
     # Exempt only named local mating/containing envelopes, never the opposite

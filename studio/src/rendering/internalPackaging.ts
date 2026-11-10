@@ -72,13 +72,25 @@ export function addInternalPackaging(model: RobotModel, add: AddMesh) {
     );
   }
   for (const p of model.assembly_parts ?? []) {
-    segment(
+    const fitting = segment(
       p.body,
       new THREE.Vector3(...p.start),
       new THREE.Vector3(...p.end),
       p.radius,
       p.kind === "connector" ? "#232b30" : "#9aa8b1",
     );
+    if (p.kind === "connector") {
+      fitting.geometry.dispose();
+      fitting.geometry = new THREE.BoxGeometry(
+        0.014,
+        new THREE.Vector3(...p.end).distanceTo(new THREE.Vector3(...p.start)),
+        0.01,
+      );
+      fitting.material.metalness = 0.05;
+    }
+    // Saddles and plugs sit outside the module cover and remain physical in RGB.
+    fitting.userData.inspectionOnly = false;
+    fitting.visible = true;
   }
   for (const p of model.cable_passages) {
     const a = new THREE.Vector3(...p.start),

@@ -1,9 +1,7 @@
-"""Dimensioned provisional shoulder packaging, shared by render and motion guard.
+"""Shared catalog arm dimensions and custom fitting collision geometry.
 
-These are reserved component volumes, not vendor CAD. Envelopes deliberately
-include the complete motor/reducer stack; shaft and bearing interfaces may share
-structural volume. Cable passages reserve space only; articulated harness design
-and connector selection remain unresolved.
+Vendor mounting holes and connector clocking need CAD confirmation. Rigid cable
+passages and moving proximal loops are separate from the unfinished wrist loom.
 """
 
 import numpy as np

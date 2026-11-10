@@ -1,6 +1,6 @@
-"""Assumed output-side arm actuator envelope; not a selected motor specification.
+"""Catalog continuous arm ratings with an assumed output-side torque-speed model.
 
-Linear motoring torque-speed droop, full peak braking torque, and smooth Coulomb
+Linear motoring torque-speed droop, continuous-rated braking torque, and smooth Coulomb
 friction. No thermal, bus-voltage, backlash, stiction or transmission compliance
 model. All speeds are joint rad/s and torques are joint N m after gearing.
 """

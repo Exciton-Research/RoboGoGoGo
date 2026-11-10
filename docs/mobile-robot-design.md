@@ -248,28 +248,30 @@ recordings, or controller state. Its outline is hidden from RGB/depth capture;
 recorded observations always depict the actual simulated robot.
 
 
-### Catalog proximal drives and 1 kg payload target
+### Catalog arm drives and 1 kg payload target
 
-Robot revision `engineering-1` uses `catalog-proximal-drive-1`. Each arm selects:
+Robot revision `engineering-2` uses `catalog-arm-drive-2`. Each arm selects:
 
 - Shoulder yaw and elbow: [CubeMars AK60-39 V3.0 KV80](https://www.cubemars.com/product/ak60-39-v3-0-kv80-robotic-actuator.html),
   79 mm diameter × 67 mm length, 750 g, 39:1 planetary, 24 N m continuous.
 - Shoulder roll and pitch: [CubeMars AK80-64 KV80](https://www.cubemars.com/product/ak80-64-kv80-robotic-actuator.html),
   98 mm diameter × 61.9 mm length, 850 g, 64:1 planetary, 48 N m continuous.
-- Wrist candidate: [CubeMars AK45-36 V3.0 KV80](https://www.cubemars.com/product/ak45-36-v3-0-kv80-robotic-actuator.html).
-  Its 55 × 56.5 mm package is **not integrated** into the compact wrist yet;
-  wrist masses, speed and torque limits retain their prior assumptions.
+- All three wrist axes: [CubeMars AK45-36 V3.0 KV80](https://www.cubemars.com/product/ak45-36-v3-0-kv80-robotic-actuator.html).
+  The 55 × 56.5 mm, 349 g, 36:1 units are integrated with 8 N m continuous
+  limits. Roll mounts aft into the forearm; pitch and tool-roll axes are spaced
+  55 mm and 100 mm apart, with a 130 mm tool carrier. This increases reach.
 
-These integrated motor/gearbox units replace proximal placeholder volumes.
-Catalog mass is attached to the parent of each driven joint, with solid-cylinder
+These integrated motor/gearbox units replace all fourteen arm placeholder drive volumes.
+Catalog mass plus estimated aluminum saddle and connector mass is attached to the parent of each driven joint, with solid-cylinder
 inertia, in addition to assumed structural masses. External dimensions drive the
 inspection geometry and conservative enclosing collision volumes. Custom output
 couplings bridge the offset units to the co-located shoulder axes; their detailed
 bearings, mounts and structural sizing still require engineering CAD.
 
 With 1 kg applied at each tool at full extension, the current static calculation
-requires approximately 29.6 N m shoulder pitch and 10.5 N m elbow torque. Tests
-require at least 20% static reserve across the arms. This does not establish
+requires approximately 40.5 N m shoulder pitch, 17.1 N m elbow and 3.6 N m
+wrist pitch torque. Tests require at least 15% static reserve across the arms.
+The earlier 20% reserve calculation omitted the integrated wrist and saddle mass. This does not establish
 acceleration capacity, thermal duty cycle, impact tolerance or fatigue life.
 
 Every physics substep limits torque to continuous URDF ratings and an assumed
@@ -300,11 +302,11 @@ mechanical interface or the full nominal joint range.
 
 ### Moving cable routing
 
-Eight proximal joint service loops use constant-length 0.70 m cubic centrelines,
-with a 30 mm dress-pack envelope. Shoulder-roll loops route aft to clear extended
-forearms. Straight rigid passages have 36 mm internal diameter. Endpoint clamps
-are shown, but supporting brackets and complete terminal-to-terminal routing
-remain unfinished.
+Eight proximal joint service loops use constant-length 0.51 m cubic centrelines,
+with a 30 mm dress-pack envelope. The anchor radius is 150 mm (previously 210 mm), and axial offset 175 mm
+(previously 255 mm). Pitch/elbow neutral angles center the loop on the working
+range to reduce strain. Shoulder-roll loops route aft to clear extended forearms. Straight rigid passages have 36 mm internal diameter. Endpoint clamps are shown. The motor saddles are modeled, but the cable clamp
+supports and complete terminal-to-terminal routing remain unfinished.
 
 The cable selection is separately fused 48 V power branches, a separate 24 V
 wrist supply and a dedicated CAN cable. Power routing uses
@@ -313,7 +315,21 @@ with conservative 8.5 mm diameter from the older manufacturer sheet, 10× diamet
 dynamic bend and ±180 degrees/m torsion. Including bundle offsets gives a 104.25 mm
 centreline bend-radius requirement. CAN candidate CFROBOT8.022 uses the
 [manufacturer data sheet](https://us.misumi-ec.com/linked/pdf/vona/EU_Data_sheet_chainflex_CFROBOT8.pdf).
-Connector pinouts, electrical derating, protection and terminations are pending.
+The [AMASS catalog](https://www.china-amass.com/public/upload/20240723/c1ae9604bbe795ebfd366c9063019e3e.pdf)
+and [CubeMars driver manual](https://img.cubemars.com/products/cubemars-product-parameter/AK-Series-Module-Product-Manual-v3.0.0-Download.pdf)
+identify XT30(2+2) power/CAN connectors for compatible drivers. Studio models a
+conservative 18 mm diameter × 20 mm installation envelope at each rear interface;
+this is not a verified port position for every actuator revision. Connector
+clocking, pinouts, electrical derating, protection and terminations are pending.
+
+Each motor has an 8 mm rod aluminum U-saddle, two longitudinal rails, and front/rear
+ties. These fittings remain visible outside module covers in Exterior and sensor
+views. Their estimated mass is included; inertia remains an aggregate cylinder
+approximation. Brackets, connector envelopes and drive volumes are tested against
+other assemblies. Only named local mating/containing shells are exempt: opposite
+arms and remote torso surfaces remain checked. Tests sweep all three wrist axes
+together over ±0.2 rad around home. They do not prove the whole nominal joint range
+or validate bracket strength, mounting holes, cable fatigue or thermal operation.
 
 Each route is sampled into 48 chords with 2 mm interpolation padding. Checks
 cover bend/twist, rigid robot geometry, floor and other loops. Planning samples

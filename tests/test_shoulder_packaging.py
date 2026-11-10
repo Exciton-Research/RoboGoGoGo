@@ -4,7 +4,7 @@ import numpy as np
 
 from robogogogo.planning.collision import CollisionWorld
 from robogogogo.robot.mobile_design import mobile_dual_arm_urdf, mobile_home
-from robogogogo.robot.packaging import arm_cable_passages, packaging_capsules, assembly_parts
+from robogogogo.robot.packaging import arm_cable_passages, assembly_parts, packaging_capsules
 from robogogogo.robot.self_collision import mobile_collision_world
 from robogogogo.urdf import loads
 

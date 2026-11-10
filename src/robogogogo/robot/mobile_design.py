@@ -10,7 +10,7 @@ import xml.etree.ElementTree as ET
 from copy import deepcopy
 from importlib.resources import files
 
-from .components import ARM_COMPONENTS, mounting_offset, mounting_sign, mounting_mass
+from .components import ARM_COMPONENTS, mounting_mass, mounting_offset, mounting_sign
 
 DESIGN = dict(
     name="RG Mobile Duo · articulated concept",

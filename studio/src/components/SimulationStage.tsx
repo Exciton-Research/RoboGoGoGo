@@ -114,7 +114,7 @@ export function SimulationStage() {
           </div>
           {showInternals && (
             <div className="engineering-note">
-              Catalog proximal drives · custom structure · harness analysis
+              14 catalog drives · mounting saddles · connector envelopes
             </div>
           )}
           {shown ? (

@@ -17,7 +17,7 @@ from robogogogo.robot.definition import ROBOT_ID, ROBOT_REVISION
 
 from .. import spatial as sp
 from .. import urdf
-from ..robot.packaging import arm_cable_passages, shoulder_packages, assembly_parts
+from ..robot.packaging import arm_cable_passages, assembly_parts, shoulder_packages
 from ..session import Session
 from .episodes import EpisodeService
 from .schemas import CameraSpec, Command, NewEpisode, Project
