@@ -54,4 +54,12 @@ def mobile_collision_world(model):
             ("wrist_tip", "hand"),
         ]
         exclusions.extend((f"{side}_{a}", f"{side}_{b}") for a, b in attached)
+    from .packaging import packaging_capsules
+
+    internals = packaging_capsules(model)
+    # Each package is enclosed by its existing socket envelope. Comparing it
+    # against that robot's outer structural envelopes would double-count designed
+    # containment. Inter-package pairs remain active, including adjacent axes.
+    exclusions.extend((part.name, shell.name) for part in internals for shell in capsules)
+    capsules.extend(internals)
     return CollisionWorld(model, capsules, margin=0.012, excluded_capsule_pairs=exclusions)
