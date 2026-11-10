@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import type { RobotModel } from "../types";
+import { armShell } from "./armShell";
 
 type AddMesh = (
   body: number,
@@ -50,27 +51,30 @@ export function addResearchRobotDetails(model: RobotModel, add: AddMesh) {
       if (upper || forearm) {
         const length = upper ? 0.32 : 0.28;
         const radius = upper ? 0.075 : 0.065;
-        // Turned shell profile leaves clearance around the bearing ends.
-        const profile = [
-          [0, 0.018],
-          [radius * 0.72, 0.018],
-          [radius * 0.94, 0.045],
-          [radius * 0.96, length * 0.35],
-          [radius * 0.8, length - 0.055],
-          [radius * 0.62, length - 0.025],
-          [0, length - 0.025],
-        ].map(([r, x]) => new THREE.Vector2(r, x));
-        const sleeve = add(body, new THREE.LatheGeometry(profile, 48), shell);
-        sleeve.rotation.z = -Math.PI / 2;
-        sleeve.material.roughness = 0.42;
-        // Split housing seam and an inset service cover, fixed to this link.
-        const seam = add(
+        // Two removable shells around a continuous dark structural carrier.
+        const carrier = add(
           body,
-          new THREE.TorusGeometry(radius * 0.94, 0.0012, 8, 48),
+          new THREE.CylinderGeometry(radius * 0.53, radius * 0.53, length, 40),
           graphite,
-          [0.047, 0, 0],
+          [length / 2, 0, 0],
         );
-        seam.rotation.y = Math.PI / 2;
+        carrier.rotation.z = -Math.PI / 2;
+        for (const half of [0, 1]) {
+          const sleeve = add(body, armShell(length, radius, half), shell);
+          sleeve.rotation.z = -Math.PI / 2;
+          sleeve.material.roughness = 0.46;
+          sleeve.material.metalness = 0.08;
+        }
+        for (const x of [0.025, length - 0.03]) {
+          const collar = add(
+            body,
+            new THREE.CylinderGeometry(radius * 0.6, radius * 0.6, 0.009, 48),
+            metal,
+            [x, 0, 0],
+          );
+          collar.rotation.z = -Math.PI / 2;
+          collar.material.metalness = 0.75;
+        }
         if (forearm) {
           add(
             body,
