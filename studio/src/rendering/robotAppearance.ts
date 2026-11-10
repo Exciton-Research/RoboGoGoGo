@@ -135,7 +135,13 @@ export function addResearchRobotDetails(model: RobotModel, add: AddMesh) {
   if (mobile) {
     const base = model.names.indexOf("base_link");
     for (const side of [-1, 1])
-      box(base, [0.014, 0.10, 0.035], "#67aaa4", [0.385, side * 0.27, -0.01], 0.004);
+      box(
+        base,
+        [0.014, 0.1, 0.035],
+        "#67aaa4",
+        [0.385, side * 0.27, -0.01],
+        0.004,
+      );
     for (const [name, radius] of [
       ["torso_lower", 0.075],
       ["torso_upper", 0.065],

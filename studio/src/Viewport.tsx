@@ -100,18 +100,25 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
             ? new THREE.Vector3(0.15, 0, 0.85)
             : new THREE.Vector3(0.3, 0, 0.62);
       const home = (view: "perspective" | "top" | "front") => {
-        controls.target.copy(defaultTarget);
+        const framedTarget = defaultTarget.clone();
+        if (model.scene === "mobile_dual_arm") {
+          const base = model.names.indexOf("base_link");
+          const position = current.current.snapshot.state.positions[base];
+          framedTarget.x += position[0];
+          framedTarget.y += position[1];
+        }
+        controls.target.copy(framedTarget);
         if (view === "top")
           camera.position
-            .copy(defaultTarget)
+            .copy(framedTarget)
             .add(new THREE.Vector3(0, -0.001, 2.7));
         else if (view === "front")
           camera.position
-            .copy(defaultTarget)
+            .copy(framedTarget)
             .add(new THREE.Vector3(0, -2.7, 0.12));
         else
           camera.position
-            .copy(defaultTarget)
+            .copy(framedTarget)
             .add(new THREE.Vector3(1.65, -2.2, 1.5));
         controls.update();
       };
