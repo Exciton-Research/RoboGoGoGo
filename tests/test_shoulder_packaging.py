@@ -2,10 +2,10 @@
 
 import numpy as np
 
-from robogogogo.robot.mobile_design import mobile_dual_arm_urdf, mobile_home
-from robogogogo.robot.packaging import packaging_capsules, arm_cable_passages
-from robogogogo.robot.self_collision import mobile_collision_world
 from robogogogo.planning.collision import CollisionWorld
+from robogogogo.robot.mobile_design import mobile_dual_arm_urdf, mobile_home
+from robogogogo.robot.packaging import arm_cable_passages, packaging_capsules
+from robogogogo.robot.self_collision import mobile_collision_world
 from robogogogo.urdf import loads
 
 

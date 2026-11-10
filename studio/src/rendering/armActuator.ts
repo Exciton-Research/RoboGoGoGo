@@ -55,6 +55,7 @@ export function addArmActuator(model: RobotModel, body: number, add: AddMesh) {
       position.toArray(),
     );
     mesh.quaternion.copy(rotation);
+    mesh.userData.removableCover = true;
     mesh.material.metalness = color === "#a5afb3" ? 0.8 : 0.25;
     mesh.material.roughness = 0.36;
     return mesh;

@@ -119,16 +119,6 @@ export function addRobotHardware(
         rail.material.roughness = 0.6;
       }
     }
-    if (name.endsWith("shoulder") || name.endsWith("elbow")) {
-      const length = name.endsWith("shoulder") ? 0.32 : 0.28;
-      const panel = add(
-        body,
-        new RoundedBoxGeometry(length * 0.45, 0.04, 0.008, 3, 0.004),
-        "#c1c9c5",
-        [length * 0.5, 0, -0.063],
-      );
-      panel.material.roughness = 0.65;
-    }
   });
   // Camera optical origins and rotations use the same episode calibration as RGB capture.
   for (const camera of cameras) {

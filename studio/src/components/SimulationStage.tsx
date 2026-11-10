@@ -95,7 +95,21 @@ export function SimulationStage() {
         </div>
         <div className="viewport-wrap">
           {showInternals && (
-            <div className="viewport-label" style={{ top: 42, bottom: "auto" }}>
+            <div
+              className="viewport-label"
+              style={{
+                position: "absolute",
+                zIndex: 3,
+                top: 42,
+                left: 16,
+                maxWidth: "75%",
+                padding: "6px 8px",
+                background: "#f6f4e9",
+                color: "#66563f",
+                fontSize: 10,
+                pointerEvents: "none",
+              }}
+            >
               PACKAGING RESERVATIONS · JOINT HARNESS UNRESOLVED
             </div>
           )}
