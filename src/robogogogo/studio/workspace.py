@@ -17,6 +17,7 @@ from robogogogo.robot.definition import ROBOT_ID, ROBOT_REVISION
 
 from .. import spatial as sp
 from .. import urdf
+from ..robot.packaging import arm_cable_passages, shoulder_packages
 from ..session import Session
 from .episodes import EpisodeService
 from .schemas import CameraSpec, Command, NewEpisode, Project
@@ -99,6 +100,8 @@ class Studio:
             indices=list(model.indices),
             masses=np.asarray(model.mass).tolist(),
             axes=np.asarray(model.axis).tolist(),
+            shoulder_packages=shoulder_packages(model),
+            cable_passages=arm_cable_passages(model),
             joint_origins=np.asarray(model.origin).tolist(),
             joint_orientations=np.asarray(model.orientation).tolist(),
             joints=[

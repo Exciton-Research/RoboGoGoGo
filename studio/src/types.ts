@@ -15,7 +15,19 @@ export interface Visual {
   origin: Vec3;
   rpy: Vec3;
 }
+export interface PackagingVolume {
+  name: string;
+  body: number;
+  start: Vec3;
+  end: Vec3;
+  radius: number;
+  motor_radius?: number;
+  reducer_length?: number;
+  bundle_radius?: number;
+}
 export interface RobotModel {
+  shoulder_packages: PackagingVolume[];
+  cable_passages: PackagingVolume[];
   name: string;
   scene: "mobile_dual_arm";
   mobile_design?: {

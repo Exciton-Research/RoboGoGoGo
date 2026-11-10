@@ -44,6 +44,7 @@ export function addResearchRobotDetails(model: RobotModel, add: AddMesh) {
           "#e4e6e2",
           [0, 0, 0],
         );
+        socket.userData.removableCover = true;
         socket.scale.set(0.08, 0.084, 0.088);
       }
       const upper = name.endsWith("shoulder");
@@ -58,9 +59,11 @@ export function addResearchRobotDetails(model: RobotModel, add: AddMesh) {
           graphite,
           [length / 2, 0, 0],
         );
+        carrier.userData.removableCover = true;
         carrier.rotation.z = -Math.PI / 2;
         for (const half of [0, 1]) {
           const sleeve = add(body, armShell(length, radius, half), shell);
+          sleeve.userData.removableCover = true;
           sleeve.rotation.z = -Math.PI / 2;
           sleeve.material.roughness = 0.46;
           sleeve.material.metalness = 0.08;

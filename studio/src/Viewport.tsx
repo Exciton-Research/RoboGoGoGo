@@ -1,3 +1,4 @@
+import { addInternalPackaging } from "./rendering/internalPackaging";
 import type { PosePreview } from "./types";
 import { addRobotHardware } from "./rendering/robotHardware";
 import { createManipulationVisuals } from "./rendering/manipulation";
@@ -31,6 +32,7 @@ interface Props {
   showGrid: boolean;
   showAxes: boolean;
   showCameraGuides: boolean;
+  showInternals: boolean;
 }
 
 export const Viewport = forwardRef<ViewportHandle, Props>(
@@ -295,6 +297,19 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
         current.current.snapshot.episode?.cameras ?? [],
         addMesh,
       );
+      addInternalPackaging(model, addMesh);
+      const covers: THREE.Object3D[] = [],
+        internals: THREE.Object3D[] = [];
+      bodyGroups.forEach((group) =>
+        group.traverse((object) => {
+          if (object.userData.removableCover) covers.push(object);
+          if (object.userData.inspectionOnly) internals.push(object);
+        }),
+      );
+      const inspectInternals = (enabled: boolean) => {
+        covers.forEach((object) => (object.visible = !enabled));
+        internals.forEach((object) => (object.visible = enabled));
+      };
       const updateManipulation = createManipulationVisuals(
         scene,
         bodyGroups,
@@ -489,6 +504,7 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
             group.quaternion.setFromRotationMatrix(rotation);
           });
         }
+        inspectInternals(current.current.showInternals);
         updateManipulation(snapshot);
         const matrix = new THREE.Matrix4();
         bodyGroups.forEach((group, i) => {
@@ -524,6 +540,7 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
       };
       const renderSensor = (snapshot: Snapshot, capture = false) => {
         applyPose(snapshot);
+        inspectInternals(false);
         const visibility = [
           grid.visible,
           origin.visible,
@@ -593,6 +610,7 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
           }
         }
         ghost.visible = previewVisible;
+        inspectInternals(current.current.showInternals);
         [grid.visible, origin.visible, toolAxes.visible, trail.visible] =
           visibility;
         sensors.forEach(
@@ -622,6 +640,7 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
           showGrid,
           trail: points,
         } = current.current;
+        inspectInternals(current.current.showInternals);
         updateManipulation(snapshot);
         const state = snapshot.state;
         bodyGroups.forEach((group, i) => {
