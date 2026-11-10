@@ -29,6 +29,7 @@ function useWorkspaceState() {
   const [goalDirty, setGoalDirty] = useState(false);
   const [showGrid, setShowGrid] = useState(true);
   const [showAxes, setShowAxes] = useState(false);
+  const [showCameraGuides, setShowCameraGuides] = useState(true);
   const [help, setHelp] = useState(false);
   const [treeOpen, setTreeOpen] = useState(false);
   const [replay, setReplay] = useState<number | null>(null);
@@ -222,6 +223,8 @@ function useWorkspaceState() {
     setShowGrid,
     showAxes,
     setShowAxes,
+    showCameraGuides,
+    setShowCameraGuides,
     help,
     setHelp,
     treeOpen,

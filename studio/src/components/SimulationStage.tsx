@@ -28,6 +28,8 @@ export function SimulationStage() {
     setShowGrid,
     showAxes,
     setShowAxes,
+    showCameraGuides,
+    setShowCameraGuides,
     replay,
     setReplay,
     viewport,
@@ -97,6 +99,7 @@ export function SimulationStage() {
               onSelect={chooseBody}
               showGrid={showGrid}
               showAxes={showAxes}
+              showCameraGuides={showCameraGuides}
             />
           ) : (
             <div className="loading-scene">
@@ -139,6 +142,15 @@ export function SimulationStage() {
               title="Coordinate frames"
             >
               <Axis3D size={18} />
+            </button>
+            <button
+              className={`icon-button ${showCameraGuides ? "active" : ""}`}
+              aria-label="Toggle camera guidelines"
+              aria-pressed={showCameraGuides}
+              title="Camera field-of-view guidelines"
+              onClick={() => setShowCameraGuides(!showCameraGuides)}
+            >
+              <Camera size={18} />
             </button>
             <span />
             <button

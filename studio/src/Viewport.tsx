@@ -28,6 +28,7 @@ interface Props {
   onSelect: (body: number) => void;
   showGrid: boolean;
   showAxes: boolean;
+  showCameraGuides: boolean;
 }
 
 export const Viewport = forwardRef<ViewportHandle, Props>(
@@ -540,7 +541,7 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
         [grid.visible, origin.visible, toolAxes.visible, trail.visible] =
           visibility;
         sensors.forEach(
-          ({ guide }) => (guide.visible = current.current.showAxes),
+          ({ guide }) => (guide.visible = current.current.showCameraGuides),
         );
         return { images, ground_truth_depth };
       };
