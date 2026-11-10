@@ -259,7 +259,6 @@ def test_localization_history_is_bounded_and_moving_profile_is_strict():
 
 def test_studio_localization_epoch_export_and_old_session_callbacks(tmp_path, monkeypatch):
     from fastapi.testclient import TestClient
-
     from fixtures.api import create_app
 
     pipelines = []

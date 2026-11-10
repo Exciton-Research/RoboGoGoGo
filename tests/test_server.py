@@ -11,7 +11,6 @@ import pytest
 
 pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient
-
 from fixtures.api import create_app
 
 

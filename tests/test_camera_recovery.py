@@ -14,7 +14,7 @@ from robogogogo.studio.schemas import PlanTask
 
 def example(name):
     spec = importlib.util.spec_from_file_location(
-        name, Path(__file__).parents[1] / "examples" / (name + ".py")
+        name, Path(__file__).parent / "fixtures" / (name + ".py")
     )
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

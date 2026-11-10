@@ -3,10 +3,10 @@ from importlib.resources import files
 import jax.numpy as jnp
 import numpy as np
 import pytest
-
 from fixtures import models
-from robogogogo import urdf
+
 from robogogogo import spatial as sp
+from robogogogo import urdf
 
 
 def fixture():

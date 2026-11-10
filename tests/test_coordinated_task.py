@@ -9,9 +9,9 @@ import pytest
 
 pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient
+from fixtures.api import create_app
 
 from robogogogo.datasets import iter_transitions
-from fixtures.api import create_app
 
 
 def frame():
@@ -137,8 +137,9 @@ def test_runtime_guard_rejects_zero_time_action_without_corrupting_dataset(tmp_p
 
 
 def test_handover_picks_transfers_places_and_records_payload(tmp_path):
-    from robogogogo.studio.schemas import CameraObservation, PlanTask
     from fixtures.workspace import Studio
+
+    from robogogogo.studio.schemas import CameraObservation, PlanTask
 
     workspace = Studio(tmp_path, scene="dual_arm")
     snapshot = workspace.task_service.plan(PlanTask(kind="handover"))
@@ -209,8 +210,9 @@ def test_handover_picks_transfers_places_and_records_payload(tmp_path):
 
 
 def test_material_grasp_fixture_lifts_soft_object_and_exports_damage_state(tmp_path):
-    from robogogogo.studio.schemas import CameraObservation, PlanTask
     from fixtures.workspace import Studio
+
+    from robogogogo.studio.schemas import CameraObservation, PlanTask
 
     workspace = Studio(tmp_path, scene="dual_arm")
     snapshot = workspace.task_service.plan(

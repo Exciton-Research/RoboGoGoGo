@@ -9,12 +9,13 @@ import jax.numpy as jnp
 import numpy as np
 import pytest
 from fastapi.testclient import TestClient
+from fixtures import models
+from fixtures.api import create_app
 from test_vla import png_observation
 
-from robogogogo import control, models, urdf
+from robogogogo import control, urdf
 from robogogogo import spatial as sp
 from robogogogo.embodiment import resolve_arms
-from fixtures.api import create_app
 
 
 @pytest.mark.parametrize("count", [1, 2, 3])

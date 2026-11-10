@@ -57,7 +57,12 @@ class MobilePlanningWorld:
 
 def plan_mobile(dynamics, start, goal, *, seed=0, budget_seconds=12):
     start, goal = np.asarray(start), np.asarray(goal)
-    if not np.isfinite([start, goal]).all() or start.shape != dynamics.model.home.shape:
+    if (
+        start.shape != dynamics.model.home.shape
+        or goal.shape != start.shape
+        or not np.isfinite(start).all()
+        or not np.isfinite(goal).all()
+    ):
         raise PlanningError("Mobile plan requires finite full-robot configurations")
     if not np.allclose(start[dynamics.driven], goal[dynamics.driven], atol=1e-6):
         raise PlanningError("Use mobile drive commands for base motion; arm plans freeze the base")

@@ -8,11 +8,11 @@ from dataclasses import asdict, replace
 
 import pytest
 from fastapi.testclient import TestClient
+from fixtures.api import create_app
 from test_vla import png_observation
 
 from robogogogo.robot.profile import RobotProfile
 from robogogogo.runtime.workflow import RobotWorkflow
-from fixtures.api import create_app
 
 
 def test_legacy_imports_preserve_contract_identity():

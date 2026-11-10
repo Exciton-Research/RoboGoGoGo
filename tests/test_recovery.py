@@ -13,7 +13,7 @@ from robogogogo.planning.collision import CollisionViolation
 from robogogogo.studio.schemas import PlanTask
 
 # Load the runnable benchmark and its adjacent fixture without a package install.
-DIRECTORY = Path(__file__).parents[1] / "examples"
+DIRECTORY = Path(__file__).parent / "fixtures"
 for name in ("structural_handover", "grasp_recovery"):
     spec = importlib.util.spec_from_file_location(name, DIRECTORY / (name + ".py"))
     module = importlib.util.module_from_spec(spec)

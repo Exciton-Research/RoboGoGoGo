@@ -168,7 +168,13 @@ class Session:
                 or self.payload_model is not None
             ):
                 raise ValueError("Mobile driving does not yet support payload/contact task models")
-            return self._advance_mobile()
+            try:
+                return self._advance_mobile()
+            except FloatingPointError:
+                self.stop_drive()
+                if self.motion_plan:
+                    self.motion_plan["status"] = "blocked"
+                raise
         if self.contact_system is not None:
             return self._advance_contacts(collision_world)
         if collision_world is None:

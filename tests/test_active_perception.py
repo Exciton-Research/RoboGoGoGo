@@ -15,7 +15,7 @@ from robogogogo.studio.schemas import PlanTask
 for name in ("camera_recovery", "recovery_search", "active_perception_demo"):
     filename = "active_perception" if name == "active_perception_demo" else name
     spec = importlib.util.spec_from_file_location(
-        name, Path(__file__).parents[1] / "examples" / (filename + ".py")
+        name, Path(__file__).parent / "fixtures" / (filename + ".py")
     )
     module = importlib.util.module_from_spec(spec)
     sys.modules[name] = module
@@ -109,6 +109,7 @@ def test_wrist_motion_reveals_missing_grasp_flank_and_completes_recovery():
 
 def test_motorized_head_moves_with_native_dynamics_and_preserves_arm_joints():
     from fixtures import models
+
     from robogogogo.manipulation import Manipulation
     from robogogogo.planning import Capsule, CollisionWorld
     from robogogogo.session import Session

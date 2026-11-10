@@ -8,7 +8,7 @@ import pytest
 
 from robogogogo.studio.schemas import PlanTask
 
-BENCH = runpy.run_path(str(Path(__file__).parents[1] / "examples/structural_handover.py"))
+BENCH = runpy.run_path(str(Path(__file__).parent / "fixtures/structural_handover.py"))
 
 
 def test_structural_damage_feedback_unloads_before_damage():

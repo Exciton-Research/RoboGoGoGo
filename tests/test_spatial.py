@@ -4,8 +4,8 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 import pytest
+from fixtures import env3d, models
 
-from fixtures import models, env3d
 from robogogogo import control
 from robogogogo import spatial as sp
 

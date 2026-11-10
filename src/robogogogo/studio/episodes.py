@@ -115,6 +115,8 @@ class EpisodeService:
                 raise ValueError("Action requires the latest camera observation")
             observation = episode.observations[-1]
             s = workspace.session
+            if s.motion_plan and s.motion_plan["status"] in ("ready", "running", "paused"):
+                raise ValueError("Finish or cancel the motion plan before sending policy actions")
             if observation["time"] != s.elapsed or not np.array_equal(
                 observation["joint_position"], np.asarray(s.state.q)
             ):

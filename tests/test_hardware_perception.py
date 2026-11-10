@@ -301,7 +301,6 @@ def test_studio_fuses_only_profiled_hardware_and_faults_on_calibration_change(tm
     import time
 
     from fastapi.testclient import TestClient
-
     from fixtures.api import create_app
 
     class Backend:
