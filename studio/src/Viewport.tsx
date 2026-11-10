@@ -215,7 +215,9 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
         const linkName = model.names[visual.body];
         if (
           mobile &&
-          ["torso", "torso_lower", "torso_upper"].includes(linkName)
+          (["torso", "torso_lower", "torso_upper"].includes(linkName) ||
+            linkName.startsWith("left_") ||
+            linkName.startsWith("right_"))
         )
           continue;
         if (
@@ -254,7 +256,9 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
         if (
           model.scene === "drop" ||
           (mobile &&
-            (joint.name.startsWith("base_") ||
+            (joint.name.startsWith("left_") ||
+              joint.name.startsWith("right_") ||
+              joint.name.startsWith("base_") ||
               joint.name.endsWith("_wheel") ||
               joint.name.endsWith("_steer") ||
               joint.name.endsWith("_waist") ||

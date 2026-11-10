@@ -58,8 +58,59 @@ export function addResearchRobotDetails(model: RobotModel, add: AddMesh) {
     return mesh;
   };
   model.names.forEach((name, body) => {
-    if (name.endsWith("shoulder") && mobile) {
-      add(body, new THREE.SphereGeometry(0.082, 32, 24), shell, [0, 0, 0]);
+    if (mobile && (name.startsWith("left_") || name.startsWith("right_"))) {
+      if (name.endsWith("waist")) {
+        const socket = add(
+          body,
+          new THREE.SphereGeometry(1, 40, 28),
+          "#e4e6e2",
+          [0, 0, 0],
+        );
+        socket.scale.set(0.1, 0.105, 0.11);
+      }
+      const upper = name.endsWith("shoulder");
+      const forearm = name.endsWith("elbow");
+      if (upper || forearm) {
+        const length = upper ? 0.32 : 0.28;
+        const radius = upper ? 0.075 : 0.065;
+        const sleeve = add(
+          body,
+          new THREE.CapsuleGeometry(radius, length - 2 * radius, 12, 32),
+          "#e4e6e2",
+          [length / 2, 0, 0],
+        );
+        sleeve.rotation.z = -Math.PI / 2;
+        if (forearm) {
+          add(
+            body,
+            new THREE.SphereGeometry(0.068, 32, 24),
+            "#aeb6b3",
+            [0, 0, 0],
+          );
+          const cap = add(
+            body,
+            new THREE.CylinderGeometry(0.057, 0.057, 0.14, 40),
+            "#e4e6e2",
+            [0, 0, 0],
+          );
+          cap.rotation.y = 0;
+        }
+      }
+      for (const [suffix, length, radius] of [
+        ["wrist_roll", 0.04, 0.043],
+        ["wrist_pitch", 0.03, 0.043],
+        ["tool_roll", 0.04, 0.04],
+      ] as const) {
+        if (name.endsWith(suffix)) {
+          const cuff = add(
+            body,
+            new THREE.CylinderGeometry(radius, radius, length, 32),
+            suffix === "wrist_pitch" ? "#aeb6b3" : "#e4e6e2",
+            [length / 2, 0, 0],
+          );
+          cuff.rotation.z = Math.PI / 2;
+        }
+      }
     }
     if (name.endsWith("pedestal") && !mobile) {
       box(body, [0.3, 0.3, 0.045], graphite, [0, 0, 0.024], 0.025);
@@ -79,7 +130,7 @@ export function addResearchRobotDetails(model: RobotModel, add: AddMesh) {
           0.17,
         ]);
     }
-    if (name.endsWith("shoulder") || name.endsWith("elbow")) {
+    if (!mobile && (name.endsWith("shoulder") || name.endsWith("elbow"))) {
       const length = name.endsWith("shoulder") ? 0.32 : 0.28;
       box(body, [length * 0.57, 0.077, 0.013], graphite, [
         length * 0.52,

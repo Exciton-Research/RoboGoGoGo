@@ -172,7 +172,7 @@ def mobile_dual_arm_urdf():
     )
     visual(chest, "box", (0.28, 0.50, 0.28), origin=(0, 0, 0.12))
     template = ET.fromstring(files("robogogogo").joinpath("assets/arm6.urdf").read_text())
-    for side, y in (("left", 0.29), ("right", -0.29)):
+    for side, y in (("left", 0.28), ("right", -0.28)):
         for child in template:
             element = deepcopy(child)
             element.set("name", f"{side}_{element.attrib['name']}")
@@ -192,8 +192,40 @@ def mobile_dual_arm_urdf():
                     inertia.set(diagonal, str(2.0 * 0.07**2 / 6))
                 for item in list(element.findall("visual")):
                     element.remove(item)
+            if element.tag == "joint":
+                short_offsets = {"wrist_pitch": 0.04, "tool_roll": 0.03, "tool": 0.04}
+                for suffix, offset in short_offsets.items():
+                    if element.attrib["name"] == f"{side}_{suffix}_joint":
+                        element.find("origin").set("xyz", f"{offset} 0 0")
+            if element.tag == "link":
+                segments = {
+                    "shoulder": (0.32, 0.075),
+                    "elbow": (0.28, 0.065),
+                    "wrist_roll": (0.04, 0.043),
+                    "wrist_pitch": (0.03, 0.043),
+                    "tool_roll": (0.04, 0.04),
+                }
+                for suffix, (length, radius) in segments.items():
+                    if element.attrib["name"] != f"{side}_{suffix}":
+                        continue
+                    inertial = element.find("inertial")
+                    inertial.find("origin").set("xyz", f"{length / 2} 0 0")
+                    mass = float(inertial.find("mass").attrib["value"])
+                    inertia = inertial.find("inertia")
+                    inertia.set("ixx", str(mass * radius**2 / 2))
+                    for diagonal in ("iyy", "izz"):
+                        inertia.set(diagonal, str(mass * (3 * radius**2 + length**2) / 12))
+                    for item in list(element.findall("visual")):
+                        element.remove(item)
+                    visual(
+                        element,
+                        "cylinder",
+                        (radius, length),
+                        origin=(length / 2, 0, 0),
+                        rpy=(0, math.pi / 2, 0),
+                    )
             robot.append(element)
-        joint(f"{side}_mount", "torso", f"{side}_pedestal", origin=(0, y, 0.15))
+        joint(f"{side}_mount", "torso", f"{side}_pedestal", origin=(0, y, 0.22))
         link(f"{side}_upper_roll", 0.5)
         joint(
             f"{side}_upper_roll_joint",
@@ -245,7 +277,7 @@ def mobile_home(model, posture="standing"):
                 f"{side}_{name}": value
                 for name, value in zip(
                     ("waist", "shoulder", "elbow", "wrist_roll", "wrist_pitch", "tool_roll"),
-                    (0.0, -0.8, 1.2, 0.0, -0.4, 0.0),
+                    (0.0, 1.2, -1.35, 0.0, 0.15, 0.0),
                 )
             }
         )
