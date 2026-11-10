@@ -9,6 +9,7 @@ import jax.numpy as jnp
 import numpy as np
 
 from .. import spatial as sp
+from ..robot.actuators import arm_drive_parameters, delivered_torque, gearbox_friction
 from .dynamics import acceleration
 
 
@@ -19,6 +20,7 @@ class MobileDynamics:
 
     def __init__(self, model, substeps):
         self.model, self.substeps = model, substeps
+        self.no_load_speed, self.coulomb = arm_drive_parameters(model)
 
         def index(name):
             return model.indices[model.names.index(name)]
@@ -152,8 +154,10 @@ class MobileDynamics:
                 drive_torque + external[driven] - bias[driven],
             )
             torque = (bias + matrix[:, driven] @ drive_acc).at[driven].set(drive_torque)
+            torque = delivered_torque(torque, current.qd, model.effort, self.no_load_speed)
+            friction = gearbox_friction(current.qd, self.coulomb)
             qdd = acceleration(
-                model, current, torque, implicit_dt=model.dt, external_force=external
+                model, current, torque, implicit_dt=model.dt, external_force=external + friction
             )
             qd = current.qd + model.dt * qdd
             following = sp.State(current.q + model.dt * qd, qd)
