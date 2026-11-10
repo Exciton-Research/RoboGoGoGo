@@ -100,7 +100,7 @@ def assembly_parts(model):
                     mass_kg=float(mass),
                     provenance="custom aluminum saddle"
                     if kind == "bracket"
-                    else "XT30(2+2) installation envelope; port clocking provisional",
+                    else "XT30(2+2) panel connector in custom saddle cradle; drive pigtail interface",
                 )
             )
 
@@ -128,7 +128,19 @@ def assembly_parts(model):
                     0.004,
                     "bracket",
                 )
-        part("power_can_connector", b + axis * 0.004, b + axis * 0.024, 0.009, "connector")
+        # Panel-side connector sits in a retaining cradle on the rear saddle tie.
+        # This is our connector mount, not a guessed actuator PCB socket location.
+        mount = rear + other * spacing
+        part("connector_standoff", mount, mount + axis * 0.012, 0.004, "bracket")
+        part("power_can_connector", mount + axis * 0.012, mount + axis * 0.032, 0.009, "connector")
+        for sign in (-1, 1):
+            part(
+                f"connector_retainer_{sign}",
+                mount + radial * sign * 0.012,
+                mount + radial * sign * 0.012 + axis * 0.030,
+                0.003,
+                "bracket",
+            )
     return result
 
 
@@ -139,7 +151,7 @@ def assembly_capsules(model):
     ]
 
 
-def harness_fixtures(model):
+def harness_fixture_specs():
     """Bolted standoffs and split clamps at the dress-pack's explicit anchors.
 
     Custom geometry, shared with the renderer and motion checks. The root is on
@@ -166,7 +178,7 @@ def harness_fixtures(model):
                     dict(
                         name=f"{prefix}_{tag}",
                         owner=span["owner"],
-                        body=model.names.index(name),
+                        body_name=name,
                         start=a.tolist(),
                         end=b.tolist(),
                         radius=radius,
@@ -178,3 +190,7 @@ def harness_fixtures(model):
                     )
                 )
     return fixtures
+
+
+def harness_fixtures(model):
+    return [dict(p, body=model.names.index(p["body_name"])) for p in harness_fixture_specs()]
