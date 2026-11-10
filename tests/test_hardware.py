@@ -191,3 +191,85 @@ def test_cleanup_failure_disconnects_telemetry_and_reports_fault():
     feed.sink.joints(joint(2))
     snapshot = service.snapshot()
     assert snapshot["status"] == "fault" and snapshot["joints"] is None
+
+
+def test_ros_backend_subscribes_and_cleans_up_owned_context(monkeypatch):
+    import sys
+
+    nodes, executors, initialized = [], [], []
+
+    class Context:
+        def __init__(self):
+            self.live = True
+
+        def ok(self):
+            return self.live
+
+        def try_shutdown(self):
+            self.live = False
+
+    class Node:
+        def __init__(self, name, **kwargs):
+            assert not kwargs["enable_rosout"] and not kwargs["start_parameter_services"]
+            self.subscriptions = []
+            self.destroyed = False
+            nodes.append(self)
+
+        def create_subscription(self, message_type, topic, callback, qos):
+            self.subscriptions.append((topic, callback))
+
+        def destroy_node(self):
+            self.destroyed = True
+
+    class Executor:
+        def __init__(self, context):
+            self.closed = False
+            executors.append(self)
+
+        def add_node(self, node):
+            self.node = node
+
+        def spin_once(self, timeout_sec):
+            threading.Event().wait(0.001)
+
+        def shutdown(self, timeout_sec):
+            self.closed = True
+
+    modules = {
+        "rclpy": SimpleNamespace(init=lambda **kwargs: initialized.append(kwargs)),
+        "rclpy.context": SimpleNamespace(Context=Context),
+        "rclpy.node": SimpleNamespace(Node=Node),
+        "rclpy.executors": SimpleNamespace(SingleThreadedExecutor=Executor),
+        "rclpy.qos": SimpleNamespace(qos_profile_sensor_data=object()),
+        "sensor_msgs": SimpleNamespace(),
+        "sensor_msgs.msg": SimpleNamespace(JointState=object(), CompressedImage=object()),
+    }
+    for name, module in modules.items():
+        monkeypatch.setitem(sys.modules, name, module)
+    service = HardwareService(
+        {"ros2": lambda: ROS2Backend(cameras={"head": "/head/image/compressed"}, domain_id=5)}
+    )
+    service.connect("ros2")
+    assert initialized[0]["domain_id"] == 5
+    callbacks = dict(nodes[0].subscriptions)
+    assert set(callbacks) == {"/joint_states", "/head/image/compressed"}
+    header = SimpleNamespace(stamp=SimpleNamespace(sec=1, nanosec=0), frame_id="robot")
+    callbacks["/joint_states"](
+        SimpleNamespace(header=header, name=["joint1"], position=[0.1], velocity=[], effort=[])
+    )
+    callbacks["/head/image/compressed"](SimpleNamespace(header=header, format="png", data=PNG))
+    assert service.snapshot()["status"] == "streaming"
+    assert service.snapshot()["cameras"][0]["name"] == "head"
+    service.close()
+    assert nodes[0].destroyed and executors[0].closed and not initialized[0]["context"].ok()
+
+
+def test_camera_budget_is_bounded():
+    feed = Feed()
+    service = HardwareService({"robot": lambda: feed})
+    service.connect("robot")
+    for index in range(9):
+        feed.sink.camera(camera(name=f"camera_{index}"))
+    assert len(service.snapshot()["cameras"]) == 8
+    assert service.snapshot()["status"] == "fault"
+    service.close()
