@@ -1,3 +1,4 @@
+import { addRobotHardware } from "./rendering/robotHardware";
 import { createManipulationVisuals } from "./rendering/manipulation";
 import { captureDepth } from "./rendering/depthCapture";
 import {
@@ -286,6 +287,11 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
         center.position.copy(axis.clone().multiplyScalar(size * 0.91));
       }
       addResearchRobotDetails(model, addMesh);
+      addRobotHardware(
+        model,
+        current.current.snapshot.episode?.cameras ?? [],
+        addMesh,
+      );
       const updateManipulation = createManipulationVisuals(
         scene,
         bodyGroups,
@@ -426,12 +432,6 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
             }),
           ),
         );
-        const housing = new THREE.Mesh(
-          new THREE.BoxGeometry(0.04, 0.025, 0.025),
-          new THREE.MeshBasicMaterial({ color: "#365161" }),
-        );
-        housing.position.z = 0.0125;
-        guide.add(housing);
         scene.add(guide);
         return { config, camera, preview, wrapper, guide };
       });
@@ -539,7 +539,9 @@ export const Viewport = forwardRef<ViewportHandle, Props>(
         }
         [grid.visible, origin.visible, toolAxes.visible, trail.visible] =
           visibility;
-        sensors.forEach(({ guide }) => (guide.visible = true));
+        sensors.forEach(
+          ({ guide }) => (guide.visible = current.current.showAxes),
+        );
         return { images, ground_truth_depth };
       };
       captureFrame.current = (snapshot) => {

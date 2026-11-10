@@ -174,14 +174,5 @@ export function addResearchRobotDetails(model: RobotModel, add: AddMesh) {
   if (head >= 0 && mobile) {
     const shellMesh = add(head, new THREE.SphereGeometry(1, 40, 24), shell);
     shellMesh.scale.set(0.075, 0.105, 0.07);
-    for (const y of [-0.032, 0.032]) {
-      const lens = add(
-        head,
-        new THREE.CylinderGeometry(0.018, 0.018, 0.004, 32),
-        graphite,
-        [0.075, y, 0],
-      );
-      lens.rotation.z = Math.PI / 2;
-    }
   }
 }
