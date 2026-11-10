@@ -12,7 +12,7 @@ CABLE_SOURCE = (
     "https://www.igus.it/contentData/Product_Files/Download/pdf/Data_sheet_chainflex_CFROBOT2.pdf"
 )
 RADIUS = 0.00425
-FREE_LENGTH = 0.65
+FREE_LENGTH = 0.70
 MIN_BEND = 10 * 2 * RADIUS + RADIUS
 NEUTRAL = {"waist": 0.0, "upper_roll": 0.0, "shoulder": 1.2, "elbow": -1.35}
 
@@ -23,7 +23,7 @@ def loop_points(axis, delta, samples=49):
     radial -= axis * np.dot(axis, radial)
     radial /= np.linalg.norm(radial)
     turned = radial * np.cos(delta) + np.cross(axis, radial) * np.sin(delta)
-    a, d = axis * 0.215 + radial * 0.18, axis * 0.215 - turned * 0.18
+    a, d = axis * 0.235 + radial * 0.20, axis * 0.235 - turned * 0.20
     t = np.linspace(0, 1, samples)[:, None]
 
     def curve(bulge):
