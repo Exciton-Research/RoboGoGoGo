@@ -38,7 +38,21 @@ def robot_wiring(model):
             panel = f"{name}_panel"
             drive = f"{name}_drive"
             host = model.names[model.parents[body]]
-            connector(panel, ["V+", "V-", "CAN_H", "CAN_L"], host, "panel")
+            terminals = ["V+", "V-", "CAN_H", "CAN_L"]
+            for feed in (
+                ("roll", "pitch")
+                if suffix == "waist"
+                else ("pitch",)
+                if suffix == "upper_roll"
+                else ()
+            ):
+                terminals.extend([f"{feed}_V+", f"{feed}_V-"])
+            connector(
+                panel,
+                terminals,
+                host,
+                "custom_loom_junction" if suffix in ("waist", "upper_roll") else "panel",
+            )
             connector(drive, ["V+", "V-", "CAN_H", "CAN_L"], host, "drive")
             connectors[-1]["physical_interfaces"] = connector_interfaces(suffix)
             connectors[-1]["placement_qualification"] = (
@@ -47,7 +61,23 @@ def robot_wiring(model):
             # Each voltage rail has an individual branch to the panel; no wrist
             # gets the proximal 48 V rail. Protection ratings are a separate BOM.
             for polarity in ("+", "-"):
-                wire(distribution, f"{spec.voltage}V{polarity}", panel, f"V{polarity}", "power")
+                if suffix in ("upper_roll", "shoulder"):
+                    feed = "roll" if suffix == "upper_roll" else "pitch"
+                    yaw_panel, roll_panel = f"{side}_waist_panel", f"{side}_upper_roll_panel"
+                    wire(distribution, f"48V{polarity}", yaw_panel, f"{feed}_V{polarity}", "power")
+                    if suffix == "upper_roll":
+                        wire(yaw_panel, f"roll_V{polarity}", panel, f"V{polarity}", "power")
+                    else:
+                        wire(
+                            yaw_panel,
+                            f"pitch_V{polarity}",
+                            roll_panel,
+                            f"pitch_V{polarity}",
+                            "power",
+                        )
+                        wire(roll_panel, f"pitch_V{polarity}", panel, f"V{polarity}", "power")
+                else:
+                    wire(distribution, f"{spec.voltage}V{polarity}", panel, f"V{polarity}", "power")
                 wire(panel, f"V{polarity}", drive, f"V{polarity}", "fixed_pigtail")
             for signal in ("CAN_H", "CAN_L"):
                 wire(previous, signal, panel, signal, "can_trunk")
@@ -69,14 +99,12 @@ def robot_wiring(model):
         terminations.append(dict(connector=previous, resistance_ohm=120))
     branches = branch_specs(model)
     for lead in wires:
-        target, pin = lead["target"]
+        target, _ = lead["target"]
         for side in ("left", "right"):
             if target == f"{side}_upper_roll_panel":
                 lead["route_ids"] = [f"{side}_yaw_roll_internal"]
             elif target == f"{side}_shoulder_panel":
-                lead["route_ids"] = (
-                    [f"{side}_yaw_roll_internal"] if pin in ("V+", "V-") else []
-                ) + [f"{side}_roll_pitch_internal"]
+                lead["route_ids"] = [f"{side}_roll_pitch_internal"]
     result = dict(
         revision=WIRING_REVISION,
         shoulder_interconnects=branches,
@@ -119,6 +147,13 @@ def validate_wiring(wiring):
     graph = defaultdict(set)
     for wire in wiring["wires"]:
         a, b = tuple(wire["source"]), tuple(wire["target"])
+        for side in ("left", "right"):
+            expected_route = {
+                f"{side}_upper_roll_panel": f"{side}_yaw_roll_internal",
+                f"{side}_shoulder_panel": f"{side}_roll_pitch_internal",
+            }.get(b[0])
+            if expected_route and wire.get("route_ids") != [expected_route]:
+                errors.append("Missing or incorrect shoulder route binding")
         if any(route not in routes for route in wire.get("route_ids", [])):
             errors.append("Unknown physical shoulder route")
         if any(name not in nodes or pin not in nodes[name] for name, pin in (a, b)):
