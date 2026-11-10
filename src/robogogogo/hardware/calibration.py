@@ -134,6 +134,7 @@ class CalibrationProfile:
             raise ValueError("A versioned measured profile with fixed_base=true is required")
         if not d.get("world_frame") or not d.get("clock_domain") or not d.get("calibrated_at"):
             raise ValueError("Profile requires world frame, clock domain and calibration date")
+        self.robot_xml = robot_xml
         self.tree = KinematicTree(robot_xml)
         self.world_from_base = transform(d["world_from_base"])
         self.speed_limits = d["joint_speed_limits"]
@@ -147,6 +148,8 @@ class CalibrationProfile:
         self.max_gap = float(d.get("max_joint_gap_s", 0.05))
         if not 0 < self.max_skew <= 0.03 or not 0 < self.max_gap <= 0.1:
             raise ValueError("Invalid synchronization tolerances")
+        if not np.isfinite(d["max_scene_speed_m_s"]) or not 0 <= d["max_scene_speed_m_s"] <= 10:
+            raise ValueError("A bounded scene-motion assumption is required")
         self.cameras = d["cameras"]
         if not isinstance(self.cameras, dict) or not 2 <= len(self.cameras) <= 8:
             raise ValueError("Configure two to eight calibrated cameras")
@@ -209,3 +212,24 @@ class CalibrationProfile:
             @ transform(camera["mount_from_optical"])
         )
         return dict(position=pose[:3, 3], rotation=pose[:3, :3])
+
+    def pose_uncertainty(self, name, positions, gap, skew):
+        camera = self.cameras[name]
+        poses = self.tree.poses(positions)
+        center = (poses[camera["mount_link"]] @ transform(camera["mount_from_optical"]))[:3, 3]
+        link = camera["mount_link"]
+        bound = camera["extrinsic_uncertainty_m"]
+        timing = gap / 2 + camera["time_uncertainty_s"]
+        while link != self.tree.root:
+            joint_name, joint = next(
+                (n, j) for n, j in self.tree.joints.items() if j["child"] == link
+            )
+            if joint["kind"] != "fixed":
+                lever = (
+                    1.0
+                    if joint["kind"] == "prismatic"
+                    else np.linalg.norm(center - poses[link][:3, 3])
+                )
+                bound += self.speed_limits[joint_name] * timing * lever
+            link = joint["parent"]
+        return bound + self.document["max_scene_speed_m_s"] * (skew + camera["time_uncertainty_s"])
