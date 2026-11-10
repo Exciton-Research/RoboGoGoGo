@@ -7,8 +7,8 @@ Floating and mimic joints are rejected rather than assigning invented poses.
 import hashlib
 import json
 import re
-from datetime import datetime
 import xml.etree.ElementTree as ET
+from datetime import datetime
 from pathlib import Path
 
 import numpy as np

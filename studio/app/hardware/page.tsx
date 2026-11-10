@@ -240,8 +240,8 @@ export default function HardwarePage() {
                 : styles.warning
             }
           >
-            {offline
-              ? "Unavailable"
+            {perceptionStale
+              ? "Stale / unavailable"
               : (data?.perception?.state?.replaceAll("_", " ") ??
                 "Not configured")}
           </span>
