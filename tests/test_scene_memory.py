@@ -143,6 +143,13 @@ def test_motion_evidence_inflates_uncertainty_of_still_hidden_target_parts():
         timestamp=1.0,
         uncertainty_m=0.003,
     )
+    later = replace(
+        later,
+        views=tuple(
+            (pose, {k: v for k, v in calibration.items() if k not in ("depth", "intrinsics")})
+            for pose, calibration in later.views
+        ),
+    )
     result = memory.observe(later, target_mask=np.ones(1, bool))
     assert result.diagnostics["scene_memory"]["motion_evidence"] > 0
     hidden = [c for c in memory.cells.values() if c["seen"] == 0]

@@ -101,6 +101,8 @@ def backproject(
                         np.rad2deg(2 * np.arctan(depth.shape[0] / (2 * k[1, 1])))
                     ),
                     surface_points=points[valid],
+                    depth=depth.copy(),
+                    intrinsics=k.copy(),
                     width=depth.shape[1],
                     height=depth.shape[0],
                 ),

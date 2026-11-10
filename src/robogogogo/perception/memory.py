@@ -40,6 +40,40 @@ class SceneMemory:
         cleared = np.zeros(len(points), bool)
         for pose, calibration in cloud.views:
             center = np.asarray(pose["position"])
+            if "depth" in calibration and "intrinsics" in calibration:
+                depth = calibration["depth"]
+                optical = (points - center) @ np.asarray(pose["rotation"])
+                pixels = optical @ calibration["intrinsics"].T
+                pixels = np.divide(
+                    pixels[:, :2],
+                    optical[:, 2, None],
+                    out=np.zeros((len(points), 2)),
+                    where=optical[:, 2, None] > 0,
+                )
+                uv = np.rint(pixels).astype(int)
+                valid = (
+                    (optical[:, 2] > 0)
+                    & (uv[:, 0] >= 1)
+                    & (uv[:, 0] < depth.shape[1] - 1)
+                    & (uv[:, 1] >= 1)
+                    & (uv[:, 1] < depth.shape[0] - 1)
+                )
+                indices = np.flatnonzero(valid)
+                neighborhood = np.stack(
+                    [
+                        depth[uv[indices, 1] + dy, uv[indices, 0] + dx]
+                        for dx in (-1, 0, 1)
+                        for dy in (-1, 0, 1)
+                    ],
+                    axis=1,
+                )
+                # Require all neighboring pixels to see beyond the old point.
+                # A hole or foreground edge is not free-space evidence.
+                margin = 0.008 + 3 * cloud.uncertainty_m
+                cleared[indices] |= np.isfinite(neighborhood).all(axis=1) & (
+                    neighborhood > optical[indices, 2, None] + margin
+                ).all(axis=1)
+                continue
             if "surface_points" not in calibration:
                 continue
             rays = calibration["surface_points"] - center
