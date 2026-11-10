@@ -1,0 +1,2320 @@
+{
+  "revision": "dual-arm-power-can-2",
+  "shoulder_interconnects": [
+    {
+      "name": "left_yaw_roll_internal",
+      "side": "left",
+      "source": "left_waist_panel",
+      "target": "left_upper_roll_panel",
+      "bodies": [
+        16,
+        17
+      ],
+      "anchors": [
+        [
+          -0.035,
+          0,
+          0.226
+        ],
+        [
+          -0.163,
+          0.025,
+          0.035
+        ]
+      ],
+      "normals": [
+        [
+          -1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1
+        ]
+      ],
+      "length_m": 0.295,
+      "radius": 0.008,
+      "bend_limit_m": 0.04,
+      "termination_boot_m": 0.028
+    },
+    {
+      "name": "left_roll_pitch_internal",
+      "side": "left",
+      "source": "left_upper_roll_panel",
+      "target": "left_shoulder_panel",
+      "bodies": [
+        17,
+        18
+      ],
+      "anchors": [
+        [
+          -0.163,
+          0.035,
+          0.025
+        ],
+        [
+          -0.035,
+          0.201,
+          0.02
+        ]
+      ],
+      "normals": [
+        [
+          0,
+          1,
+          0
+        ],
+        [
+          -1,
+          0,
+          0
+        ]
+      ],
+      "length_m": 0.25,
+      "radius": 0.008,
+      "bend_limit_m": 0.04,
+      "termination_boot_m": 0.028
+    },
+    {
+      "name": "right_yaw_roll_internal",
+      "side": "right",
+      "source": "right_waist_panel",
+      "target": "right_upper_roll_panel",
+      "bodies": [
+        32,
+        33
+      ],
+      "anchors": [
+        [
+          -0.035,
+          0,
+          0.226
+        ],
+        [
+          -0.163,
+          -0.025,
+          0.035
+        ]
+      ],
+      "normals": [
+        [
+          -1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1
+        ]
+      ],
+      "length_m": 0.295,
+      "radius": 0.008,
+      "bend_limit_m": 0.04,
+      "termination_boot_m": 0.028
+    },
+    {
+      "name": "right_roll_pitch_internal",
+      "side": "right",
+      "source": "right_upper_roll_panel",
+      "target": "right_shoulder_panel",
+      "bodies": [
+        33,
+        34
+      ],
+      "anchors": [
+        [
+          -0.163,
+          -0.035,
+          0.025
+        ],
+        [
+          -0.035,
+          -0.201,
+          -0.02
+        ]
+      ],
+      "normals": [
+        [
+          0,
+          -1,
+          0
+        ],
+        [
+          -1,
+          0,
+          0
+        ]
+      ],
+      "length_m": 0.25,
+      "radius": 0.008,
+      "bend_limit_m": 0.04,
+      "termination_boot_m": 0.028
+    }
+  ],
+  "connectors": [
+    {
+      "name": "left_distribution",
+      "terminals": [
+        "48V+",
+        "48V-",
+        "24V+",
+        "24V-"
+      ],
+      "body": "torso",
+      "role": "power_distribution"
+    },
+    {
+      "name": "left_can_gateway",
+      "terminals": [
+        "CAN_H",
+        "CAN_L"
+      ],
+      "body": "torso",
+      "role": "isolated_can_gateway"
+    },
+    {
+      "name": "left_waist_panel",
+      "terminals": [
+        "V+",
+        "V-",
+        "CAN_H",
+        "CAN_L",
+        "roll_V+",
+        "roll_V-",
+        "pitch_V+",
+        "pitch_V-"
+      ],
+      "body": "left_pedestal",
+      "role": "custom_loom_junction"
+    },
+    {
+      "name": "left_waist_drive",
+      "terminals": [
+        "V+",
+        "V-",
+        "CAN_H",
+        "CAN_L"
+      ],
+      "body": "left_pedestal",
+      "role": "drive",
+      "physical_interfaces": [
+        {
+          "family": "XT30 2+2",
+          "terminals": [
+            "V+",
+            "V-",
+            "CAN_H",
+            "CAN_L"
+          ]
+        }
+      ],
+      "placement_qualification": "rear-face adapter layout; vendor socket clocking unverified"
+    },
+    {
+      "name": "left_upper_roll_panel",
+      "terminals": [
+        "V+",
+        "V-",
+        "CAN_H",
+        "CAN_L",
+        "pitch_V+",
+        "pitch_V-"
+      ],
+      "body": "left_waist",
+      "role": "custom_loom_junction"
+    },
+    {
+      "name": "left_upper_roll_drive",
+      "terminals": [
+        "V+",
+        "V-",
+        "CAN_H",
+        "CAN_L"
+      ],
+      "body": "left_waist",
+      "role": "drive",
+      "physical_interfaces": [
+        {
+          "family": "XT30 2P",
+          "terminals": [
+            "V+",
+            "V-"
+          ]
+        },
+        {
+          "family": "GH125 4P",
+          "terminals": [
+            "CAN_H",
+            "CAN_L"
+          ],
+          "unused_terminals": "verify driver revision; no invented pin numbering"
+        }
+      ],
+      "placement_qualification": "rear-face adapter layout; vendor socket clocking unverified"
+    },
+    {
+      "name": "left_shoulder_panel",
+      "terminals": [
+        "V+",
+        "V-",
+        "CAN_H",
+        "CAN_L"
+      ],
+      "body": "left_upper_roll",
+      "role": "panel"
+    },
+    {
+      "name": "left_shoulder_drive",
+      "terminals": [
+        "V+",
+        "V-",
+        "CAN_H",
+        "CAN_L"
+      ],
+      "body": "left_upper_roll",
+      "role": "drive",
+      "physical_interfaces": [
+        {
+          "family": "XT30 2P",
+          "terminals": [
+            "V+",
+            "V-"
+          ]
+        },
+        {
+          "family": "GH125 4P",
+          "terminals": [
+            "CAN_H",
+            "CAN_L"
+          ],
+          "unused_terminals": "verify driver revision; no invented pin numbering"
+        }
+      ],
+      "placement_qualification": "rear-face adapter layout; vendor socket clocking unverified"
+    },
+    {
+      "name": "left_elbow_panel",
+      "terminals": [
+        "V+",
+        "V-",
+        "CAN_H",
+        "CAN_L"
+      ],
+      "body": "left_shoulder",
+      "role": "panel"
+    },
+    {
+      "name": "left_elbow_drive",
+      "terminals": [
+        "V+",
+        "V-",
+        "CAN_H",
+        "CAN_L"
+      ],
+      "body": "left_shoulder",
+      "role": "drive",
+      "physical_interfaces": [
+        {
+          "family": "XT30 2+2",
+          "terminals": [
+            "V+",
+            "V-",
+            "CAN_H",
+            "CAN_L"
+          ]
+        }
+      ],
+      "placement_qualification": "rear-face adapter layout; vendor socket clocking unverified"
+    },
+    {
+      "name": "left_wrist_roll_panel",
+      "terminals": [
+        "V+",
+        "V-",
+        "CAN_H",
+        "CAN_L"
+      ],
+      "body": "left_elbow",
+      "role": "panel"
+    },
+    {
+      "name": "left_wrist_roll_drive",
+      "terminals": [
+        "V+",
+        "V-",
+        "CAN_H",
+        "CAN_L"
+      ],
+      "body": "left_elbow",
+      "role": "drive",
+      "physical_interfaces": [
+        {
+          "family": "XT30 2+2",
+          "terminals": [
+            "V+",
+            "V-",
+            "CAN_H",
+            "CAN_L"
+          ]
+        }
+      ],
+      "placement_qualification": "rear-face adapter layout; vendor socket clocking unverified"
+    },
+    {
+      "name": "left_wrist_pitch_panel",
+      "terminals": [
+        "V+",
+        "V-",
+        "CAN_H",
+        "CAN_L"
+      ],
+      "body": "left_wrist_roll",
+      "role": "panel"
+    },
+    {
+      "name": "left_wrist_pitch_drive",
+      "terminals": [
+        "V+",
+        "V-",
+        "CAN_H",
+        "CAN_L"
+      ],
+      "body": "left_wrist_roll",
+      "role": "drive",
+      "physical_interfaces": [
+        {
+          "family": "XT30 2+2",
+          "terminals": [
+            "V+",
+            "V-",
+            "CAN_H",
+            "CAN_L"
+          ]
+        }
+      ],
+      "placement_qualification": "rear-face adapter layout; vendor socket clocking unverified"
+    },
+    {
+      "name": "left_tool_roll_panel",
+      "terminals": [
+        "V+",
+        "V-",
+        "CAN_H",
+        "CAN_L"
+      ],
+      "body": "left_wrist_pitch",
+      "role": "panel"
+    },
+    {
+      "name": "left_tool_roll_drive",
+      "terminals": [
+        "V+",
+        "V-",
+        "CAN_H",
+        "CAN_L"
+      ],
+      "body": "left_wrist_pitch",
+      "role": "drive",
+      "physical_interfaces": [
+        {
+          "family": "XT30 2+2",
+          "terminals": [
+            "V+",
+            "V-",
+            "CAN_H",
+            "CAN_L"
+          ]
+        }
+      ],
+      "placement_qualification": "rear-face adapter layout; vendor socket clocking unverified"
+    },
+    {
+      "name": "right_distribution",
+      "terminals": [
+        "48V+",
+        "48V-",
+        "24V+",
+        "24V-"
+      ],
+      "body": "torso",
+      "role": "power_distribution"
+    },
+    {
+      "name": "right_can_gateway",
+      "terminals": [
+        "CAN_H",
+        "CAN_L"
+      ],
+      "body": "torso",
+      "role": "isolated_can_gateway"
+    },
+    {
+      "name": "right_waist_panel",
+      "terminals": [
+        "V+",
+        "V-",
+        "CAN_H",
+        "CAN_L",
+        "roll_V+",
+        "roll_V-",
+        "pitch_V+",
+        "pitch_V-"
+      ],
+      "body": "right_pedestal",
+      "role": "custom_loom_junction"
+    },
+    {
+      "name": "right_waist_drive",
+      "terminals": [
+        "V+",
+        "V-",
+        "CAN_H",
+        "CAN_L"
+      ],
+      "body": "right_pedestal",
+      "role": "drive",
+      "physical_interfaces": [
+        {
+          "family": "XT30 2+2",
+          "terminals": [
+            "V+",
+            "V-",
+            "CAN_H",
+            "CAN_L"
+          ]
+        }
+      ],
+      "placement_qualification": "rear-face adapter layout; vendor socket clocking unverified"
+    },
+    {
+      "name": "right_upper_roll_panel",
+      "terminals": [
+        "V+",
+        "V-",
+        "CAN_H",
+        "CAN_L",
+        "pitch_V+",
+        "pitch_V-"
+      ],
+      "body": "right_waist",
+      "role": "custom_loom_junction"
+    },
+    {
+      "name": "right_upper_roll_drive",
+      "terminals": [
+        "V+",
+        "V-",
+        "CAN_H",
+        "CAN_L"
+      ],
+      "body": "right_waist",
+      "role": "drive",
+      "physical_interfaces": [
+        {
+          "family": "XT30 2P",
+          "terminals": [
+            "V+",
+            "V-"
+          ]
+        },
+        {
+          "family": "GH125 4P",
+          "terminals": [
+            "CAN_H",
+            "CAN_L"
+          ],
+          "unused_terminals": "verify driver revision; no invented pin numbering"
+        }
+      ],
+      "placement_qualification": "rear-face adapter layout; vendor socket clocking unverified"
+    },
+    {
+      "name": "right_shoulder_panel",
+      "terminals": [
+        "V+",
+        "V-",
+        "CAN_H",
+        "CAN_L"
+      ],
+      "body": "right_upper_roll",
+      "role": "panel"
+    },
+    {
+      "name": "right_shoulder_drive",
+      "terminals": [
+        "V+",
+        "V-",
+        "CAN_H",
+        "CAN_L"
+      ],
+      "body": "right_upper_roll",
+      "role": "drive",
+      "physical_interfaces": [
+        {
+          "family": "XT30 2P",
+          "terminals": [
+            "V+",
+            "V-"
+          ]
+        },
+        {
+          "family": "GH125 4P",
+          "terminals": [
+            "CAN_H",
+            "CAN_L"
+          ],
+          "unused_terminals": "verify driver revision; no invented pin numbering"
+        }
+      ],
+      "placement_qualification": "rear-face adapter layout; vendor socket clocking unverified"
+    },
+    {
+      "name": "right_elbow_panel",
+      "terminals": [
+        "V+",
+        "V-",
+        "CAN_H",
+        "CAN_L"
+      ],
+      "body": "right_shoulder",
+      "role": "panel"
+    },
+    {
+      "name": "right_elbow_drive",
+      "terminals": [
+        "V+",
+        "V-",
+        "CAN_H",
+        "CAN_L"
+      ],
+      "body": "right_shoulder",
+      "role": "drive",
+      "physical_interfaces": [
+        {
+          "family": "XT30 2+2",
+          "terminals": [
+            "V+",
+            "V-",
+            "CAN_H",
+            "CAN_L"
+          ]
+        }
+      ],
+      "placement_qualification": "rear-face adapter layout; vendor socket clocking unverified"
+    },
+    {
+      "name": "right_wrist_roll_panel",
+      "terminals": [
+        "V+",
+        "V-",
+        "CAN_H",
+        "CAN_L"
+      ],
+      "body": "right_elbow",
+      "role": "panel"
+    },
+    {
+      "name": "right_wrist_roll_drive",
+      "terminals": [
+        "V+",
+        "V-",
+        "CAN_H",
+        "CAN_L"
+      ],
+      "body": "right_elbow",
+      "role": "drive",
+      "physical_interfaces": [
+        {
+          "family": "XT30 2+2",
+          "terminals": [
+            "V+",
+            "V-",
+            "CAN_H",
+            "CAN_L"
+          ]
+        }
+      ],
+      "placement_qualification": "rear-face adapter layout; vendor socket clocking unverified"
+    },
+    {
+      "name": "right_wrist_pitch_panel",
+      "terminals": [
+        "V+",
+        "V-",
+        "CAN_H",
+        "CAN_L"
+      ],
+      "body": "right_wrist_roll",
+      "role": "panel"
+    },
+    {
+      "name": "right_wrist_pitch_drive",
+      "terminals": [
+        "V+",
+        "V-",
+        "CAN_H",
+        "CAN_L"
+      ],
+      "body": "right_wrist_roll",
+      "role": "drive",
+      "physical_interfaces": [
+        {
+          "family": "XT30 2+2",
+          "terminals": [
+            "V+",
+            "V-",
+            "CAN_H",
+            "CAN_L"
+          ]
+        }
+      ],
+      "placement_qualification": "rear-face adapter layout; vendor socket clocking unverified"
+    },
+    {
+      "name": "right_tool_roll_panel",
+      "terminals": [
+        "V+",
+        "V-",
+        "CAN_H",
+        "CAN_L"
+      ],
+      "body": "right_wrist_pitch",
+      "role": "panel"
+    },
+    {
+      "name": "right_tool_roll_drive",
+      "terminals": [
+        "V+",
+        "V-",
+        "CAN_H",
+        "CAN_L"
+      ],
+      "body": "right_wrist_pitch",
+      "role": "drive",
+      "physical_interfaces": [
+        {
+          "family": "XT30 2+2",
+          "terminals": [
+            "V+",
+            "V-",
+            "CAN_H",
+            "CAN_L"
+          ]
+        }
+      ],
+      "placement_qualification": "rear-face adapter layout; vendor socket clocking unverified"
+    }
+  ],
+  "wires": [
+    {
+      "source": [
+        "left_distribution",
+        "48V+"
+      ],
+      "target": [
+        "left_waist_panel",
+        "V+"
+      ],
+      "circuit": "power"
+    },
+    {
+      "source": [
+        "left_waist_panel",
+        "V+"
+      ],
+      "target": [
+        "left_waist_drive",
+        "V+"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "left_distribution",
+        "48V-"
+      ],
+      "target": [
+        "left_waist_panel",
+        "V-"
+      ],
+      "circuit": "power"
+    },
+    {
+      "source": [
+        "left_waist_panel",
+        "V-"
+      ],
+      "target": [
+        "left_waist_drive",
+        "V-"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "left_can_gateway",
+        "CAN_H"
+      ],
+      "target": [
+        "left_waist_panel",
+        "CAN_H"
+      ],
+      "circuit": "can_trunk"
+    },
+    {
+      "source": [
+        "left_waist_panel",
+        "CAN_H"
+      ],
+      "target": [
+        "left_waist_drive",
+        "CAN_H"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "left_can_gateway",
+        "CAN_L"
+      ],
+      "target": [
+        "left_waist_panel",
+        "CAN_L"
+      ],
+      "circuit": "can_trunk"
+    },
+    {
+      "source": [
+        "left_waist_panel",
+        "CAN_L"
+      ],
+      "target": [
+        "left_waist_drive",
+        "CAN_L"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "left_distribution",
+        "48V+"
+      ],
+      "target": [
+        "left_waist_panel",
+        "roll_V+"
+      ],
+      "circuit": "power"
+    },
+    {
+      "source": [
+        "left_waist_panel",
+        "roll_V+"
+      ],
+      "target": [
+        "left_upper_roll_panel",
+        "V+"
+      ],
+      "circuit": "power",
+      "route_ids": [
+        "left_yaw_roll_internal"
+      ]
+    },
+    {
+      "source": [
+        "left_upper_roll_panel",
+        "V+"
+      ],
+      "target": [
+        "left_upper_roll_drive",
+        "V+"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "left_distribution",
+        "48V-"
+      ],
+      "target": [
+        "left_waist_panel",
+        "roll_V-"
+      ],
+      "circuit": "power"
+    },
+    {
+      "source": [
+        "left_waist_panel",
+        "roll_V-"
+      ],
+      "target": [
+        "left_upper_roll_panel",
+        "V-"
+      ],
+      "circuit": "power",
+      "route_ids": [
+        "left_yaw_roll_internal"
+      ]
+    },
+    {
+      "source": [
+        "left_upper_roll_panel",
+        "V-"
+      ],
+      "target": [
+        "left_upper_roll_drive",
+        "V-"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "left_waist_panel",
+        "CAN_H"
+      ],
+      "target": [
+        "left_upper_roll_panel",
+        "CAN_H"
+      ],
+      "circuit": "can_trunk",
+      "route_ids": [
+        "left_yaw_roll_internal"
+      ]
+    },
+    {
+      "source": [
+        "left_upper_roll_panel",
+        "CAN_H"
+      ],
+      "target": [
+        "left_upper_roll_drive",
+        "CAN_H"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "left_waist_panel",
+        "CAN_L"
+      ],
+      "target": [
+        "left_upper_roll_panel",
+        "CAN_L"
+      ],
+      "circuit": "can_trunk",
+      "route_ids": [
+        "left_yaw_roll_internal"
+      ]
+    },
+    {
+      "source": [
+        "left_upper_roll_panel",
+        "CAN_L"
+      ],
+      "target": [
+        "left_upper_roll_drive",
+        "CAN_L"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "left_distribution",
+        "48V+"
+      ],
+      "target": [
+        "left_waist_panel",
+        "pitch_V+"
+      ],
+      "circuit": "power"
+    },
+    {
+      "source": [
+        "left_waist_panel",
+        "pitch_V+"
+      ],
+      "target": [
+        "left_upper_roll_panel",
+        "pitch_V+"
+      ],
+      "circuit": "power",
+      "route_ids": [
+        "left_yaw_roll_internal"
+      ]
+    },
+    {
+      "source": [
+        "left_upper_roll_panel",
+        "pitch_V+"
+      ],
+      "target": [
+        "left_shoulder_panel",
+        "V+"
+      ],
+      "circuit": "power",
+      "route_ids": [
+        "left_roll_pitch_internal"
+      ]
+    },
+    {
+      "source": [
+        "left_shoulder_panel",
+        "V+"
+      ],
+      "target": [
+        "left_shoulder_drive",
+        "V+"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "left_distribution",
+        "48V-"
+      ],
+      "target": [
+        "left_waist_panel",
+        "pitch_V-"
+      ],
+      "circuit": "power"
+    },
+    {
+      "source": [
+        "left_waist_panel",
+        "pitch_V-"
+      ],
+      "target": [
+        "left_upper_roll_panel",
+        "pitch_V-"
+      ],
+      "circuit": "power",
+      "route_ids": [
+        "left_yaw_roll_internal"
+      ]
+    },
+    {
+      "source": [
+        "left_upper_roll_panel",
+        "pitch_V-"
+      ],
+      "target": [
+        "left_shoulder_panel",
+        "V-"
+      ],
+      "circuit": "power",
+      "route_ids": [
+        "left_roll_pitch_internal"
+      ]
+    },
+    {
+      "source": [
+        "left_shoulder_panel",
+        "V-"
+      ],
+      "target": [
+        "left_shoulder_drive",
+        "V-"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "left_upper_roll_panel",
+        "CAN_H"
+      ],
+      "target": [
+        "left_shoulder_panel",
+        "CAN_H"
+      ],
+      "circuit": "can_trunk",
+      "route_ids": [
+        "left_roll_pitch_internal"
+      ]
+    },
+    {
+      "source": [
+        "left_shoulder_panel",
+        "CAN_H"
+      ],
+      "target": [
+        "left_shoulder_drive",
+        "CAN_H"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "left_upper_roll_panel",
+        "CAN_L"
+      ],
+      "target": [
+        "left_shoulder_panel",
+        "CAN_L"
+      ],
+      "circuit": "can_trunk",
+      "route_ids": [
+        "left_roll_pitch_internal"
+      ]
+    },
+    {
+      "source": [
+        "left_shoulder_panel",
+        "CAN_L"
+      ],
+      "target": [
+        "left_shoulder_drive",
+        "CAN_L"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "left_distribution",
+        "48V+"
+      ],
+      "target": [
+        "left_elbow_panel",
+        "V+"
+      ],
+      "circuit": "power"
+    },
+    {
+      "source": [
+        "left_elbow_panel",
+        "V+"
+      ],
+      "target": [
+        "left_elbow_drive",
+        "V+"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "left_distribution",
+        "48V-"
+      ],
+      "target": [
+        "left_elbow_panel",
+        "V-"
+      ],
+      "circuit": "power"
+    },
+    {
+      "source": [
+        "left_elbow_panel",
+        "V-"
+      ],
+      "target": [
+        "left_elbow_drive",
+        "V-"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "left_shoulder_panel",
+        "CAN_H"
+      ],
+      "target": [
+        "left_elbow_panel",
+        "CAN_H"
+      ],
+      "circuit": "can_trunk"
+    },
+    {
+      "source": [
+        "left_elbow_panel",
+        "CAN_H"
+      ],
+      "target": [
+        "left_elbow_drive",
+        "CAN_H"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "left_shoulder_panel",
+        "CAN_L"
+      ],
+      "target": [
+        "left_elbow_panel",
+        "CAN_L"
+      ],
+      "circuit": "can_trunk"
+    },
+    {
+      "source": [
+        "left_elbow_panel",
+        "CAN_L"
+      ],
+      "target": [
+        "left_elbow_drive",
+        "CAN_L"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "left_distribution",
+        "24V+"
+      ],
+      "target": [
+        "left_wrist_roll_panel",
+        "V+"
+      ],
+      "circuit": "power"
+    },
+    {
+      "source": [
+        "left_wrist_roll_panel",
+        "V+"
+      ],
+      "target": [
+        "left_wrist_roll_drive",
+        "V+"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "left_distribution",
+        "24V-"
+      ],
+      "target": [
+        "left_wrist_roll_panel",
+        "V-"
+      ],
+      "circuit": "power"
+    },
+    {
+      "source": [
+        "left_wrist_roll_panel",
+        "V-"
+      ],
+      "target": [
+        "left_wrist_roll_drive",
+        "V-"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "left_elbow_panel",
+        "CAN_H"
+      ],
+      "target": [
+        "left_wrist_roll_panel",
+        "CAN_H"
+      ],
+      "circuit": "can_trunk"
+    },
+    {
+      "source": [
+        "left_wrist_roll_panel",
+        "CAN_H"
+      ],
+      "target": [
+        "left_wrist_roll_drive",
+        "CAN_H"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "left_elbow_panel",
+        "CAN_L"
+      ],
+      "target": [
+        "left_wrist_roll_panel",
+        "CAN_L"
+      ],
+      "circuit": "can_trunk"
+    },
+    {
+      "source": [
+        "left_wrist_roll_panel",
+        "CAN_L"
+      ],
+      "target": [
+        "left_wrist_roll_drive",
+        "CAN_L"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "left_distribution",
+        "24V+"
+      ],
+      "target": [
+        "left_wrist_pitch_panel",
+        "V+"
+      ],
+      "circuit": "power"
+    },
+    {
+      "source": [
+        "left_wrist_pitch_panel",
+        "V+"
+      ],
+      "target": [
+        "left_wrist_pitch_drive",
+        "V+"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "left_distribution",
+        "24V-"
+      ],
+      "target": [
+        "left_wrist_pitch_panel",
+        "V-"
+      ],
+      "circuit": "power"
+    },
+    {
+      "source": [
+        "left_wrist_pitch_panel",
+        "V-"
+      ],
+      "target": [
+        "left_wrist_pitch_drive",
+        "V-"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "left_wrist_roll_panel",
+        "CAN_H"
+      ],
+      "target": [
+        "left_wrist_pitch_panel",
+        "CAN_H"
+      ],
+      "circuit": "can_trunk"
+    },
+    {
+      "source": [
+        "left_wrist_pitch_panel",
+        "CAN_H"
+      ],
+      "target": [
+        "left_wrist_pitch_drive",
+        "CAN_H"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "left_wrist_roll_panel",
+        "CAN_L"
+      ],
+      "target": [
+        "left_wrist_pitch_panel",
+        "CAN_L"
+      ],
+      "circuit": "can_trunk"
+    },
+    {
+      "source": [
+        "left_wrist_pitch_panel",
+        "CAN_L"
+      ],
+      "target": [
+        "left_wrist_pitch_drive",
+        "CAN_L"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "left_distribution",
+        "24V+"
+      ],
+      "target": [
+        "left_tool_roll_panel",
+        "V+"
+      ],
+      "circuit": "power"
+    },
+    {
+      "source": [
+        "left_tool_roll_panel",
+        "V+"
+      ],
+      "target": [
+        "left_tool_roll_drive",
+        "V+"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "left_distribution",
+        "24V-"
+      ],
+      "target": [
+        "left_tool_roll_panel",
+        "V-"
+      ],
+      "circuit": "power"
+    },
+    {
+      "source": [
+        "left_tool_roll_panel",
+        "V-"
+      ],
+      "target": [
+        "left_tool_roll_drive",
+        "V-"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "left_wrist_pitch_panel",
+        "CAN_H"
+      ],
+      "target": [
+        "left_tool_roll_panel",
+        "CAN_H"
+      ],
+      "circuit": "can_trunk"
+    },
+    {
+      "source": [
+        "left_tool_roll_panel",
+        "CAN_H"
+      ],
+      "target": [
+        "left_tool_roll_drive",
+        "CAN_H"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "left_wrist_pitch_panel",
+        "CAN_L"
+      ],
+      "target": [
+        "left_tool_roll_panel",
+        "CAN_L"
+      ],
+      "circuit": "can_trunk"
+    },
+    {
+      "source": [
+        "left_tool_roll_panel",
+        "CAN_L"
+      ],
+      "target": [
+        "left_tool_roll_drive",
+        "CAN_L"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "right_distribution",
+        "48V+"
+      ],
+      "target": [
+        "right_waist_panel",
+        "V+"
+      ],
+      "circuit": "power"
+    },
+    {
+      "source": [
+        "right_waist_panel",
+        "V+"
+      ],
+      "target": [
+        "right_waist_drive",
+        "V+"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "right_distribution",
+        "48V-"
+      ],
+      "target": [
+        "right_waist_panel",
+        "V-"
+      ],
+      "circuit": "power"
+    },
+    {
+      "source": [
+        "right_waist_panel",
+        "V-"
+      ],
+      "target": [
+        "right_waist_drive",
+        "V-"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "right_can_gateway",
+        "CAN_H"
+      ],
+      "target": [
+        "right_waist_panel",
+        "CAN_H"
+      ],
+      "circuit": "can_trunk"
+    },
+    {
+      "source": [
+        "right_waist_panel",
+        "CAN_H"
+      ],
+      "target": [
+        "right_waist_drive",
+        "CAN_H"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "right_can_gateway",
+        "CAN_L"
+      ],
+      "target": [
+        "right_waist_panel",
+        "CAN_L"
+      ],
+      "circuit": "can_trunk"
+    },
+    {
+      "source": [
+        "right_waist_panel",
+        "CAN_L"
+      ],
+      "target": [
+        "right_waist_drive",
+        "CAN_L"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "right_distribution",
+        "48V+"
+      ],
+      "target": [
+        "right_waist_panel",
+        "roll_V+"
+      ],
+      "circuit": "power"
+    },
+    {
+      "source": [
+        "right_waist_panel",
+        "roll_V+"
+      ],
+      "target": [
+        "right_upper_roll_panel",
+        "V+"
+      ],
+      "circuit": "power",
+      "route_ids": [
+        "right_yaw_roll_internal"
+      ]
+    },
+    {
+      "source": [
+        "right_upper_roll_panel",
+        "V+"
+      ],
+      "target": [
+        "right_upper_roll_drive",
+        "V+"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "right_distribution",
+        "48V-"
+      ],
+      "target": [
+        "right_waist_panel",
+        "roll_V-"
+      ],
+      "circuit": "power"
+    },
+    {
+      "source": [
+        "right_waist_panel",
+        "roll_V-"
+      ],
+      "target": [
+        "right_upper_roll_panel",
+        "V-"
+      ],
+      "circuit": "power",
+      "route_ids": [
+        "right_yaw_roll_internal"
+      ]
+    },
+    {
+      "source": [
+        "right_upper_roll_panel",
+        "V-"
+      ],
+      "target": [
+        "right_upper_roll_drive",
+        "V-"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "right_waist_panel",
+        "CAN_H"
+      ],
+      "target": [
+        "right_upper_roll_panel",
+        "CAN_H"
+      ],
+      "circuit": "can_trunk",
+      "route_ids": [
+        "right_yaw_roll_internal"
+      ]
+    },
+    {
+      "source": [
+        "right_upper_roll_panel",
+        "CAN_H"
+      ],
+      "target": [
+        "right_upper_roll_drive",
+        "CAN_H"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "right_waist_panel",
+        "CAN_L"
+      ],
+      "target": [
+        "right_upper_roll_panel",
+        "CAN_L"
+      ],
+      "circuit": "can_trunk",
+      "route_ids": [
+        "right_yaw_roll_internal"
+      ]
+    },
+    {
+      "source": [
+        "right_upper_roll_panel",
+        "CAN_L"
+      ],
+      "target": [
+        "right_upper_roll_drive",
+        "CAN_L"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "right_distribution",
+        "48V+"
+      ],
+      "target": [
+        "right_waist_panel",
+        "pitch_V+"
+      ],
+      "circuit": "power"
+    },
+    {
+      "source": [
+        "right_waist_panel",
+        "pitch_V+"
+      ],
+      "target": [
+        "right_upper_roll_panel",
+        "pitch_V+"
+      ],
+      "circuit": "power",
+      "route_ids": [
+        "right_yaw_roll_internal"
+      ]
+    },
+    {
+      "source": [
+        "right_upper_roll_panel",
+        "pitch_V+"
+      ],
+      "target": [
+        "right_shoulder_panel",
+        "V+"
+      ],
+      "circuit": "power",
+      "route_ids": [
+        "right_roll_pitch_internal"
+      ]
+    },
+    {
+      "source": [
+        "right_shoulder_panel",
+        "V+"
+      ],
+      "target": [
+        "right_shoulder_drive",
+        "V+"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "right_distribution",
+        "48V-"
+      ],
+      "target": [
+        "right_waist_panel",
+        "pitch_V-"
+      ],
+      "circuit": "power"
+    },
+    {
+      "source": [
+        "right_waist_panel",
+        "pitch_V-"
+      ],
+      "target": [
+        "right_upper_roll_panel",
+        "pitch_V-"
+      ],
+      "circuit": "power",
+      "route_ids": [
+        "right_yaw_roll_internal"
+      ]
+    },
+    {
+      "source": [
+        "right_upper_roll_panel",
+        "pitch_V-"
+      ],
+      "target": [
+        "right_shoulder_panel",
+        "V-"
+      ],
+      "circuit": "power",
+      "route_ids": [
+        "right_roll_pitch_internal"
+      ]
+    },
+    {
+      "source": [
+        "right_shoulder_panel",
+        "V-"
+      ],
+      "target": [
+        "right_shoulder_drive",
+        "V-"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "right_upper_roll_panel",
+        "CAN_H"
+      ],
+      "target": [
+        "right_shoulder_panel",
+        "CAN_H"
+      ],
+      "circuit": "can_trunk",
+      "route_ids": [
+        "right_roll_pitch_internal"
+      ]
+    },
+    {
+      "source": [
+        "right_shoulder_panel",
+        "CAN_H"
+      ],
+      "target": [
+        "right_shoulder_drive",
+        "CAN_H"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "right_upper_roll_panel",
+        "CAN_L"
+      ],
+      "target": [
+        "right_shoulder_panel",
+        "CAN_L"
+      ],
+      "circuit": "can_trunk",
+      "route_ids": [
+        "right_roll_pitch_internal"
+      ]
+    },
+    {
+      "source": [
+        "right_shoulder_panel",
+        "CAN_L"
+      ],
+      "target": [
+        "right_shoulder_drive",
+        "CAN_L"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "right_distribution",
+        "48V+"
+      ],
+      "target": [
+        "right_elbow_panel",
+        "V+"
+      ],
+      "circuit": "power"
+    },
+    {
+      "source": [
+        "right_elbow_panel",
+        "V+"
+      ],
+      "target": [
+        "right_elbow_drive",
+        "V+"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "right_distribution",
+        "48V-"
+      ],
+      "target": [
+        "right_elbow_panel",
+        "V-"
+      ],
+      "circuit": "power"
+    },
+    {
+      "source": [
+        "right_elbow_panel",
+        "V-"
+      ],
+      "target": [
+        "right_elbow_drive",
+        "V-"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "right_shoulder_panel",
+        "CAN_H"
+      ],
+      "target": [
+        "right_elbow_panel",
+        "CAN_H"
+      ],
+      "circuit": "can_trunk"
+    },
+    {
+      "source": [
+        "right_elbow_panel",
+        "CAN_H"
+      ],
+      "target": [
+        "right_elbow_drive",
+        "CAN_H"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "right_shoulder_panel",
+        "CAN_L"
+      ],
+      "target": [
+        "right_elbow_panel",
+        "CAN_L"
+      ],
+      "circuit": "can_trunk"
+    },
+    {
+      "source": [
+        "right_elbow_panel",
+        "CAN_L"
+      ],
+      "target": [
+        "right_elbow_drive",
+        "CAN_L"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "right_distribution",
+        "24V+"
+      ],
+      "target": [
+        "right_wrist_roll_panel",
+        "V+"
+      ],
+      "circuit": "power"
+    },
+    {
+      "source": [
+        "right_wrist_roll_panel",
+        "V+"
+      ],
+      "target": [
+        "right_wrist_roll_drive",
+        "V+"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "right_distribution",
+        "24V-"
+      ],
+      "target": [
+        "right_wrist_roll_panel",
+        "V-"
+      ],
+      "circuit": "power"
+    },
+    {
+      "source": [
+        "right_wrist_roll_panel",
+        "V-"
+      ],
+      "target": [
+        "right_wrist_roll_drive",
+        "V-"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "right_elbow_panel",
+        "CAN_H"
+      ],
+      "target": [
+        "right_wrist_roll_panel",
+        "CAN_H"
+      ],
+      "circuit": "can_trunk"
+    },
+    {
+      "source": [
+        "right_wrist_roll_panel",
+        "CAN_H"
+      ],
+      "target": [
+        "right_wrist_roll_drive",
+        "CAN_H"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "right_elbow_panel",
+        "CAN_L"
+      ],
+      "target": [
+        "right_wrist_roll_panel",
+        "CAN_L"
+      ],
+      "circuit": "can_trunk"
+    },
+    {
+      "source": [
+        "right_wrist_roll_panel",
+        "CAN_L"
+      ],
+      "target": [
+        "right_wrist_roll_drive",
+        "CAN_L"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "right_distribution",
+        "24V+"
+      ],
+      "target": [
+        "right_wrist_pitch_panel",
+        "V+"
+      ],
+      "circuit": "power"
+    },
+    {
+      "source": [
+        "right_wrist_pitch_panel",
+        "V+"
+      ],
+      "target": [
+        "right_wrist_pitch_drive",
+        "V+"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "right_distribution",
+        "24V-"
+      ],
+      "target": [
+        "right_wrist_pitch_panel",
+        "V-"
+      ],
+      "circuit": "power"
+    },
+    {
+      "source": [
+        "right_wrist_pitch_panel",
+        "V-"
+      ],
+      "target": [
+        "right_wrist_pitch_drive",
+        "V-"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "right_wrist_roll_panel",
+        "CAN_H"
+      ],
+      "target": [
+        "right_wrist_pitch_panel",
+        "CAN_H"
+      ],
+      "circuit": "can_trunk"
+    },
+    {
+      "source": [
+        "right_wrist_pitch_panel",
+        "CAN_H"
+      ],
+      "target": [
+        "right_wrist_pitch_drive",
+        "CAN_H"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "right_wrist_roll_panel",
+        "CAN_L"
+      ],
+      "target": [
+        "right_wrist_pitch_panel",
+        "CAN_L"
+      ],
+      "circuit": "can_trunk"
+    },
+    {
+      "source": [
+        "right_wrist_pitch_panel",
+        "CAN_L"
+      ],
+      "target": [
+        "right_wrist_pitch_drive",
+        "CAN_L"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "right_distribution",
+        "24V+"
+      ],
+      "target": [
+        "right_tool_roll_panel",
+        "V+"
+      ],
+      "circuit": "power"
+    },
+    {
+      "source": [
+        "right_tool_roll_panel",
+        "V+"
+      ],
+      "target": [
+        "right_tool_roll_drive",
+        "V+"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "right_distribution",
+        "24V-"
+      ],
+      "target": [
+        "right_tool_roll_panel",
+        "V-"
+      ],
+      "circuit": "power"
+    },
+    {
+      "source": [
+        "right_tool_roll_panel",
+        "V-"
+      ],
+      "target": [
+        "right_tool_roll_drive",
+        "V-"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "right_wrist_pitch_panel",
+        "CAN_H"
+      ],
+      "target": [
+        "right_tool_roll_panel",
+        "CAN_H"
+      ],
+      "circuit": "can_trunk"
+    },
+    {
+      "source": [
+        "right_tool_roll_panel",
+        "CAN_H"
+      ],
+      "target": [
+        "right_tool_roll_drive",
+        "CAN_H"
+      ],
+      "circuit": "fixed_pigtail"
+    },
+    {
+      "source": [
+        "right_wrist_pitch_panel",
+        "CAN_L"
+      ],
+      "target": [
+        "right_tool_roll_panel",
+        "CAN_L"
+      ],
+      "circuit": "can_trunk"
+    },
+    {
+      "source": [
+        "right_tool_roll_panel",
+        "CAN_L"
+      ],
+      "target": [
+        "right_tool_roll_drive",
+        "CAN_L"
+      ],
+      "circuit": "fixed_pigtail"
+    }
+  ],
+  "devices": [
+    {
+      "name": "left_waist",
+      "connector": "left_waist_drive",
+      "panel": "left_waist_panel",
+      "voltage": 48,
+      "can_bus": "left",
+      "can_id": 1,
+      "model": "CubeMars AK60-39 V3.0 KV80",
+      "panel_body": "left_pedestal",
+      "joint_index": 15
+    },
+    {
+      "name": "left_upper_roll",
+      "connector": "left_upper_roll_drive",
+      "panel": "left_upper_roll_panel",
+      "voltage": 48,
+      "can_bus": "left",
+      "can_id": 2,
+      "model": "CubeMars AK80-64 KV80",
+      "panel_body": "left_waist",
+      "joint_index": 16
+    },
+    {
+      "name": "left_shoulder",
+      "connector": "left_shoulder_drive",
+      "panel": "left_shoulder_panel",
+      "voltage": 48,
+      "can_bus": "left",
+      "can_id": 3,
+      "model": "CubeMars AK80-64 KV80",
+      "panel_body": "left_upper_roll",
+      "joint_index": 17
+    },
+    {
+      "name": "left_elbow",
+      "connector": "left_elbow_drive",
+      "panel": "left_elbow_panel",
+      "voltage": 48,
+      "can_bus": "left",
+      "can_id": 4,
+      "model": "CubeMars AK60-39 V3.0 KV80",
+      "panel_body": "left_shoulder",
+      "joint_index": 18
+    },
+    {
+      "name": "left_wrist_roll",
+      "connector": "left_wrist_roll_drive",
+      "panel": "left_wrist_roll_panel",
+      "voltage": 24,
+      "can_bus": "left",
+      "can_id": 5,
+      "model": "CubeMars AK45-36 V3.0 KV80",
+      "panel_body": "left_elbow",
+      "joint_index": 19
+    },
+    {
+      "name": "left_wrist_pitch",
+      "connector": "left_wrist_pitch_drive",
+      "panel": "left_wrist_pitch_panel",
+      "voltage": 24,
+      "can_bus": "left",
+      "can_id": 6,
+      "model": "CubeMars AK45-36 V3.0 KV80",
+      "panel_body": "left_wrist_roll",
+      "joint_index": 20
+    },
+    {
+      "name": "left_tool_roll",
+      "connector": "left_tool_roll_drive",
+      "panel": "left_tool_roll_panel",
+      "voltage": 24,
+      "can_bus": "left",
+      "can_id": 7,
+      "model": "CubeMars AK45-36 V3.0 KV80",
+      "panel_body": "left_wrist_pitch",
+      "joint_index": 21
+    },
+    {
+      "name": "right_waist",
+      "connector": "right_waist_drive",
+      "panel": "right_waist_panel",
+      "voltage": 48,
+      "can_bus": "right",
+      "can_id": 1,
+      "model": "CubeMars AK60-39 V3.0 KV80",
+      "panel_body": "right_pedestal",
+      "joint_index": 22
+    },
+    {
+      "name": "right_upper_roll",
+      "connector": "right_upper_roll_drive",
+      "panel": "right_upper_roll_panel",
+      "voltage": 48,
+      "can_bus": "right",
+      "can_id": 2,
+      "model": "CubeMars AK80-64 KV80",
+      "panel_body": "right_waist",
+      "joint_index": 23
+    },
+    {
+      "name": "right_shoulder",
+      "connector": "right_shoulder_drive",
+      "panel": "right_shoulder_panel",
+      "voltage": 48,
+      "can_bus": "right",
+      "can_id": 3,
+      "model": "CubeMars AK80-64 KV80",
+      "panel_body": "right_upper_roll",
+      "joint_index": 24
+    },
+    {
+      "name": "right_elbow",
+      "connector": "right_elbow_drive",
+      "panel": "right_elbow_panel",
+      "voltage": 48,
+      "can_bus": "right",
+      "can_id": 4,
+      "model": "CubeMars AK60-39 V3.0 KV80",
+      "panel_body": "right_shoulder",
+      "joint_index": 25
+    },
+    {
+      "name": "right_wrist_roll",
+      "connector": "right_wrist_roll_drive",
+      "panel": "right_wrist_roll_panel",
+      "voltage": 24,
+      "can_bus": "right",
+      "can_id": 5,
+      "model": "CubeMars AK45-36 V3.0 KV80",
+      "panel_body": "right_elbow",
+      "joint_index": 26
+    },
+    {
+      "name": "right_wrist_pitch",
+      "connector": "right_wrist_pitch_drive",
+      "panel": "right_wrist_pitch_panel",
+      "voltage": 24,
+      "can_bus": "right",
+      "can_id": 6,
+      "model": "CubeMars AK45-36 V3.0 KV80",
+      "panel_body": "right_wrist_roll",
+      "joint_index": 27
+    },
+    {
+      "name": "right_tool_roll",
+      "connector": "right_tool_roll_drive",
+      "panel": "right_tool_roll_panel",
+      "voltage": 24,
+      "can_bus": "right",
+      "can_id": 7,
+      "model": "CubeMars AK45-36 V3.0 KV80",
+      "panel_body": "right_wrist_pitch",
+      "joint_index": 28
+    }
+  ],
+  "terminations": [
+    {
+      "connector": "left_can_gateway",
+      "resistance_ohm": 120
+    },
+    {
+      "connector": "left_tool_roll_panel",
+      "resistance_ohm": 120
+    },
+    {
+      "connector": "right_can_gateway",
+      "resistance_ohm": 120
+    },
+    {
+      "connector": "right_tool_roll_panel",
+      "resistance_ohm": 120
+    }
+  ],
+  "source": "https://img.cubemars.com/products/cubemars-product-parameter/AK-Series-Module-Product-Manual-v3.0.0-Download.pdf",
+  "qualification": {
+    "logical_topology": "validated by connectivity checks",
+    "physical_pin_numbering": "verify device revision and terminal legends",
+    "branch_protection": "hardware BOM and bus-current measurements required",
+    "complete_3d_branch_routing": false,
+    "shoulder_interconnect_geometry": true,
+    "moving_cable": "custom 16 mm microloom envelope, 40 mm bend requirement; supplier qualification pending"
+  }
+}

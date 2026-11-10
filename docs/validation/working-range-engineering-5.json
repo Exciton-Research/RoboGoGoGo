@@ -1,0 +1,316 @@
+{
+  "revision": "engineering-5",
+  "status": "failed",
+  "seed": 43,
+  "ranges_rad": {
+    "waist": [
+      -0.35,
+      0.35
+    ],
+    "upper_roll": [
+      0.0,
+      0.4
+    ],
+    "shoulder": [
+      0.25,
+      1.2
+    ],
+    "elbow": [
+      -1.6,
+      -0.3
+    ],
+    "wrist_roll": [
+      -0.25,
+      0.25
+    ],
+    "wrist_pitch": [
+      -0.25,
+      0.25
+    ],
+    "tool_roll": [
+      -0.25,
+      0.25
+    ]
+  },
+  "roll_convention": "positive outward; negate right upper_roll",
+  "counts": {
+    "samples": 594,
+    "rigid_clear": 593,
+    "harness_clear": 594,
+    "both_clear": 593
+  },
+  "margin_m": 0.012,
+  "minimum_guard_equivalent_clearance_m": -0.06599558437008472,
+  "failures": [
+    {
+      "case": "random:169",
+      "pair": [
+        "left_hand",
+        "base_left"
+      ],
+      "clearance_m": -0.06599558437008472,
+      "q": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0499999523162842,
+        -2.0999999046325684,
+        1.0499999523162842,
+        -0.2923322916030884,
+        0.08080672472715378,
+        1.1762677431106567,
+        -0.3609195351600647,
+        0.18595966696739197,
+        -0.0005404046387411654,
+        -0.026921693235635757,
+        -0.20230481028556824,
+        -0.3392714560031891,
+        0.7340945601463318,
+        -1.284424066543579,
+        0.1269501894712448,
+        -0.2123269885778427,
+        0.16424918174743652,
+        0.0,
+        0.0
+      ]
+    }
+  ],
+  "limitations": [
+    "Finite sampled configurations; no continuous-space or full nominal-range certificate",
+    "Sampled cable centreline geometry; no cable force or fatigue simulation",
+    "Vendor socket clocking, microloom flex ratings and electrical protection are unqualified",
+    "Service covers are envelope models with mating openings, not manufacturing CAD"
+  ],
+  "fixed_wiring": {
+    "valid": true,
+    "installation_gap_m": 0.001,
+    "leads": [
+      {
+        "name": "left_waist_drive_lead_0",
+        "length_m": 0.11838153445834168,
+        "minimum_gap_m": 0.0016129037429546507,
+        "nearest": "left_waist_device_port_0"
+      },
+      {
+        "name": "left_upper_roll_drive_lead_0",
+        "length_m": 0.1180879245263663,
+        "minimum_gap_m": 0.0018905907837442433,
+        "nearest": "left_upper_roll_device_port_0"
+      },
+      {
+        "name": "left_upper_roll_drive_lead_1",
+        "length_m": 0.14873599577931176,
+        "minimum_gap_m": 0.004176102133328885,
+        "nearest": "left_upper_roll_power_can_connector"
+      },
+      {
+        "name": "left_shoulder_drive_lead_0",
+        "length_m": 0.13811179276177202,
+        "minimum_gap_m": 0.0011524146960208352,
+        "nearest": "left_shoulder_drive_lead_1_4"
+      },
+      {
+        "name": "left_shoulder_drive_lead_1",
+        "length_m": 0.12637636445169076,
+        "minimum_gap_m": 0.0011524146960208348,
+        "nearest": "left_shoulder_drive_lead_0_13"
+      },
+      {
+        "name": "right_waist_drive_lead_0",
+        "length_m": 0.11838153445834168,
+        "minimum_gap_m": 0.0016129037429546507,
+        "nearest": "right_waist_device_port_0"
+      },
+      {
+        "name": "right_upper_roll_drive_lead_0",
+        "length_m": 0.13334250541667833,
+        "minimum_gap_m": 0.0016446568581092542,
+        "nearest": "right_upper_roll_device_port_0"
+      },
+      {
+        "name": "right_upper_roll_drive_lead_1",
+        "length_m": 0.14048661444992183,
+        "minimum_gap_m": 0.0025030843727430188,
+        "nearest": "right_upper_roll_drive_lead_0_5"
+      },
+      {
+        "name": "right_shoulder_drive_lead_0",
+        "length_m": 0.14627056436792832,
+        "minimum_gap_m": 0.001723468557836126,
+        "nearest": "right_shoulder_device_port_0"
+      },
+      {
+        "name": "right_shoulder_drive_lead_1",
+        "length_m": 0.10735983782182103,
+        "minimum_gap_m": 0.0044038193500983615,
+        "nearest": "right_shoulder_power_can_connector"
+      }
+    ],
+    "failures": [],
+    "scope": "fixed leads, same-host hardware and inner cavities; supplier qualification pending"
+  },
+  "shoulder_branches": [
+    {
+      "name": "left_yaw_roll_internal",
+      "side": "left",
+      "source": "left_waist_panel",
+      "target": "left_upper_roll_panel",
+      "bodies": [
+        16,
+        17
+      ],
+      "anchors": [
+        [
+          -0.035,
+          0,
+          0.226
+        ],
+        [
+          -0.163,
+          0.025,
+          0.035
+        ]
+      ],
+      "normals": [
+        [
+          -1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1
+        ]
+      ],
+      "length_m": 0.295,
+      "radius": 0.008,
+      "bend_limit_m": 0.04,
+      "termination_boot_m": 0.028
+    },
+    {
+      "name": "left_roll_pitch_internal",
+      "side": "left",
+      "source": "left_upper_roll_panel",
+      "target": "left_shoulder_panel",
+      "bodies": [
+        17,
+        18
+      ],
+      "anchors": [
+        [
+          -0.163,
+          0.035,
+          0.025
+        ],
+        [
+          -0.035,
+          0.201,
+          0.02
+        ]
+      ],
+      "normals": [
+        [
+          0,
+          1,
+          0
+        ],
+        [
+          -1,
+          0,
+          0
+        ]
+      ],
+      "length_m": 0.25,
+      "radius": 0.008,
+      "bend_limit_m": 0.04,
+      "termination_boot_m": 0.028
+    },
+    {
+      "name": "right_yaw_roll_internal",
+      "side": "right",
+      "source": "right_waist_panel",
+      "target": "right_upper_roll_panel",
+      "bodies": [
+        32,
+        33
+      ],
+      "anchors": [
+        [
+          -0.035,
+          0,
+          0.226
+        ],
+        [
+          -0.163,
+          -0.025,
+          0.035
+        ]
+      ],
+      "normals": [
+        [
+          -1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1
+        ]
+      ],
+      "length_m": 0.295,
+      "radius": 0.008,
+      "bend_limit_m": 0.04,
+      "termination_boot_m": 0.028
+    },
+    {
+      "name": "right_roll_pitch_internal",
+      "side": "right",
+      "source": "right_upper_roll_panel",
+      "target": "right_shoulder_panel",
+      "bodies": [
+        33,
+        34
+      ],
+      "anchors": [
+        [
+          -0.163,
+          -0.035,
+          0.025
+        ],
+        [
+          -0.035,
+          -0.201,
+          -0.02
+        ]
+      ],
+      "normals": [
+        [
+          0,
+          -1,
+          0
+        ],
+        [
+          -1,
+          0,
+          0
+        ]
+      ],
+      "length_m": 0.25,
+      "radius": 0.008,
+      "bend_limit_m": 0.04,
+      "termination_boot_m": 0.028
+    }
+  ],
+  "service_cover_mass_upper_bound_kg": 3.0155498878807943
+}

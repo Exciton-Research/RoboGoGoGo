@@ -2,7 +2,8 @@
 
 Mount coordinates describe our adapter trays, not verified vendor PCB sockets.
 The moving microloom specification is a design requirement awaiting supplier
-qualification; manufacturer accessory leads are used only on fixed links.
+qualification. Fixed leads use manufacturer connector families; their rear-face
+clocking and custom cut lengths still require hardware confirmation.
 """
 
 import numpy as np
