@@ -73,6 +73,7 @@ def branch_specs(model):
                     length_m=length,
                     radius=0.008,
                     bend_limit_m=0.040,
+                    termination_boot_m=0.028,
                 )
             )
     return specs
@@ -261,7 +262,15 @@ def internal_clearance(model, q, pose, world, routes=None, external=()):
                 if capsule.name.startswith(owner + "_") and any(
                     tag in capsule.name for tag in ("connector", "drive_lead")
                 ):
-                    local = arc[:-1] < 0.020 if end == 0 else arc[-1] - arc[1:] < 0.020
+                    # The plug's enclosing capsule extends beyond its flat
+                    # mating face. Bound only the declared termination zone;
+                    # the rest of this same cable still checks this same plug.
+                    zone = (
+                        route["termination_boot_m"]
+                        if capsule.name == owner + "_power_can_connector"
+                        else 0.020
+                    )
+                    local = arc[:-1] < zone if end == 0 else arc[-1] - arc[1:] < zone
                     gaps[local, col] = np.inf
         row, col = np.unravel_index(np.argmin(gaps), gaps.shape)
         keep(gaps[row, col], (route["name"], world.capsules[col].name))
