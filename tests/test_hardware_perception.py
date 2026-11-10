@@ -32,7 +32,8 @@ def document():
             time_offset_s=0.0,
             time_uncertainty_s=0.0001,
             reprojection_error_px=0.2,
-            extrinsic_uncertainty_m=0.001,
+            extrinsic_uncertainty_m=0.0002,
+            rotation_uncertainty_rad=0.00005,
         )
 
     return dict(
@@ -170,7 +171,7 @@ def textured_frames():
     cv = pytest.importorskip("cv2")
     left = np.random.default_rng(7).integers(0, 256, (96, 192, 3), dtype=np.uint8)
     right = np.zeros_like(left)
-    right[:, :-24] = left[:, 24:]
+    right[:, :-32] = left[:, 32:]
     return tuple(cv.imencode(".png", image)[1].tobytes() for image in (left, right))
 
 
@@ -257,3 +258,21 @@ def test_scene_export_is_fresh_isolated_and_invalidated_on_fault():
         pipeline.scene_snapshot()
     pipeline.invalidate("calibration changed")
     assert pipeline.snapshot()["state"] == "fault"
+
+
+def test_rotation_uncertainty_includes_exposure_time_joint_motion():
+    d = document()
+    p = CalibrationProfile(d, XML.replace("prismatic", "revolute"))
+    assert p.rotation_uncertainty("wrist", 0.02) > p.rotation_uncertainty("head", 0.02)
+    assert p.rotation_uncertainty("wrist", 0.04) > p.rotation_uncertainty("wrist", 0.02)
+
+
+def test_profile_rejects_unknown_fields_and_invalid_dates():
+    d = document()
+    d["max_skew_ms"] = 10
+    with pytest.raises(ValueError, match="Unknown"):
+        CalibrationProfile(d, XML)
+    d = document()
+    d["calibrated_at"] = "2026-11-09"
+    with pytest.raises(ValueError, match="timezone"):
+        CalibrationProfile(d, XML)

@@ -197,6 +197,7 @@ class CalibrationProfile:
                 "time_uncertainty_s",
                 "reprojection_error_px",
                 "extrinsic_uncertainty_m",
+                "rotation_uncertainty_rad",
                 "require_camera_info",
             }
             if (
@@ -229,6 +230,7 @@ class CalibrationProfile:
             if (
                 not 0 <= camera["reprojection_error_px"] <= 1
                 or not 0 < camera["extrinsic_uncertainty_m"] <= 0.01
+                or not 0 < camera["rotation_uncertainty_rad"] <= 0.02
             ):
                 raise ValueError(
                     "Calibration quality must be supplied and within acceptance bounds"
@@ -288,6 +290,19 @@ class CalibrationProfile:
                 bound += self.speed_limits[joint_name] * timing * lever
             link = joint["parent"]
         return bound + self.document["max_scene_speed_m_s"] * (skew + camera["time_uncertainty_s"])
+
+    def rotation_uncertainty(self, name, gap):
+        camera = self.cameras[name]
+        bound = camera["rotation_uncertainty_rad"]
+        link = camera["mount_link"]
+        while link != self.tree.root:
+            joint_name, joint = next(
+                (n, j) for n, j in self.tree.joints.items() if j["child"] == link
+            )
+            if joint["kind"] in ("continuous", "revolute"):
+                bound += self.speed_limits[joint_name] * (gap / 2 + camera["time_uncertainty_s"])
+            link = joint["parent"]
+        return bound
 
 
 def main():

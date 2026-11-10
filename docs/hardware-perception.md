@@ -81,6 +81,8 @@ Each camera record contains:
 - `reprojection_error_px`: measured quality, at most 1 pixel.
 - `extrinsic_uncertainty_m`: positive conservative static positional uncertainty,
   at most 0.010 m, including mount, robot calibration, and base/world uncertainty.
+- `rotation_uncertainty_rad`: positive conservative static rotational uncertainty,
+  at most 0.020 radians, including the full calibrated transform chain.
 - `clock_domain`: same as the profile; `time_offset_s`: measured additive correction
   to acquisition time, within ±1 s. This corrects sensor latency, not unrelated
   clock epochs. `time_uncertainty_s` is the residual timing bound and must include
@@ -141,7 +143,9 @@ history are rejected. These bounds do not prove absolute acquisition latency.
 
 Images are undistorted before stereo. A conservative scalar uncertainty budget
 adds stereo disparity error, static calibration error, speed-bounded pose error
-from joint interpolation/timing, and bounded scene motion. Depth above 20 mm
+from joint interpolation/timing, and bounded scene motion. Translational and
+rotational uncertainty also enter the triangulation error, which grows with range
+and decreasing stereo baseline. Depth above 20 mm
 uncertainty is discarded. This model is an engineering bound under the configured
 assumptions, not a full probabilistic estimator or a guarantee of physical accuracy.
 No accepted depth means no invented geometry: existing memory ages and expires.
@@ -170,7 +174,7 @@ constructor to reproduce its digest independently of that original path.
 
 Run `pytest tests/test_hardware_perception.py tests/test_intrinsic_calibration.py`.
 These tests include numerical camera/robot fixtures, actual OpenCV stereo and
-calibration algorithms, timing rejection, covariance/pose-budget checks, and API
+calibration algorithms, timing rejection, uncertainty/pose-budget checks, and API
 lifecycle tests. They do not replace target-hardware validation: independently
 measure transforms and clock alignment, verify reconstructed stationary geometry
 while moving the wrists, and test transport loss before using the memory for any

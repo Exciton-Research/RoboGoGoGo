@@ -186,13 +186,31 @@ class HardwarePerception:
                     poses[right],
                     num_disparities=min(64, (images[left].shape[1] // 32) * 16),
                 )
-                pose_error = max(
+                translation_errors = [
                     self.profile.pose_uncertainty(
                         n, bundle.positions[n], bundle.joint_gap_s, bundle.skew_s
                     )
                     for n in (left, right)
+                ]
+                angular_errors = [
+                    self.profile.rotation_uncertainty(n, bundle.joint_gap_s) for n in (left, right)
+                ]
+                z, baseline = result.depth, result.baseline_m
+                k = result.intrinsics
+                ray_factor = np.sqrt(
+                    1
+                    + (max(abs(k[0, 2]), abs(images[left].shape[1] - k[0, 2])) / k[0, 0]) ** 2
+                    + (max(abs(k[1, 2]), abs(images[left].shape[0] - k[1, 2])) / k[1, 1]) ** 2
                 )
-                sigma = result.depth**2 / (result.focal_px * result.baseline_m) + pose_error
+                # Calibration/pose errors affect triangulation as well as the
+                # final world transform, especially at long range/small baseline.
+                sigma = (
+                    z**2 / (result.focal_px * baseline)
+                    + max(translation_errors)
+                    + z * sum(translation_errors) / baseline
+                    + z**2 * sum(angular_errors) / baseline
+                    + z * ray_factor * max(angular_errors)
+                )
                 valid = np.isfinite(result.depth) & (sigma <= 0.02)
                 if not valid.any():
                     raise ValueError("No reliable metric depth within the 20 mm uncertainty budget")
