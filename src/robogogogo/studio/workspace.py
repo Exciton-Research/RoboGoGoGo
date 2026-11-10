@@ -32,6 +32,7 @@ class Studio:
         self.directory = Path(directory)
         self.directory.mkdir(parents=True, exist_ok=True)
         self.lock = threading.RLock()
+        self.single_robot = scene == "mobile_dual_arm"
         self.running = False
         self.speed = 1.0
         self.sequence = 0
@@ -256,6 +257,8 @@ class Studio:
     def command(self, command: Command):
         with self.lock:
             op = command.op
+            if self.single_robot and op == "scene" and command.scene != "mobile_dual_arm":
+                raise ValueError("This workspace supports only RG Mobile Duo")
             if self.task is not None and op not in ("pause", "speed", "scene", "reset"):
                 raise ValueError(
                     "Coordinated task owns the robot. Start a new episode to use debug controls."
@@ -398,6 +401,8 @@ class Studio:
 
     def import_robot(self, xml, arms=None):
         with self.lock:
+            if self.single_robot:
+                raise ValueError("Robot swapping is not available in the RG Mobile Duo workspace")
             self._replace_session("urdf", xml, arms=arms)
             self.project_id, self.project_name = None, "Imported robot"
             self.episode = self._episode_for_state("Move the robot tool to the highlighted target.")
@@ -479,6 +484,8 @@ class Studio:
     def load(self, identifier):
         with self.lock:
             project = Project.model_validate_json(self._project_path(identifier).read_text())
+            if self.single_robot and project.scene != "mobile_dual_arm":
+                raise ValueError("Only RG Mobile Duo checkpoints can be loaded here")
             # Validate vectors before replacing the active workspace.
             expected = len(project.q)
             if not expected or len(project.qd) != expected or len(project.goal) != expected:

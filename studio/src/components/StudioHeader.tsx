@@ -48,7 +48,6 @@ export function StudioHeader() {
         <div className="header-actions">
           <a href="/">Workflow</a>
           <a href="/hardware/">Hardware</a>
-          <a href="/structure/">Structural Lab</a>
           <button
             className="icon-button help-button"
             aria-label="Help and shortcuts"

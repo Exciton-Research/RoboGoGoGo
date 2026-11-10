@@ -5,7 +5,6 @@ import time
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import Literal
 from uuid import UUID
 
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
@@ -18,7 +17,6 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from robogogogo.robot import HardwareService
 
 from ..runtime.workflow import RobotWorkflow
-from ..simulation.structural_lab import StructuralLab
 from .execution import router as execution_router
 from .schemas import (
     CameraObservation,
@@ -32,11 +30,6 @@ from .schemas import (
     TaskStep,
 )
 from .workspace import Studio
-
-
-class StructuralReset(BaseModel):
-    material: Literal["soft_foam", "soft_elastomer", "fragile_shell"] = "soft_foam"
-    recipe: Literal["bend", "tear", "crush"] = "bend"
 
 
 class HardwareConnection(BaseModel):
@@ -138,33 +131,6 @@ def create_app(
     @app.exception_handler(FileNotFoundError)
     async def missing_file(_, error):
         return JSONResponse({"detail": "Project not found"}, status_code=404)
-
-    structural_lock = asyncio.Lock()
-    structural_lab = None
-
-    @app.post("/api/structure/reset")
-    async def structure_reset(body: StructuralReset):
-        nonlocal structural_lab
-        async with structural_lock:
-            structural_lab = await asyncio.to_thread(StructuralLab, body.material, body.recipe)
-            return structural_lab.snapshot()
-
-    @app.post("/api/structure/step")
-    async def structure_step():
-        async with structural_lock:
-            if structural_lab is None:
-                raise ValueError("Reset a structural specimen first")
-            return await asyncio.to_thread(structural_lab.step)
-
-    @app.get("/api/structure/export")
-    async def structure_export():
-        async with structural_lock:
-            if structural_lab is None:
-                raise ValueError("Reset a structural specimen first")
-            return JSONResponse(
-                structural_lab.export(),
-                headers={"Content-Disposition": 'attachment; filename="robogogogo-structure.json"'},
-            )
 
     @app.get("/api/hardware")
     async def hardware_status():

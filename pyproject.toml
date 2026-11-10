@@ -5,14 +5,13 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "robogogogo"
 version = "0.2.0"
-description = "Dual-arm robotics development workflow with Python/JAX simulation and read-only hardware integration"
+description = "RG Mobile Duo robotics workflow with Python/JAX simulation and hardware integration"
 requires-python = ">=3.11"
 dependencies = ["jax>=0.4.35", "numpy>=1.26"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "httpx>=0.28,<1", "ruff>=0.11,<1"]
 perception = ["opencv-python-headless>=4.10,<5"]
-viewer = ["matplotlib>=3.8"]
 studio = ["fastapi>=0.115,<1", "uvicorn[standard]>=0.34,<1"]
 
 [project.scripts]

@@ -15,7 +15,6 @@ import {
   PerceptionPanel,
   type StereoReport,
 } from "./components/PerceptionPanel";
-import { CoordinationPanel } from "./components/CoordinationPanel";
 import type { Coordination } from "./types";
 import { CameraMountEditor } from "./components/CameraMountEditor";
 import type { CameraConfig, RobotModel, EpisodeSummary } from "./types";
@@ -90,17 +89,6 @@ export function VlaPanel(props: Props) {
         <h2>Episode workspace</h2>
         <p>Observe. Act. Collect the next transition.</p>
       </div>
-      <CoordinationPanel
-        task={props.coordination}
-        manipulation={props.manipulation}
-        materials={props.materials}
-        armCount={props.model?.arms.length ?? 0}
-        disabled={props.disabled}
-        running={props.taskRunning}
-        onPlan={props.onPlanTask}
-        onRun={props.onRunTask}
-        onPause={props.onStop}
-      />
       <div className="vla-instruction">
         <label htmlFor="instruction">
           <MessageSquare size={13} />

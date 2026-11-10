@@ -72,37 +72,15 @@ export function WorkspaceSidebar() {
               <label>ROBOT TASK ENVIRONMENT</label>
               <div className="task-scene-name">
                 <Crosshair size={14} />
-                <span>Language-conditioned reach</span>
+                <span>RG Mobile Duo workspace</span>
               </div>
               <p className="fixture-caption">
                 {model?.arms.length ?? 1} arm(s) · {model?.dof ?? 6} joints
               </p>
             </div>
-            <div className="task-variant">
-              <label htmlFor="embodiment">EMBODIMENT</label>
-              <select
-                id="embodiment"
-                aria-label="Robot embodiment"
-                disabled={disabled}
-                value={model?.scene ?? "mobile_dual_arm"}
-                onChange={(e) =>
-                  void command("scene", { scene: e.target.value })
-                }
-              >
-                <option value="mobile_dual_arm">
-                  Wheeled articulated torso · 2 × 7-DoF arms
-                </option>
-                <option value="dual_arm_head">
-                  Dual arms + pan/tilt head · 14 joints
-                </option>
-                {model &&
-                  !["dual_arm_head", "mobile_dual_arm"].includes(
-                    model.scene,
-                  ) && (
-                    <option value={model.scene}>Legacy simulation scene</option>
-                  )}
-              </select>
-            </div>
+            <p className="fixture-caption">
+              RG Mobile Duo · wheeled base, folding torso, two 7-joint arms
+            </p>
             <div className="section-heading">
               <span>ROBOT & OBSERVATION</span>
               <span className="count">{(model?.names.length ?? 0) + 1}</span>
@@ -158,22 +136,6 @@ export function WorkspaceSidebar() {
                 </button>
               ))}
             </div>
-            <button
-              className="import-button"
-              disabled={disabled}
-              onClick={() => upload.current?.click()}
-            >
-              <Plus size={15} />
-              Change embodiment<span>.urdf</span>
-            </button>
-            <input
-              ref={upload}
-              type="file"
-              accept=".urdf,.xml"
-              className="visually-hidden"
-              aria-label="Import URDF file"
-              onChange={(e) => void importFile(e.target.files?.[0])}
-            />
           </>
         ) : (
           <div className="projects-list">

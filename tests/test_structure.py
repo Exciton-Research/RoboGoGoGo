@@ -83,24 +83,8 @@ def test_contact_driven_recipes(material, recipe):
     assert exported["dt_s"] == 0.0001
 
 
-def test_structural_api_validation_and_export(tmp_path):
-    from fastapi.testclient import TestClient
-
+def test_standalone_structural_api_is_removed():
     from robogogogo.studio.api import create_app
 
-    client = TestClient(create_app(project_dir=tmp_path))
-    assert client.post("/api/structure/step").status_code == 422
-    assert client.post("/api/structure/reset", json={"recipe": "invalid"}).status_code == 422
-    response = client.post(
-        "/api/structure/reset", json={"material": "fragile_shell", "recipe": "crush"}
-    )
-    assert response.status_code == 200
-    assert response.json()["broken_bonds"] == 0
-    assert client.post("/api/structure/step").status_code == 200
-    exported = client.get("/api/structure/export")
-    assert exported.status_code == 200
-    assert "attachment" in exported.headers["content-disposition"]
-    payload = exported.json()
-    assert payload["initial_state"]["maximum_damage"] == 0
-    assert payload["frames"][0]["force_limit_n"] == [10.0]
-    assert payload["pad_half_extent_m"] == 0.025
+    app = create_app()
+    assert not any(route.path.startswith("/api/structure") for route in app.routes)

@@ -6,7 +6,7 @@ import pytest
 
 from robogogogo import models
 from robogogogo import spatial as sp
-from robogogogo.viewer import Session
+from robogogogo.session import Session
 
 
 def test_export_can_replay_applied_torques(tmp_path):
@@ -27,22 +27,3 @@ def test_export_can_replay_applied_torques(tmp_path):
         assert data["model_inertia"].shape == (1, 3, 3)
     session.reset()
     assert session.elapsed == 0 and len(session.history) == 1
-
-
-def test_viewer_controls_with_noninteractive_backend(tmp_path):
-    matplotlib = pytest.importorskip("matplotlib")
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
-
-    from robogogogo.viewer import Workbench
-
-    session = Session(models.slider(), scene="drop")
-    workbench = Workbench(session, export_path=tmp_path / "ui-export.npz")
-    workbench._single_step(None)
-    assert session.elapsed > 0
-    workbench._export(None)
-    assert (tmp_path / "ui-export.npz").exists()
-    workbench._reset(None)
-    assert session.elapsed == 0
-    workbench.fig.canvas.draw()
-    plt.close(workbench.fig)
