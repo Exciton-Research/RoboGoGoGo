@@ -1,10 +1,11 @@
 """Bounded acquisition-time synchronization; never substitutes arrival timestamps."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 
-from .contracts import CameraSample, JointSample
+from .contracts import CameraSample, JointSample, TransformSample
+from .localization import LocalizationBuffer
 
 
 @dataclass(frozen=True)
@@ -15,6 +16,8 @@ class SensorBundle:
     skew_s: float
     joint_gap_s: float
     calibration_digest: str
+    base_poses: dict = field(default_factory=dict)
+    localization_epoch: int = 0
 
 
 class Synchronizer:
@@ -30,9 +33,26 @@ class Synchronizer:
         self.fault = None
         self.highwater = {}
         self.last_rejection = None
+        self.localization = (
+            LocalizationBuffer(profile.localization, profile.document["clock_domain"])
+            if profile.localization
+            else None
+        )
+        self.localization_epoch = 0
 
     def add(self, sample, received):
         if self.fault:
+            return
+        if isinstance(sample, TransformSample):
+            if self.localization:
+                self.localization.add(sample, received)
+                if self.localization.epoch != self.localization_epoch:
+                    self.localization_epoch = self.localization.epoch
+                    self.joints.clear()
+                    for queue in self.frames.values():
+                        queue.clear()
+                if self.localization.fault:
+                    self.fault = self.localization.fault
             return
         if not np.isfinite([sample.timestamp, received]).all() or sample.timestamp < 0:
             self.rejected += 1
@@ -135,6 +155,16 @@ class Synchronizer:
                 continue
             try:
                 estimates = {name: self.interpolate(item[0]) for name, item in selected.items()}
+                bases = (
+                    {
+                        name: self.localization.at(
+                            item[0], now, self.profile.cameras[name]["time_uncertainty_s"]
+                        )
+                        for name, item in selected.items()
+                    }
+                    if self.localization
+                    else {}
+                )
             except ValueError as error:
                 self.reason = str(error)
                 continue
@@ -150,5 +180,7 @@ class Synchronizer:
                 skew,
                 max(v[1] for v in estimates.values()),
                 self.profile.digest,
+                base_poses=bases,
+                localization_epoch=self.localization_epoch,
             )
         return None

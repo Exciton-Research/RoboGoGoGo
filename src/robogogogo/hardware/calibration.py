@@ -95,7 +95,7 @@ class KinematicTree:
             )
         roots = self.links - incoming
         if len(roots) != 1:
-            raise ValueError("Hardware URDF must have one fixed base")
+            raise ValueError("Hardware URDF must have one root link")
         self.root = roots.pop()
         self.names = tuple(n for n, j in self.joints.items() if j["kind"] != "fixed")
         self.poses(dict.fromkeys(self.names, 0.0))
@@ -153,19 +153,83 @@ class CalibrationProfile:
             "max_scene_speed_m_s",
             "cameras",
             "stereo_pairs",
+            "localization",
         }
         if not isinstance(d, dict) or set(d) - allowed:
             raise ValueError("Unknown calibration profile fields")
         stamp = datetime.fromisoformat(d["calibrated_at"].replace("Z", "+00:00"))
         if stamp.tzinfo is None:
             raise ValueError("Calibration date must include its timezone")
-        if d.get("schema_version") != 1 or not d.get("revision") or d.get("fixed_base") is not True:
-            raise ValueError("A versioned measured profile with fixed_base=true is required")
+        if (
+            d.get("schema_version") != 1
+            or not d.get("revision")
+            or type(d.get("fixed_base")) is not bool
+        ):
+            raise ValueError(
+                "A versioned measured profile with explicit fixed_base mode is required"
+            )
         if not d.get("world_frame") or not d.get("clock_domain") or not d.get("calibrated_at"):
             raise ValueError("Profile requires world frame, clock domain and calibration date")
         self.robot_xml = robot_xml
         self.tree = KinematicTree(robot_xml)
-        self.world_from_base = transform(d["world_from_base"])
+        self.localization = None
+        if d["fixed_base"]:
+            if "localization" in d:
+                raise ValueError("Fixed-base profiles cannot configure moving localization")
+            self.world_from_base = transform(d["world_from_base"])
+        else:
+            if "world_from_base" in d:
+                raise ValueError(
+                    "Moving-base profiles cannot supply a static world_from_base fallback"
+                )
+            loc = d["localization"]
+            fields = {
+                "tf_chain",
+                "max_gap_s",
+                "max_age_s",
+                "translation_uncertainty_m",
+                "rotation_uncertainty_rad",
+                "max_linear_speed_m_s",
+                "max_angular_speed_rad_s",
+                "jump_translation_m",
+                "jump_rotation_rad",
+            }
+            if not isinstance(loc, dict) or set(loc) != fields:
+                raise ValueError(
+                    "Localization requires an explicit chain, timing, uncertainty, speed and jump bounds"
+                )
+            chain = loc["tf_chain"]
+            if (
+                not isinstance(chain, list)
+                or not 2 <= len(chain) <= 8
+                or any(
+                    not isinstance(n, str) or not n or len(n) > 128 or n.startswith("/")
+                    for n in chain
+                )
+                or len(set(chain)) != len(chain)
+                or chain[0] != d["world_frame"]
+                or chain[-1] != self.tree.root
+            ):
+                raise ValueError(
+                    "TF chain must connect world_frame to the unique URDF root without cycles"
+                )
+            bounds = {
+                "max_gap_s": 0.1,
+                "max_age_s": 0.5,
+                "translation_uncertainty_m": 0.05,
+                "rotation_uncertainty_rad": 0.1,
+                "max_linear_speed_m_s": 10.0,
+                "max_angular_speed_rad_s": 10.0,
+                "jump_translation_m": 0.5,
+                "jump_rotation_rad": 1.0,
+            }
+            if any(
+                not np.isfinite(loc[n]) or not 0 < loc[n] <= limit for n, limit in bounds.items()
+            ):
+                raise ValueError("Invalid localization acceptance bounds")
+            if loc["max_age_s"] < loc["max_gap_s"]:
+                raise ValueError("Localization max_age_s must cover its interpolation window")
+            self.localization, self.world_from_base = loc, None
         self.speed_limits = d["joint_speed_limits"]
         if set(self.speed_limits) != set(self.tree.names) or any(
             not np.isfinite(v) or not 0 < v <= 100 for v in self.speed_limits.values()
@@ -261,10 +325,13 @@ class CalibrationProfile:
         document = json.loads(path.read_text())
         return cls(document, (path.parent / document["robot_urdf"]).read_text())
 
-    def pose(self, name, positions):
+    def pose(self, name, positions, world_from_base=None):
+        if self.localization is not None and world_from_base is None:
+            raise ValueError("Moving camera poses require exposure-time localization")
+        base = self.world_from_base if world_from_base is None else transform(world_from_base)
         camera = self.cameras[name]
         pose = (
-            self.world_from_base
+            base
             @ self.tree.poses(positions)[camera["mount_link"]]
             @ transform(camera["mount_from_optical"])
         )

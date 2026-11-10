@@ -171,7 +171,7 @@ class LocalizationBuffer:
                 return f"Stale localization TF: {edge[0]} → {edge[1]}"
         return None
 
-    def at(self, timestamp, now):
+    def at(self, timestamp, now, time_uncertainty_s=0.0):
         problem = self.health(now)
         if problem:
             raise ValueError(problem)
@@ -216,7 +216,7 @@ class LocalizationBuffer:
             self.epoch,
             self.config["translation_uncertainty_m"],
             self.config["rotation_uncertainty_rad"],
-            self.config["max_linear_speed_m_s"] * total_gap / 2,
-            self.config["max_angular_speed_rad_s"] * total_gap / 2,
+            self.config["max_linear_speed_m_s"] * (total_gap / 2 + time_uncertainty_s),
+            self.config["max_angular_speed_rad_s"] * (total_gap / 2 + time_uncertainty_s),
             tuple(provenance),
         )
