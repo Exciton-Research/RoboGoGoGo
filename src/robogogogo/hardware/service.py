@@ -198,6 +198,12 @@ class HardwareService:
                 else dict(state="not_configured", reason="No measured calibration profile active"),
             )
 
+    def scene(self):
+        with self.lock:
+            if not self.perception or self.error:
+                raise ValueError("No active calibrated hardware perception")
+            return self.perception.scene_snapshot()
+
     def image(self, name):
         with self.lock:
             if self.backend is None or name not in self.cameras:

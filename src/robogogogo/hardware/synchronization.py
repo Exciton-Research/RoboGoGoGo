@@ -28,17 +28,25 @@ class Synchronizer:
         self.dropped = 0
         self.reason = "Waiting for calibrated camera frames and bracketing joints"
         self.fault = None
+        self.highwater = {}
+        self.last_rejection = None
 
     def add(self, sample, received):
         if self.fault:
             return
+        if not np.isfinite([sample.timestamp, received]).all() or sample.timestamp < 0:
+            self.rejected += 1
+            self.last_rejection = "Invalid sensor timestamp"
+            return
         if sample.clock_domain != self.profile.document["clock_domain"]:
             self.rejected += 1
             self.reason = "Clock domain missing or incompatible with calibration"
+            self.last_rejection = self.reason
             return
         if isinstance(sample, JointSample):
             if not set(self.profile.tree.names).issubset(sample.names):
                 self.reason = "Required robot joints missing"
+                self.last_rejection = self.reason
                 self.rejected += 1
                 return
             queue, time = self.joints, sample.timestamp
@@ -48,16 +56,19 @@ class Synchronizer:
             if sample.frame_id != camera["frame_id"]:
                 self.rejected += 1
                 self.reason = f"Optical frame mismatch: {sample.name}"
+                self.last_rejection = self.reason
                 return
             queue, time = self.frames[sample.name], sample.timestamp + camera["time_offset_s"]
-            if time <= self.used[sample.name]:
-                return
             limit = 16
         else:
             return
-        if queue and time < queue[-1][0] - 1:
+        stream = "joints" if isinstance(sample, JointSample) else "camera:" + sample.name
+        if time < self.highwater.get(stream, time) - 1:
             self.fault = "Acquisition clock moved backward; reconnect to reset memory"
             self.reason = self.fault
+            return
+        self.highwater[stream] = max(time, self.highwater.get(stream, time))
+        if isinstance(sample, CameraSample) and time <= self.used[sample.name]:
             return
         if any(item[0] == time for item in queue):
             return

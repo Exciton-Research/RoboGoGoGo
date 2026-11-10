@@ -230,3 +230,30 @@ def test_queues_are_bounded_and_no_depth_does_not_invent_geometry():
     pipeline.step()
     assert pipeline.snapshot()["state"] == "blocked"
     assert not pipeline.memory.cells
+
+
+def test_clock_reset_after_consumed_camera_frames_latches_fault():
+    sync = Synchronizer(profile())
+    ready(sync, t=10.0)
+    assert sync.next(0.04)
+    assert not sync.frames["head"]
+    sync.add(frame("head", 1.0), 0.05)
+    assert sync.fault
+
+
+def test_scene_export_is_fresh_isolated_and_invalidated_on_fault():
+    now = [0.1]
+    pipeline = HardwarePerception(profile(), clock=lambda: now[0])
+    left, right = textured_frames()
+    for sample in (joint(1), joint(1.02), frame("head", 1.01, left), frame("wrist", 1.01, right)):
+        pipeline.ingest(sample)
+    pipeline.step()
+    scene = pipeline.scene_snapshot()
+    assert scene["world_frame"] == "lab" and scene["points"]
+    scene["points"].clear()
+    assert pipeline.scene_snapshot()["points"]
+    now[0] = 1.0
+    with pytest.raises(ValueError, match="fresh"):
+        pipeline.scene_snapshot()
+    pipeline.invalidate("calibration changed")
+    assert pipeline.snapshot()["state"] == "fault"

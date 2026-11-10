@@ -1,5 +1,6 @@
 """Read-only calibrated hardware perception worker, separate from simulation state."""
 
+import copy
 import hashlib
 import json
 import logging
@@ -28,6 +29,7 @@ class HardwarePerception:
         self.count = 0
         self.verified_info = set()
         self.status = dict(state="waiting", reason=self.sync.reason, scene_memory={})
+        self.scene = None
         self.audit = None
         if audit_dir is not None:
             path = Path(audit_dir) / str(uuid4())
@@ -71,6 +73,18 @@ class HardwarePerception:
         with self.lock:
             self.sync.fault = str(reason)
 
+    def scene_snapshot(self):
+        with self.lock:
+            if (
+                self.scene is None
+                or self.sync.fault
+                or self.updated is None
+                or self.clock() - self.updated > 0.5
+                or self.status["state"] == "fault"
+            ):
+                raise ValueError("No fresh calibrated hardware scene is available")
+            return copy.deepcopy(self.scene)
+
     def snapshot(self):
         with self.lock:
             result = dict(self.status)
@@ -82,6 +96,7 @@ class HardwarePerception:
                 bundles=self.count,
                 dropped=self.sync.dropped,
                 rejected=self.sync.rejected,
+                last_rejection=self.sync.last_rejection,
                 cameras=[
                     dict(
                         name=n,
@@ -109,6 +124,7 @@ class HardwarePerception:
             except Exception as error:
                 with self.lock:
                     self.status.update(state="fault", reason=str(error))
+                    self.scene = None
                 return
 
     def step(self):
@@ -131,6 +147,7 @@ class HardwarePerception:
                 if self.sync.fault:
                     self.memory.clear()
                     self.status["scene_memory"] = {}
+                    self.scene = None
                 return
         cv = opencv()
         images, poses = {}, {}
@@ -217,6 +234,16 @@ class HardwarePerception:
             if self.sync.fault or self.stop.is_set():
                 self.memory.clear()
                 return
+            self.scene = dict(
+                timestamp=bundle.timestamp,
+                calibration_digest=self.profile.digest,
+                world_frame=self.profile.document["world_frame"],
+                points=observation.view_evidence.points.tolist(),
+                normals=observation.view_evidence.normals.tolist(),
+                confidence=observation.view_evidence.confidence.tolist(),
+                last_seen=[c["seen"] for c in self.memory.cells.values()],
+                uncertainty_m=[float(np.sqrt(c["variance"])) for c in self.memory.cells.values()],
+            )
             self.count += 1
             self.updated = self.clock()
             self.status = dict(

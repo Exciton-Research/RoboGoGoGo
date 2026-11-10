@@ -148,6 +148,13 @@ def create_app(
         await asyncio.to_thread(app.state.hardware.close)
         return app.state.hardware.snapshot()
 
+    @app.get("/api/hardware/scene")
+    async def hardware_scene():
+        try:
+            return JSONResponse(app.state.hardware.scene(), headers={"Cache-Control": "no-store"})
+        except ValueError as error:
+            return JSONResponse({"detail": str(error)}, status_code=409)
+
     @app.get("/api/hardware/cameras/{name}")
     async def hardware_camera(name: str):
         try:
