@@ -71,13 +71,6 @@ export function addResearchRobotDetails(model: RobotModel, add: AddMesh) {
           [0.047, 0, 0],
         );
         seam.rotation.y = Math.PI / 2;
-        box(
-          body,
-          [length * 0.38, 0.042, 0.006],
-          metal,
-          [length * 0.49, 0, radius * 0.86],
-          0.003,
-        );
         if (forearm) {
           add(
             body,
@@ -179,6 +172,20 @@ export function addResearchRobotDetails(model: RobotModel, add: AddMesh) {
     );
     chest.scale.set(0.15, 0.26, 0.19);
     const torso = model.names.indexOf("torso");
+    // Fixed shoulder bearing carriers bridge the chest to each yaw assembly.
+    for (const side of [-1, 1]) {
+      add(torso, new THREE.CylinderGeometry(0.06, 0.06, 0.105, 40), graphite, [
+        0,
+        side * 0.285,
+        0.22,
+      ]);
+      add(torso, new THREE.CylinderGeometry(0.064, 0.064, 0.012, 40), metal, [
+        0,
+        side * 0.32,
+        0.22,
+      ]);
+    }
+
     const neck = add(
       torso,
       new THREE.CylinderGeometry(0.044, 0.052, 0.07, 40),
