@@ -27,9 +27,9 @@ simulation must never stand in for measured hardware configuration.
   and the episode library. It does not own a hardware motor loop or a trainer.
 
 The numerical engine stays in `simulation` and the existing physics modules.
-Planning and perception remain supporting libraries. Legacy single-arm and material
-fixtures remain available to tests and old projects; the product entry point starts
-with the dual-arm head-camera reference scene. Existing physics limitations remain.
+Planning and perception remain supporting libraries. Legacy models and material fixtures live only in tests. The product starts with
+RG Mobile Duo: steerable wheels, a folding torso, two seven-joint arms and four
+cameras. Other robot projects and arbitrary URDF import are no longer supported.
 
 Robot identity, dataset readers and training-input validation can be imported
 without initializing JAX or importing FastAPI. Runtime contracts have no simulator
@@ -48,8 +48,8 @@ robogogogo-studio --robot-profile examples/deployment/robot.json
 
 The supplied profile is deliberately unconfigured. Omitting the flag gives the
 same pending identity. `/` is the workflow overview, `/simulation/` is the reference
-robot, and `/hardware/` is the read-only connection/calibration workspace. Existing
-simulation API routes and project files remain supported.
+robot, and `/hardware/` is the read-only connection/calibration workspace. Only RG Mobile Duo simulation projects are supported. Robot import, structural
+lab and legacy fixed-base task routes are no longer product endpoints.
 
 When hardware is selected, fill the profile with the exact model, backend name,
 disjoint ordered `left_joints`/`right_joints`, distinct gripper identifiers, and four
@@ -95,8 +95,9 @@ episode library and stage blockers. `POST /api/data/{episode_uuid}/validate` val
 an existing local archive. These APIs neither move hardware nor launch training. The separate
 [command execution test console](command-execution.md) can exercise group commands
 without physical actuators using `--test-execution`.
-Older archives without environment metadata retain an `unknown` origin during
-validation. A simulation recording never becomes a physical demonstration because
+Learning validation requires the `rg_mobile_duo` / `concept-1` robot identity
+and 31-coordinate simulation action contract. Historical archives remain readable
+through the low-level reader but are rejected as current training inputs. A simulation recording never becomes a physical demonstration because
 an action is labeled `policy` or the configured robot happens to have matching DOFs.
 
 ## Integration work still required

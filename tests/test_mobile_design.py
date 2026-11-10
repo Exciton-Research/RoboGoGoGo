@@ -108,6 +108,7 @@ def test_default_studio_mobile_postures_dynamics_checkpoint_and_task_boundary(tm
         result.raise_for_status()
         goal = result.json()["state"]["goal"]
         assert goal != snapshot["state"]["q"]
+        client.post("/api/command", json={"op": "step"}).raise_for_status()
         after = client.post("/api/command", json={"op": "step"}).json()
         assert np.isfinite(after["state"]["q"]).all()
         assert after["state"]["q"] != snapshot["state"]["q"]
@@ -119,8 +120,7 @@ def test_default_studio_mobile_postures_dynamics_checkpoint_and_task_boundary(tm
         restored = client.post(f"/api/projects/{project['id']}/load").json()
         np.testing.assert_allclose(restored["state"]["goal"], after["state"]["goal"])
         blocked = client.post("/api/tasks/plan", json={"kind": "handover"})
-        assert blocked.status_code == 422
-        assert "stability" in blocked.json()["detail"]
+        assert blocked.status_code in (404, 405)
 
 
 def test_compact_humanlike_shoulder_has_coincident_three_axes(model):
