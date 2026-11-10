@@ -164,3 +164,25 @@
   line-height: 1.7;
   font-size: 12px;
 }
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(125px, 1fr));
+  gap: 14px;
+  padding: 16px 0;
+}
+.metrics div {
+  display: grid;
+  gap: 8px;
+}
+.metrics strong {
+  font:
+    18px "IBM Plex Mono",
+    monospace;
+}
+.digest {
+  font:
+    11px "IBM Plex Mono",
+    monospace;
+  overflow-wrap: anywhere;
+}
