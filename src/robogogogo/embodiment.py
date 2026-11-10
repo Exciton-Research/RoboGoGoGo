@@ -11,6 +11,7 @@ class ArmGroup:
     body: int
     joint_indices: tuple[int, ...]
     joint_names: tuple[str, ...]
+    root: str | None = None
 
     def to_dict(self):
         return asdict(self)
@@ -37,20 +38,26 @@ def resolve_arms(model, definitions=None) -> tuple[ArmGroup, ...]:
             raise ValueError("Arm names and tool frames must be unique")
         if tool not in model.names:
             raise ValueError(f"Unknown tool frame: {tool}")
+        root = definition.get("root")
+        if root is not None and root not in model.names:
+            raise ValueError(f"Unknown arm root: {root}")
+        boundary = model.names.index(root) if root is not None else -1
         body = model.names.index(tool)
         indices, joint_names = [], []
         cursor = body
-        while cursor >= 0:
+        while cursor >= 0 and cursor != boundary:
             if model.indices[cursor] >= 0:
                 indices.append(model.indices[cursor])
                 joint_names.append(model.names[cursor])
             cursor = model.parents[cursor]
+        if root is not None and cursor != boundary:
+            raise ValueError("Arm root must be an ancestor of its tool")
         if not indices and inferred:
             continue
         if not indices:
             raise ValueError(f"Tool frame {tool} has no movable ancestor")
         groups.append(
-            ArmGroup(name, tool, body, tuple(reversed(indices)), tuple(reversed(joint_names)))
+            ArmGroup(name, tool, body, tuple(reversed(indices)), tuple(reversed(joint_names)), root))
         )
         names.add(name)
         tools.add(tool)

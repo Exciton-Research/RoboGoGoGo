@@ -21,8 +21,15 @@ class ReachPolicy:
             raise ValueError("Require arms and control_ticks in [1, 20]")
         self.control_ticks = control_ticks
         bodies = tuple(arm.body for arm in self.arms)
+        mask = (
+            jnp.zeros_like(model.home)
+            .at[jnp.array(sorted({j for a in self.arms for j in a.joint_indices}))]
+            .set(1)
+        )
         self._solve = jax.jit(
-            lambda q, targets: inverse_kinematics_targets(model, targets, bodies, q)[0]
+            lambda q, targets: inverse_kinematics_targets(
+                model, targets, bodies, q, joint_mask=mask
+            )[0]
         )
         self.limit = np.array(
             [0.02 if k == "prismatic" else 0.12 for k in model.kinds if k != "fixed"]

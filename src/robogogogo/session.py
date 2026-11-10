@@ -39,9 +39,14 @@ class Session:
         self._loaded_energy = jax.jit(sp.energy)
         self._poses = jax.jit(lambda q: sp.forward_kinematics(model, q))
         self._energy = jax.jit(lambda state: sp.energy(model, state))
+        arm_mask = (
+            jnp.zeros_like(model.home)
+            .at[jnp.array(sorted({j for a in self.arms for j in a.joint_indices}))]
+            .set(1)
+        )
         self._ik = jax.jit(
             lambda targets, q: control.inverse_kinematics_targets(
-                model, targets, tuple(arm.body for arm in self.arms), q
+                model, targets, tuple(arm.body for arm in self.arms), q, joint_mask=arm_mask
             )
         )
         # Compile outside the animation callback, without advancing visible state.

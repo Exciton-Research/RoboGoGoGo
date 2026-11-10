@@ -10,16 +10,20 @@ class Payload(BaseModel):
 
 
 class Command(Payload):
-    op: Literal["run", "pause", "step", "reset", "home", "joints", "target", "scene", "speed"]
+    op: Literal[
+        "run", "pause", "step", "reset", "home", "joints", "target", "scene", "speed", "posture"
+    ]
+    posture: Literal["standing", "low", "reach"] | None = None
     arm: str | None = None
     values: list[float] | None = None
-    scene: Literal["arm", "dual_arm", "dual_arm_head", "drop"] | None = None
+    scene: Literal["arm", "dual_arm", "dual_arm_head", "mobile_dual_arm", "drop"] | None = None
     speed: float | None = Field(default=None, ge=0.25, le=2.0)
 
 
 class ArmSpec(Payload):
     name: str = Field(pattern=r"^[A-Za-z_][A-Za-z0-9_.-]{0,79}$")
     tool: str
+    root: str | None = None
 
 
 class ImportRobot(Payload):
@@ -151,7 +155,7 @@ class Project(Payload):
     id: str
     name: str = Field(min_length=1, max_length=80)
     updated: str
-    scene: Literal["arm", "dual_arm", "dual_arm_head", "drop", "urdf"]
+    scene: Literal["arm", "dual_arm", "dual_arm_head", "mobile_dual_arm", "drop", "urdf"]
     xml: str | None = Field(default=None, max_length=262144)
     dt: float = Field(gt=0, le=0.005)
     substeps: int = Field(ge=1, le=20)

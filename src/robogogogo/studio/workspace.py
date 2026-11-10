@@ -53,13 +53,22 @@ class Studio:
             self.episode_service.start_episode(NewEpisode(camera_preset="head_wrists"))
 
     def _replace_session(self, scene, xml=None, dt=0.002, substeps=5, arms=None):
+        from ..robot.mobile_design import (
+            DESIGN,
+            mobile_arm_definitions,
+            mobile_dual_arm_urdf,
+            mobile_home,
+        )
+
+        if scene == "mobile_dual_arm":
+            xml, arms = mobile_dual_arm_urdf(), mobile_arm_definitions()
         if scene in ("dual_arm", "dual_arm_head"):
             xml = models.multi_arm_urdf(2)
             arms = [
                 {"name": "left_arm", "tool": "left_tool"},
                 {"name": "right_arm", "tool": "right_tool"},
             ]
-        if scene in ("urdf", "dual_arm", "dual_arm_head"):
+        if scene in ("urdf", "dual_arm", "dual_arm_head", "mobile_dual_arm"):
             if not xml:
                 raise ValueError("URDF content is required")
             try:
@@ -68,6 +77,8 @@ class Studio:
                 raise ValueError(f"Invalid URDF: {error}") from error
             model, label = robot.model, robot.name
             visuals = list(robot.visuals)
+            if scene == "mobile_dual_arm":
+                model = replace(model, home=jnp.asarray(mobile_home(model)))
             if scene in ("dual_arm", "dual_arm_head"):
                 model = replace(model, home=jnp.tile(models.arm6(dt=dt).home, 2))
         elif scene == "arm":
@@ -103,6 +114,7 @@ class Studio:
 
         self.model_info = dict(
             name=label,
+            mobile_design=DESIGN if scene == "mobile_dual_arm" else None,
             scene=scene,
             dof=int(model.home.size),
             arms=[arm.to_dict() for arm in candidate.arms],
@@ -274,6 +286,20 @@ class Studio:
                     raise ValueError("Joint goals are required")
                 self.session.set_joints(command.values, command.arm)
                 self.message = "Joint goals applied"
+            elif op == "posture":
+                if self.scene != "mobile_dual_arm" or command.posture is None:
+                    raise ValueError("A mobile concept scene and named posture are required")
+                from ..robot.mobile_design import mobile_home
+
+                q = np.asarray(self.session.target_q).copy()
+                preset = mobile_home(self.session.model, command.posture)
+                for name in ("torso_lower", "torso_upper", "torso"):
+                    index = self.session.model.indices[self.session.model.names.index(name)]
+                    q[index] = preset[index]
+                self.session.set_joints(q)
+                self.message = (
+                    "Torso posture goal set. Run to move; collision and tipping are not validated."
+                )
             elif op == "target":
                 if self.scene == "drop":
                     raise ValueError("Cartesian control is unavailable in the contact experiment")
@@ -384,7 +410,7 @@ class Studio:
                 goal=np.asarray(s.target_q).tolist(),
                 target=np.asarray(s.target).tolist(),
                 elapsed=s.elapsed,
-                arms=[{"name": arm.name, "tool": arm.tool} for arm in s.arms],
+                arms=[{"name": arm.name, "tool": arm.tool, "root": arm.root} for arm in s.arms],
                 targets={name: value.tolist() for name, value in s.targets.items()},
                 cameras=[
                     {key: value for key, value in c.items() if key in CameraSpec.model_fields}

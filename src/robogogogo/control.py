@@ -42,7 +42,9 @@ def computed_torque(model, state, target_q, *, kp=80.0, kd=18.0):
     )
 
 
-def inverse_kinematics_targets(model, targets, bodies, initial_q, *, iterations=80, damping=0.03):
+def inverse_kinematics_targets(
+    model, targets, bodies, initial_q, *, iterations=80, damping=0.03, joint_mask=None
+):
     """Solve simultaneous position goals, including coupled/shared ancestor joints.
 
     Equal-weight damped least squares; no collision or orientation objective.
@@ -56,6 +58,8 @@ def inverse_kinematics_targets(model, targets, bodies, initial_q, *, iterations=
     def iteration(q, _):
         error = (targets - positions(q)).reshape(-1)
         jac = jax.jacfwd(positions)(q).reshape((-1, q.size))
+        if joint_mask is not None:
+            jac = jac * joint_mask[None, :]
         delta = jac.T @ jnp.linalg.solve(jac @ jac.T + damping**2 * jnp.eye(error.size), error)
         return jnp.clip(q + jnp.clip(delta, -0.15, 0.15), model.lower, model.upper), None
 

@@ -92,7 +92,7 @@ def test_read_only_calibrated_telemetry_cannot_enable_physical_execution(tmp_pat
 
 
 def test_dual_arm_capture_save_validate_and_reload_workflow(tmp_path):
-    with TestClient(create_app(project_dir=tmp_path)) as client:
+    with TestClient(create_app(project_dir=tmp_path, initial_scene="dual_arm_head")) as client:
         snapshot = client.get("/api/snapshot").json()
         assert snapshot["model"]["scene"] == "dual_arm_head"
         assert len(snapshot["model"]["arms"]) == 2

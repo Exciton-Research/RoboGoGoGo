@@ -55,6 +55,10 @@ class TaskService:
     def plan(self, request):
         w = self.workspace
         with w.lock:
+            if w.scene == "mobile_dual_arm":
+                raise ValueError(
+                    "Mobile concept supports joint/posture exploration; whole-body collision and stability planning are not implemented"
+                )
             if request.kind in ("handover", "material_grasp"):
                 return self.plan_handover(request)
             if w.running:

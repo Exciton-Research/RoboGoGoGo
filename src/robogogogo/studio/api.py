@@ -47,7 +47,7 @@ def create_app(
     *,
     project_dir=None,
     static_dir=None,
-    initial_scene="dual_arm_head",
+    initial_scene="mobile_dual_arm",
     hardware_backends=None,
     hardware_profiles=None,
     robot_profile=None,
