@@ -23,6 +23,7 @@ class Command(Payload):
         "posture",
         "drive",
         "brake",
+        "cancel_plan",
     ]
     duration: float = Field(default=3.0, gt=0, le=5)
     friction: float | None = Field(default=None, ge=0, le=1.5)

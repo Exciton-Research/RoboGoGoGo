@@ -190,6 +190,7 @@ class Studio:
             project=dict(id=self.project_id, name=self.project_name),
             state=dict(
                 mobile=self.session.mobile_status,
+                motion=self.session.motion_plan,
                 q=np.asarray(s.state.q).tolist(),
                 qd=np.asarray(s.state.qd).tolist(),
                 goal=np.asarray(s.target_q).tolist(),
@@ -248,6 +249,8 @@ class Studio:
             except FloatingPointError as error:
                 self.running = False
                 self.error = str(error)
+                if self.session.motion_plan:
+                    self.session.motion_plan["status"] = "blocked"
             self._refresh()
 
     def command(self, command: Command):
@@ -269,7 +272,12 @@ class Studio:
                 self.running = True
                 self._run_wall, self._run_sim = time.perf_counter(), self.session.elapsed
                 self.message = "Simulation running"
+            elif op == "cancel_plan":
+                self.session.cancel_motion_plan()
+                self.message = "Plan cancelled; Run to settle with guarded braking"
             elif op == "pause":
+                if self.session.motion_plan and self.session.motion_plan["status"] == "running":
+                    self.session.motion_plan["status"] = "paused"
                 self.session.stop_drive()
                 self.running = False
                 self.message = "Simulation paused"
@@ -313,7 +321,11 @@ class Studio:
                 if command.values is None:
                     raise ValueError("Joint goals are required")
                 self.session.set_joints(command.values, command.arm)
-                self.message = "Joint goals applied"
+                self.message = (
+                    "Collision-free path planned. Run to execute waypoints."
+                    if self.session.mobile
+                    else "Joint goals applied"
+                )
             elif op == "posture":
                 if self.scene != "mobile_dual_arm" or command.posture is None:
                     raise ValueError("A mobile concept scene and named posture are required")
@@ -325,7 +337,7 @@ class Studio:
                     index = self.session.model.indices[self.session.model.names.index(name)]
                     q[index] = preset[index]
                 self.session.set_joints(q)
-                self.message = "Torso path passed support and self-collision guards. Run to move with substep clearance monitoring."
+                self.message = "Arm/torso path planned. Run to execute with live collision and stability guards."
             elif op == "target":
                 if self.scene == "drop":
                     raise ValueError("Cartesian control is unavailable in the contact experiment")
@@ -415,6 +427,12 @@ class Studio:
 
     def save(self, request):
         with self.lock:
+            if self.session.motion_plan and self.session.motion_plan["status"] in (
+                "ready",
+                "running",
+                "paused",
+            ):
+                raise ValueError("Finish or cancel the motion plan before saving a checkpoint")
             name = request.name.strip()
             if not name:
                 raise ValueError("Project name cannot be blank")

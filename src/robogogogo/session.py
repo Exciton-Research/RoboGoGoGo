@@ -29,6 +29,8 @@ class Session:
         self.tire_mu = 0.7
         self.com_acceleration = jnp.zeros(3)
         self.mobile_status = None
+        self.motion_plan = None
+        self.motion_waypoints = []
         self.payload_model = None
         self.contact_system = None
         self.target_q = model.home
@@ -209,6 +211,8 @@ class Session:
     def set_drive(self, twist, *, duration=3.0, friction=None):
         if self.mobile is None:
             raise ValueError("Wheel driving requires the mobile robot scene")
+        if self.motion_plan and self.motion_plan["status"] in ("ready", "running", "paused"):
+            raise ValueError("Finish or cancel the arm/torso plan before driving")
         value = np.asarray(twist, dtype=float)
         if value.shape != (3,) or not np.isfinite(value).all():
             raise ValueError("Drive twist requires three finite body-frame velocities")
@@ -228,6 +232,7 @@ class Session:
         self.drive_until = self.elapsed
 
     def _advance_mobile(self):
+        self._advance_motion_goal()
         twist = self.drive_twist if self.elapsed < self.drive_until else np.zeros(3)
         following, acc, margin, torque, diagnostics, positions = self.mobile.predict(
             self.state, self.target_q, jnp.asarray(twist), self.tire_mu, self.com_acceleration
@@ -336,6 +341,8 @@ class Session:
         self.drive_until = 0.0
         self.com_acceleration = jnp.zeros(3)
         self.mobile_status = None
+        self.motion_plan = None
+        self.motion_waypoints = []
         self.payload_model = None
         self.contact_system = None
         self.state = sp.initial_state(self.model)
@@ -362,8 +369,10 @@ class Session:
         if not np.isfinite(np.asarray(q)).all():
             raise ValueError("IK failed to produce a finite configuration")
         if self.mobile is not None:
-            self.mobile.validate_goal(np.asarray(self.state.q), np.asarray(q))
-        self.target_q, self.targets = q, targets
+            self._plan_goal(q)
+        else:
+            self.target_q = q
+        self.targets = targets
         return float(jnp.max(errors))
 
     def set_joints(self, q, arm=None):
@@ -381,12 +390,64 @@ class Session:
             raise ValueError("joint goal must match model degrees of freedom")
         q = np.asarray(jnp.clip(jnp.asarray(q), self.model.lower, self.model.upper))
         if self.mobile is not None:
-            self.mobile.validate_goal(np.asarray(self.state.q), q)
-        self.target_q = jnp.asarray(q)
+            self._plan_goal(q)
+        else:
+            self.target_q = jnp.asarray(q)
         self.targets = {
-            group.name: np.asarray(sp.point_position(self.model, self.target_q, group.body))
+            group.name: np.asarray(sp.point_position(self.model, jnp.asarray(q), group.body))
             for group in self.arms
         }
+
+    def _plan_goal(self, goal):
+        from .planning.mobile import plan_mobile
+
+        if np.max(np.abs(np.asarray(self.state.qd))) > 0.03:
+            raise ValueError("Let the robot settle before planning a new arm/torso goal")
+        if self.elapsed < self.drive_until and np.any(self.drive_twist):
+            raise ValueError("Brake and settle the base before arm/torso planning")
+        plan = plan_mobile(self.mobile, self.state.q, goal)
+        self.stop_drive()
+        self.motion_waypoints = [jnp.asarray(q) for q in plan.waypoints]
+        self.motion_plan = dict(
+            status="ready",
+            method=plan.method,
+            waypoint=1,
+            waypoint_count=len(plan.waypoints) - 1,
+            checks=plan.checks,
+            final_goal=np.asarray(goal).tolist(),
+        )
+        self.target_q = self.motion_waypoints[1]
+
+    def _advance_motion_goal(self):
+        if not self.motion_plan or self.motion_plan["status"] not in ("ready", "running", "paused"):
+            return
+        self.motion_plan["status"] = "running"
+        driven = self.mobile.driven
+        indices = np.setdiff1d(np.arange(len(self.state.q)), driven)
+        error = np.max(np.abs(np.asarray(self.target_q - self.state.q)[indices]))
+        speed = np.max(np.abs(np.asarray(self.state.qd)[indices]))
+        if error > 0.008 or speed > 0.025:
+            return
+        next_index = self.motion_plan["waypoint"] + 1
+        if next_index >= len(self.motion_waypoints):
+            self.motion_plan["status"] = "complete"
+            return
+        goal = self.motion_waypoints[next_index].at[driven].set(self.state.q[driven])
+        try:
+            self.mobile.validate_goal(np.asarray(self.state.q), np.asarray(goal))
+        except ValueError as error:
+            self.motion_plan["status"] = "blocked"
+            self.stop_drive()
+            raise FloatingPointError(f"Planned segment failed revalidation: {error}") from error
+        self.motion_plan["waypoint"] = next_index
+        self.target_q = goal
+
+    def cancel_motion_plan(self):
+        self.stop_drive()
+        if self.motion_plan:
+            self.motion_plan["status"] = "cancelled"
+        self.motion_waypoints = []
+        self.target_q = self.state.q
 
     def export(self, destination):
         """Lossless NPZ history and complete model arrays; no pickle required.
