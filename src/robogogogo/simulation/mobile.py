@@ -129,7 +129,7 @@ class MobileDynamics:
                     -0.35,
                     0.35,
                 )
-            desired_acc = desired_acc.at[self.base].set(0)
+            desired_acc = desired_acc.at[self.driven].set(0)
             torque = sp.inverse_dynamics(model, current.q, current.qd, desired_acc)
             torque += model.damping * current.qd
             torque = torque.at[self.base].set(0)  # No fictitious base motors.
@@ -138,6 +138,20 @@ class MobileDynamics:
             )
             torque = torque.at[self.wheels].set(2 * (wheel_speed - current.qd[self.wheels]))
             external, diagnostics = self.tire_forces(current, mu, previous_acc)
+            # Resolve the acceleration of the unactuated base and wheel drives
+            # before computing arm/torso hold torque. Assuming a stationary base
+            # makes lateral tire acceleration pull the arms into the chest.
+            matrix = sp.mass_matrix(model, current.q)
+            matrix = matrix + jnp.diag(model.dt * model.damping)
+            bias = sp.inverse_dynamics(model, current.q, current.qd, desired_acc)
+            bias += model.damping * current.qd + model.dt * model.damping * desired_acc
+            driven = jnp.asarray(self.driven)
+            drive_torque = jnp.clip(torque[driven], -model.effort[driven], model.effort[driven])
+            drive_acc = jnp.linalg.solve(
+                matrix[jnp.ix_(driven, driven)],
+                drive_torque + external[driven] - bias[driven],
+            )
+            torque = (bias + matrix[:, driven] @ drive_acc).at[driven].set(drive_torque)
             qdd = acceleration(
                 model, current, torque, implicit_dt=model.dt, external_force=external
             )
