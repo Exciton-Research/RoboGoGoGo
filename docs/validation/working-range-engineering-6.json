@@ -1,0 +1,92 @@
+{
+  "revision": "engineering-6",
+  "status": "failed",
+  "electrical_detail": "not modeled",
+  "motor_cover_mass_kg": 0.5584308977989497,
+  "seed": 43,
+  "ranges_rad": {
+    "waist": [
+      -0.35,
+      0.35
+    ],
+    "upper_roll": [
+      0.0,
+      0.4
+    ],
+    "shoulder": [
+      0.25,
+      1.2
+    ],
+    "elbow": [
+      -1.6,
+      -0.3
+    ],
+    "wrist_roll": [
+      -0.25,
+      0.25
+    ],
+    "wrist_pitch": [
+      -0.25,
+      0.25
+    ],
+    "tool_roll": [
+      -0.25,
+      0.25
+    ]
+  },
+  "roll_convention": "positive outward; negate right upper_roll",
+  "counts": {
+    "samples": 594,
+    "rigid_clear": 593
+  },
+  "margin_m": 0.012,
+  "minimum_guard_equivalent_clearance_m": -0.06599558437008472,
+  "failures": [
+    {
+      "case": "random:169",
+      "pair": [
+        "left_hand",
+        "base_left"
+      ],
+      "clearance_m": -0.06599558437008472,
+      "q": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0499999523162842,
+        -2.0999999046325684,
+        1.0499999523162842,
+        -0.2923322916030884,
+        0.08080672472715378,
+        1.1762677431106567,
+        -0.3609195351600647,
+        0.18595966696739197,
+        -0.0005404046387411654,
+        -0.026921693235635757,
+        -0.20230481028556824,
+        -0.3392714560031891,
+        0.7340945601463318,
+        -1.284424066543579,
+        0.1269501894712448,
+        -0.2123269885778427,
+        0.16424918174743652,
+        0.0,
+        0.0
+      ]
+    }
+  ],
+  "limitations": [
+    "Finite samples, not continuous-space certification or full nominal joint range",
+    "Electrical routing and connectors are deferred, not validated",
+    "Motor covers are custom mechanical concepts; fasteners and manufacturing tolerances unqualified"
+  ]
+}
