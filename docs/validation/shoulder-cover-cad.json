@@ -1,0 +1,121 @@
+{
+  "status": "concept_geometry_valid",
+  "manufacturing_ready": false,
+  "scope": "Valid B-rep shells, unioned cavities, separated halves; not an assembly or motion certificate",
+  "covers": [
+    {
+      "body": "left_pedestal",
+      "halves": [
+        {
+          "name": "left_pedestal_service_minus",
+          "volume_mm3": 212600.19503338926,
+          "cavity_interference_mm3": 0.0
+        },
+        {
+          "name": "left_pedestal_service_plus",
+          "volume_mm3": 212600.18947505997,
+          "cavity_interference_mm3": 0.0
+        }
+      ],
+      "seam_gap_mm": 0.4,
+      "nominal_wall_mm": 2.0,
+      "overlapping_envelopes_removed_mm3": 263360.69337395555
+    },
+    {
+      "body": "left_waist",
+      "halves": [
+        {
+          "name": "left_waist_service_minus",
+          "volume_mm3": 145720.83914588316,
+          "cavity_interference_mm3": 0.0
+        },
+        {
+          "name": "left_waist_service_plus",
+          "volume_mm3": 189708.70377654675,
+          "cavity_interference_mm3": 0.0
+        }
+      ],
+      "seam_gap_mm": 0.4,
+      "nominal_wall_mm": 2.0,
+      "overlapping_envelopes_removed_mm3": 142504.58452152362
+    },
+    {
+      "body": "left_upper_roll",
+      "halves": [
+        {
+          "name": "left_upper_roll_service_minus",
+          "volume_mm3": 44270.4859163466,
+          "cavity_interference_mm3": 0.0
+        },
+        {
+          "name": "left_upper_roll_service_plus",
+          "volume_mm3": 44270.485916346486,
+          "cavity_interference_mm3": 0.0
+        }
+      ],
+      "seam_gap_mm": 0.4,
+      "nominal_wall_mm": 2.0,
+      "overlapping_envelopes_removed_mm3": 2.9103830456733704e-10
+    },
+    {
+      "body": "right_pedestal",
+      "halves": [
+        {
+          "name": "right_pedestal_service_minus",
+          "volume_mm3": 218125.64669507195,
+          "cavity_interference_mm3": 0.0
+        },
+        {
+          "name": "right_pedestal_service_plus",
+          "volume_mm3": 207488.19105434002,
+          "cavity_interference_mm3": 0.0
+        }
+      ],
+      "seam_gap_mm": 0.4,
+      "nominal_wall_mm": 2.0,
+      "overlapping_envelopes_removed_mm3": 263377.7933721002
+    },
+    {
+      "body": "right_waist",
+      "halves": [
+        {
+          "name": "right_waist_service_minus",
+          "volume_mm3": 189592.91360072757,
+          "cavity_interference_mm3": 0.0
+        },
+        {
+          "name": "right_waist_service_plus",
+          "volume_mm3": 127965.66568412812,
+          "cavity_interference_mm3": 0.0
+        }
+      ],
+      "seam_gap_mm": 0.4,
+      "nominal_wall_mm": 2.0,
+      "overlapping_envelopes_removed_mm3": 160062.47502629913
+    },
+    {
+      "body": "right_upper_roll",
+      "halves": [
+        {
+          "name": "right_upper_roll_service_minus",
+          "volume_mm3": 44270.48591634631,
+          "cavity_interference_mm3": 0.0
+        },
+        {
+          "name": "right_upper_roll_service_plus",
+          "volume_mm3": 44270.485916346486,
+          "cavity_interference_mm3": 0.0
+        }
+      ],
+      "seam_gap_mm": 0.4,
+      "nominal_wall_mm": 2.0,
+      "overlapping_envelopes_removed_mm3": 1.7462298274040222e-10
+    }
+  ],
+  "blockers": [
+    "Mounting bosses and fasteners not designed",
+    "Removal sweeps not validated",
+    "Vendor connector positions and cable selection unresolved",
+    "Inter-link mating openings and hardware cutouts not designed"
+  ]
+}
