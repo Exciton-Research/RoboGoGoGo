@@ -185,19 +185,8 @@ export function addResearchRobotDetails(model: RobotModel, add: AddMesh) {
     );
     chest.scale.set(0.15, 0.26, 0.19);
     const torso = model.names.indexOf("torso");
-    // Fixed shoulder bearing carriers bridge the chest to each yaw assembly.
-    for (const side of [-1, 1]) {
-      add(torso, new THREE.CylinderGeometry(0.06, 0.06, 0.105, 40), graphite, [
-        0,
-        side * 0.285,
-        0.22,
-      ]);
-      add(torso, new THREE.CylinderGeometry(0.064, 0.064, 0.012, 40), metal, [
-        0,
-        side * 0.32,
-        0.22,
-      ]);
-    }
+    // Shoulder hardware comes exclusively from the backend drive packages.
+    // The old decorative bearing drums duplicated the inboard lift assembly.
 
     const neck = add(
       torso,
