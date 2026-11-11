@@ -17,6 +17,7 @@ from robogogogo.robot.definition import ROBOT_ID, ROBOT_REVISION
 
 from .. import spatial as sp
 from .. import urdf
+from ..robot.hardware_qualification import shoulder_qualification
 from ..robot.packaging import (
     arm_cable_passages,
     assembly_parts,
@@ -110,6 +111,7 @@ class Studio:
             shoulder_packages=shoulder_packages(model),
             wiring=robot_wiring(model),
             shoulder_covers=cover_specs(model),
+            shoulder_qualification=shoulder_qualification(model),
             fixed_wiring=fixed_wiring_report(model),
             assembly_parts=assembly_parts(model) + harness_fixtures(model),
             cable_passages=arm_cable_passages(model),

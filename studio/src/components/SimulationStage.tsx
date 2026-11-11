@@ -114,8 +114,18 @@ export function SimulationStage() {
           </div>
           {showInternals && (
             <div className="engineering-note">
-              3 internal motors per shoulder: yaw · roll · pitch. Covered
-              inter-motor looms; connector and flex qualification pending.
+              <details>
+                <summary>
+                  3 shoulder motors · Hardware qualification incomplete
+                </summary>
+                <ul>
+                  {shown?.model.shoulder_qualification?.blockers.map(
+                    (reason) => (
+                      <li key={reason}>{reason}</li>
+                    ),
+                  )}
+                </ul>
+              </details>
             </div>
           )}
           {shown ? (
