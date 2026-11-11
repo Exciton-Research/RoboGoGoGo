@@ -11,6 +11,7 @@ from pathlib import Path
 
 import numpy as np
 
+from ..planning.collision import segment_distance
 from ..urdf import loads
 from .definition import ROBOT_REVISION
 from .mechanical_covers import motor_cover_specs
@@ -35,9 +36,7 @@ def configurations(model, count=512, seed=43):
         q = mobile_home(model, ("standing", "low", "reach")[n % 3])
         for side, sign in (("left", 1), ("right", -1)):
             for suffix, (lo, hi) in WORKING_RANGES.items():
-                q[model.indices[model.names.index(f"{side}_{suffix}")]] = rng.uniform(lo, hi) * (
-                    1
-                )
+                q[model.indices[model.names.index(f"{side}_{suffix}")]] = rng.uniform(lo, hi) * (1)
         yield f"random:{n}", q
     # Coordinated base-height transitions with both arms moving. These are
     # discrete samples of trajectories, not a continuous swept-volume proof.
@@ -57,9 +56,29 @@ def audit(count=512, seed=43):
     counts = Counter()
     failures = []
     minimum = float("inf")
+    shoulder_indices = {
+        i
+        for i, c in enumerate(world.capsules)
+        if any(
+            c.name.startswith(f"{side}_{part}")
+            for side in ("left", "right")
+            for part in ("waist_", "upper_roll_", "shoulder_", "upper_arm", "socket")
+        )
+    }
+    shoulder_pairs = np.array(
+        [(i, j) for i, j in world.pairs if i in shoulder_indices or j in shoulder_indices]
+    )
+    shoulder_minimum = float("inf")
     for label, q in configurations(model, count, seed):
         rigid = world.clearance(q)
         minimum = min(minimum, rigid.distance)
+        a, b = world.geometry(q)
+        i, j = shoulder_pairs.T
+        shoulder_gap = float(
+            np.min(segment_distance(a[i], b[i], a[j], b[j]) - world.radii[i] - world.radii[j])
+        )
+        shoulder_minimum = min(shoulder_minimum, shoulder_gap)
+        counts["shoulder_pairs_clear"] += int(shoulder_gap >= world.margin)
         counts["samples"] += 1
         counts["rigid_clear"] += int(rigid.distance >= world.margin)
         if rigid.distance < world.margin:
@@ -78,6 +97,7 @@ def audit(count=512, seed=43):
         counts=dict(counts),
         margin_m=world.margin,
         minimum_guard_equivalent_clearance_m=minimum,
+        minimum_shoulder_pair_clearance_m=shoulder_minimum,
         failures=failures,
         limitations=[
             "Finite samples, not continuous-space certification or full nominal joint range",

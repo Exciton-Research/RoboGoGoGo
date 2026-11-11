@@ -72,7 +72,7 @@ export function addInternalPackaging(model: RobotModel, add: AddMesh) {
       const output = segment(
         p.joint_body ?? p.body,
         b,
-        b.clone().addScaledVector(direction, 0.028),
+        b.clone().addScaledVector(direction, 0.034),
         0.022,
         "#8799a6",
       );
