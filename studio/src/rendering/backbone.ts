@@ -33,12 +33,17 @@ export function addBackbone(model: RobotModel, add: AddMesh) {
   };
   model.names.forEach((name, body) => {
     if (name.endsWith("actuator") || name === "world") return;
+    // Shoulder support is the serial motor carrier from the backend, not a
+    // diagonal torso rail terminating beyond the first actuator.
+    if (/^(left|right)_pedestal$/.test(name)) return;
     const parent = model.parents[body],
       end = new THREE.Vector3(...model.joint_origins[body]);
     if (parent < 0 || end.length() < 0.1) return;
     for (const side of [-1, 1]) {
       const offset = new THREE.Vector3(0, side * 0.025, 0);
-      beam(parent, offset, end.clone().add(offset), 0.009);
+      const start = offset.clone();
+      if (/^(left|right)_shoulder$/.test(model.names[parent])) start.x = 0.11;
+      beam(parent, start, end.clone().add(offset), 0.009);
     }
     beam(
       parent,

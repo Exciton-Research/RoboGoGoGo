@@ -52,17 +52,24 @@ export function addResearchRobotDetails(model: RobotModel, add: AddMesh) {
       if (upper || forearm) {
         const length = upper ? 0.32 : 0.28;
         const radius = upper ? 0.055 : 0.065;
-        // Two removable shells around a continuous dark structural carrier.
+        // The upper-arm carrier begins at the axial drive, leaving room for
+        // the cross-axis motor centered at the shoulder junction.
+        const carrierStart = upper ? 0.11 : 0;
         const carrier = add(
           body,
-          new THREE.CylinderGeometry(radius * 0.53, radius * 0.53, length, 40),
+          new THREE.CylinderGeometry(
+            radius * 0.53,
+            radius * 0.53,
+            length - carrierStart,
+            40,
+          ),
           graphite,
-          [length / 2, 0, 0],
+          [(length + carrierStart) / 2, 0, 0],
         );
         carrier.userData.removableCover = true;
         carrier.rotation.z = -Math.PI / 2;
         for (const half of [0, 1]) {
-          const sleeveStart = upper ? 0.182 : 0;
+          const sleeveStart = upper ? 0.202 : 0;
           const sleeve = add(
             body,
             armShell(length - sleeveStart, radius, half),
@@ -74,7 +81,7 @@ export function addResearchRobotDetails(model: RobotModel, add: AddMesh) {
           sleeve.material.roughness = 0.46;
           sleeve.material.metalness = 0.08;
         }
-        for (const x of [upper ? 0.187 : 0.025, length - 0.03]) {
+        for (const x of [upper ? 0.207 : 0.025, length - 0.03]) {
           const collar = add(
             body,
             new THREE.CylinderGeometry(radius * 0.6, radius * 0.6, 0.009, 48),

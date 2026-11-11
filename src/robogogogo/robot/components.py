@@ -77,7 +77,7 @@ def mounting_offset(suffix):
     # Center the cross-axis motor on the shoulder mounting plane.
     if suffix == "upper_roll":
         return -ARM_COMPONENTS[suffix].length_m / 2
-    return {"waist": 0.12, "shoulder": 0.09}.get(suffix, 0.025)
+    return {"waist": 0.12, "shoulder": 0.11}.get(suffix, 0.025)
 
 
 def mounting_sign(side, suffix):

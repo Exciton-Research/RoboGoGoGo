@@ -93,7 +93,7 @@ def test_compact_shoulder_uses_lift_then_axial_upper_arm_rotation():
             np.testing.assert_allclose(model.axis[model.names.index(f"{side}_{suffix}")], axis)
     q = mobile_home(model)
     world = mobile_collision_world(model)
-    before = world._poses(q)
+    before = world._poses(q.copy())
     q[model.indices[model.names.index("left_shoulder")]] += 0.3
     after = world._poses(q)
     # Axial rotation must not displace the elbow pivot, but rotates the forearm plane.
@@ -109,7 +109,11 @@ def test_shoulder_fork_carriers_leave_clearance_around_motor_covers():
         if not motor["shoulder_axis"]:
             continue
         owner = motor["name"].removesuffix("_drive_package")
-        fork = [part for part in parts if part["owner"] == owner]
+        fork = [
+            part
+            for part in parts
+            if part["owner"] == owner and part.get("render_style") == "shoulder_yoke"
+        ]
         assert len(fork) == 3
         assert all(part["render_style"] == "shoulder_yoke" for part in fork)
         # Rectangular cheek mesh stays inside the same capsule used by the guard.
@@ -132,7 +136,7 @@ def test_lift_motors_are_inboard_and_cross_axis_motors_follow_lift():
         assert swing["start"][2] < 0 < swing["end"][2]
 
 
-def test_cross_axis_motor_is_centered_in_shoulder_plane_without_moving_other_drives():
+def test_cross_axis_motor_is_centered_on_support_junction():
     model = loads(mobile_dual_arm_urdf()).model
     world = mobile_collision_world(model)
     q = mobile_home(model)
@@ -150,6 +154,49 @@ def test_cross_axis_motor_is_centered_in_shoulder_plane_without_moving_other_dri
             )
         # The lift-frame XY plane contains all three centers at neutral swing.
         assert all(abs(center[2]) < 1e-7 for center in centers.values())
-        np.testing.assert_allclose(centers["swing"], [-0.06, 0, 0], atol=1e-7)
-        np.testing.assert_allclose(centers["roll"], [0.12095, 0, 0], atol=1e-7)
+        np.testing.assert_allclose(centers["swing"], [0, 0, 0], atol=1e-7)
+        np.testing.assert_allclose(centers["roll"], [0.14095, 0, 0], atol=1e-7)
         assert abs(abs(centers["lift"][1]) - 0.15095) < 1e-7
+
+
+def test_distal_sleeve_collision_envelope_covers_its_full_length():
+    model = loads(mobile_dual_arm_urdf()).model
+    world = mobile_collision_world(model)
+    for side in ("left", "right"):
+        sleeve = next(c for c in world.capsules if c.name == f"{side}_upper_arm")
+        assert sleeve.start == (0.202, 0, 0)
+        assert sleeve.end == (0.32, 0, 0)
+        assert sleeve.radius >= 0.055
+        # The proximal drive remains checked against the centered cross-axis drive.
+        pairs = {
+            frozenset((world.capsules[i].name, world.capsules[j].name)) for i, j in world.pairs
+        }
+        assert (
+            frozenset((f"{side}_upper_roll_drive_package", f"{side}_shoulder_drive_package"))
+            in pairs
+        )
+
+
+def test_serial_connections_follow_each_motor_output_and_preserve_remote_guards():
+    model = loads(mobile_dual_arm_urdf()).model
+    world = mobile_collision_world(model)
+    parts = mechanical_assembly_parts(model)
+    pairs = {frozenset((world.capsules[i].name, world.capsules[j].name)) for i, j in world.pairs}
+    for side in ("left", "right"):
+        expected = {
+            "torso_to_lift": f"{side}_pedestal",
+            "lift_to_swing": f"{side}_waist",
+            "swing_to_roll": f"{side}_upper_roll",
+            "roll_to_arm": f"{side}_shoulder",
+        }
+        connections = [
+            p for p in parts if p["owner"].startswith(side + "_") and p.get("connection_role")
+        ]
+        assert {p["connection_role"] for p in connections} == set(expected)
+        for p in connections:
+            assert model.names[p["body"]] == expected[p["connection_role"]]
+            assert p["mass_kg"] > 0
+        shaft = f"{side}_upper_roll_mount_swing_output"
+        assert frozenset((shaft, f"{side}_upper_roll_drive_package")) not in pairs
+        opposite = "right" if side == "left" else "left"
+        assert frozenset((shaft, f"{opposite}_hand")) in pairs

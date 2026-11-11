@@ -95,6 +95,8 @@ def assembly_parts(model, *, electrical=True):
         # Cross-axis fork cheeks flank the upper arm instead of crossing its path.
         if drive["shoulder_axis"] == "swing":
             radial = np.array([0.0, 1, 0])
+        if drive["shoulder_axis"] == "roll":
+            radial = np.array([0.0, 0, 1])
         other = np.cross(axis, radial)
         # The lift yoke opens toward the descending upper arm, not across it.
         if drive["shoulder_axis"] == "pitch" and other[2] < 0:
@@ -125,7 +127,7 @@ def assembly_parts(model, *, electrical=True):
             # The axial roll output remains open toward the distal upper arm.
             spacing = drive["radius"] + 0.014
             front, rear = a - axis * 0.012, b + axis * 0.012
-            bridge = front if drive["shoulder_axis"] == "roll" else rear
+            bridge = front if drive["shoulder_axis"] in ("roll", "swing") else rear
             for sign in (-1, 1):
                 part(
                     f"mount_cheek_{sign}",
@@ -356,8 +358,83 @@ def harness_fixtures(model):
 
 
 def mechanical_assembly_parts(model):
-    """Motor saddles only; detailed electrical packaging is deferred."""
-    return assembly_parts(model, electrical=False)
+    """Serial torso -> lift -> swing -> roll -> arm load path; no bypass rails."""
+    parts = assembly_parts(model, electrical=False)
+    drives = {p["name"]: p for p in shoulder_packages(model)}
+
+    def connection(owner, tag, body, a, b, radius, role):
+        a, b = np.asarray(a), np.asarray(b)
+        parts.append(
+            dict(
+                name=f"{owner}_mount_{tag}",
+                owner=owner,
+                body=body,
+                start=a.tolist(),
+                end=b.tolist(),
+                radius=radius,
+                kind="bracket",
+                mass_kg=float(np.pi * radius**2 * np.linalg.norm(b - a) * 2700),
+                render_style="serial_connection",
+                connection_role=role,
+                provenance="custom serial carrier; bearing and fastener qualification pending",
+            )
+        )
+
+    for side, sign in (("left", 1), ("right", -1)):
+        lift = drives[f"{side}_waist_drive_package"]
+        swing = drives[f"{side}_upper_roll_drive_package"]
+        roll = drives[f"{side}_shoulder_drive_package"]
+        # Torso touches only the stator side of motor one.
+        connection(
+            f"{side}_waist",
+            "torso_input",
+            lift["body"],
+            [0, -sign * 0.24, 0],
+            lift["end"],
+            0.012,
+            "torso_to_lift",
+        )
+        # Motor one's rotating output terminates on motor two's fork cheek.
+        connection(
+            f"{side}_waist",
+            "lift_output",
+            lift["joint_body"],
+            lift["start"],
+            [0, -sign * (swing["radius"] + 0.014), 0],
+            0.012,
+            "lift_to_swing",
+        )
+        # Motor two's rear face is open. Its output drives the roll carrier.
+        z = swing["end"][2] + 0.05
+        connection(
+            f"{side}_upper_roll",
+            "swing_output",
+            swing["joint_body"],
+            swing["end"],
+            [0, 0, z],
+            0.012,
+            "swing_to_roll",
+        )
+        spacing = roll["radius"] + 0.014
+        x = roll["start"][0] - 0.012
+        # A central carrier meets the upper cheek of the axial motor fork.
+        # Lateral drops would sweep toward the inboard lift-motor mounting plates.
+        for tag, a, b in (
+            ("output_rail", [0, 0, z], [x, 0, z]),
+            ("output_drop", [x, 0, z], [x, 0, spacing]),
+        ):
+            connection(f"{side}_upper_roll", tag, swing["joint_body"], a, b, 0.012, "swing_to_roll")
+        end = np.asarray(roll["end"])
+        connection(
+            f"{side}_shoulder",
+            "roll_output",
+            roll["joint_body"],
+            end,
+            end + [0.034, 0, 0],
+            0.022,
+            "roll_to_arm",
+        )
+    return parts
 
 
 def mechanical_assembly_capsules(model):

@@ -190,7 +190,7 @@ def mobile_dual_arm_urdf():
                 if element.attrib["name"] == f"{side}_shoulder_joint":
                     element.find("parent").set("link", f"{side}_upper_roll")
                     element.find("axis").set("xyz", "1 0 0")
-                    element.find("origin").set("xyz", "0.06 0 0")
+                    element.find("origin").set("xyz", "0 0 0")
             if element.tag == "link" and element.attrib["name"] == f"{side}_waist":
                 element.find("inertial/origin").set("xyz", "0 0 0")
                 inertia = element.find("inertial/inertia")
@@ -238,13 +238,13 @@ def mobile_dual_arm_urdf():
             f"{side}_waist",
             f"{side}_upper_roll",
             "revolute",
-            origin=(-0.06, 0, 0),
+            origin=(0, 0, 0),
             axis=(0, 0, 1),
             effort=60,
         )
         # Serial Y-Z-X shoulder: torso-mounted lift, cross-axis swing, axial roll.
-        # Engineering-9 offsets the swing pivot; earlier trajectories are incompatible;
-        # engineering-8 changed joint semantics; older trajectories are incompatible.
+        # Engineering-10 centers swing at the support junction; older trajectories
+        # must not be replayed against the changed mechanical geometry.
     neck = link("head_pan", 0.3)
     joint(
         "head_pan_joint",

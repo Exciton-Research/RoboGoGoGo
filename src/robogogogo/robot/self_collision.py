@@ -31,7 +31,9 @@ def mobile_collision_world(model):
     exclusions = list(combinations(body_names, 2))
     for side in ("left", "right"):
         add(f"{side}_socket", f"{side}_waist", (0, 0, 0), (0, 0, 0), 0.17)
-        add(f"{side}_upper_arm", f"{side}_shoulder", (0.075, 0, 0), (0.245, 0, 0), 0.055)
+        # Distal sleeve starts after the axial actuator. Its proximal carrier
+        # is enclosed by the separately checked motor package, not a full sleeve.
+        add(f"{side}_upper_arm", f"{side}_shoulder", (0.202, 0, 0), (0.32, 0, 0), 0.055)
         add(f"{side}_forearm", f"{side}_elbow", (0.065, 0, 0), (0.215, 0, 0), 0.065)
         add(f"{side}_elbow_cap", f"{side}_elbow", (0, -0.07, 0), (0, 0.07, 0), 0.057)
         add(f"{side}_wrist_roll", f"{side}_wrist_roll", (0, 0, 0), (0.055, 0, 0), 0.044)
@@ -76,6 +78,15 @@ def mobile_collision_world(model):
         if suffix in ("waist", "upper_roll", "shoulder"):
             for chest in ("chest_lower", "chest_middle", "chest_upper"):
                 exclusions.append((part.name, chest))
+    # These shafts meet their own actuator output bearings. This is a named
+    # mating interface, not an exemption for adjacent motors or the other arm.
+    for side in ("left", "right"):
+        for suffix, shaft in (
+            ("waist", "lift_output"),
+            ("upper_roll", "swing_output"),
+            ("shoulder", "roll_output"),
+        ):
+            exclusions.append((f"{side}_{suffix}_mount_{shaft}", f"{side}_{suffix}_drive_package"))
     capsules.extend(internals)
     # Slim motor sleeves fit inside each drive's existing 4 mm package allowance.
     # No separate cable-service hoods or electrical attachment exemptions remain.
