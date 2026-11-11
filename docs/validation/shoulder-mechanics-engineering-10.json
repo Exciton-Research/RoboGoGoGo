@@ -1,0 +1,8 @@
+{
+  "samples": 594,
+  "minimum_clearance_m": 0.014067419522988886,
+  "margin_m": 0.012,
+  "failed": [],
+  "checked_pairs": 542,
+  "scope": "Retained shoulder actuator and serial-carrier pairs; named output bearing contacts excluded"
+}
