@@ -1,5 +1,18 @@
 # Shoulder interconnects — engineering 5
 
+**Historical design, superseded in engineering-6.** At the user’s request, the active
+robot now omits detailed cables, connectors, electrical supports and their guards.
+The prior electrical studies below remain reference material, not the Studio model.
+Motor saddles, catalog actuator envelopes, mechanical collision checks and support
+monitoring remain active. Studio uses slim split sleeves with 1 mm nominal motor
+clearance, 2 mm walls and open ends; Engineering hides these sleeves. Their total
+modeled mass is 0.558 kg across all 14 arm actuators. Production fasteners, tolerances
+and electrical routing remain deferred. The engineering-6 working-range report
+records 593 clear poses out of 594; the remaining pose has hand/base interference.
+Coordinated wheel/torso/two-arm motion, draft collision rejection and both visual
+modes were verified after this simplification. The old STEP cover concepts below
+are not the current slim sleeves.
+
 The yaw, roll and pitch drives now have explicit adapter trays, fixed device leads, and two moving interconnects on each shoulder. Power feed-through terminals are separate from the local drive feed. The CAN chain and the power circuits reference the physical routes exported in `examples/robots/mobile_dual_arm.wiring.json` and Studio's `/api/snapshot` model data.
 
 The yaw-to-roll microloom is 295 mm long and roll-to-pitch is 250 mm. Both use a 16 mm bundle envelope, a 40 mm minimum bend requirement, and a conservative twist limit of pi radians/m. These are **custom microloom requirements, not a verified supplier cable rating**. Each fixed adapter lead has explicit 10 mm fillets and a cut length of roughly 100–140 mm. Ten fixed leads are checked against their own host's motor, connectors, mounting rods, neighbouring wires and cover cavities. Same-host interference is not silently exempted.

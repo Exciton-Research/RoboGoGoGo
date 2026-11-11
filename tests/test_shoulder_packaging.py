@@ -6,7 +6,7 @@ from robogogogo.planning.collision import CollisionWorld
 from robogogogo.robot.mobile_design import mobile_dual_arm_urdf, mobile_home
 from robogogogo.robot.packaging import (
     arm_cable_passages,
-    assembly_parts,
+    mechanical_assembly_parts,
     packaging_capsules,
     shoulder_packages,
 )
@@ -45,12 +45,12 @@ def test_reserved_cable_bores_leave_clearance_but_do_not_claim_joint_harness():
         assert "unresolved" in route["status"]
 
 
-def test_brackets_connectors_and_wrist_drives_clear_during_working_motion():
+def test_motor_mounts_and_wrist_drives_clear_during_working_motion():
     model = loads(mobile_dual_arm_urdf()).model
     world = mobile_collision_world(model)
-    parts = assembly_parts(model)
-    assert sum(p["name"].endswith("power_can_connector") for p in parts) == 14
-    assert sum("_device_port_" in p["name"] for p in parts) == 10
+    parts = mechanical_assembly_parts(model)
+    assert len({p["owner"] for p in parts}) == 14
+    assert all(p["kind"] == "bracket" for p in parts)
     home = mobile_home(model)
     # Exercise all three wrist axes together, both mirrored arms, with fittings.
     for angle in np.linspace(-0.2, 0.2, 21):
@@ -62,8 +62,8 @@ def test_brackets_connectors_and_wrist_drives_clear_during_working_motion():
         assert report.distance >= world.margin, report
     # The opposite arm and remote torso remain collision pairs for wrist fittings.
     names = {frozenset((world.capsules[i].name, world.capsules[j].name)) for i, j in world.pairs}
-    assert frozenset(("left_wrist_pitch_power_can_connector", "right_hand")) in names
-    assert frozenset(("left_wrist_pitch_power_can_connector", "chest_middle")) in names
+    assert frozenset(("left_wrist_pitch_mount_rail_1", "right_hand")) in names
+    assert frozenset(("left_wrist_pitch_mount_rail_1", "chest_middle")) in names
 
 
 def test_each_shoulder_contains_exactly_three_catalog_motors():

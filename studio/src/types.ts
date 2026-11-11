@@ -37,11 +37,6 @@ export interface PackagingVolume {
   bundle_radius?: number;
 }
 export interface RobotModel {
-  shoulder_qualification?: {
-    status: string;
-    hardware_ready: boolean;
-    blockers: string[];
-  };
   motor_covers: (PackagingVolume & {
     inner_radius: number;
     seam_gap_m: number;
