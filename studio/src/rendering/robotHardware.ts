@@ -1,7 +1,6 @@
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import type { CameraConfig, RobotModel } from "../types";
-import { addArmActuator } from "./armActuator";
 
 type AddMesh = (
   body: number,
@@ -21,20 +20,14 @@ export function addRobotHardware(
     dark = "#263334",
     rubber = "#202828";
   for (const joint of model.joints) {
-    // Shoulder drives are rendered once, from the shared catalog packages.
-    // Do not add another illustrative reducer at each of those axes.
-    if (/^(left|right)_elbow$/.test(joint.name)) {
-      addArmActuator(model, joint.body, add);
-      continue;
-    }
-    if (!/(wrist_pitch|torso_lower|torso_upper|_steer)$/.test(joint.name))
-      continue;
+    // All seven arm actuators are drawn from shared backend catalog packages.
+    // Generic reducer drums/caps would duplicate the elbow and wrist motors.
+    if (!/(torso_lower|torso_upper|_steer)$/.test(joint.name)) continue;
     const axis = new THREE.Vector3(...model.axes[joint.body]).normalize();
     const orientation = new THREE.Quaternion().setFromUnitVectors(axisY, axis);
-    const wrist = joint.name.includes("wrist"),
-      steering = joint.name.endsWith("steer");
-    const radius = wrist ? 0.035 : steering ? 0.043 : 0.057;
-    const offset = wrist ? 0.038 : steering ? 0.045 : 0.073;
+    const steering = joint.name.endsWith("steer");
+    const radius = steering ? 0.043 : 0.057;
+    const offset = steering ? 0.045 : 0.073;
     for (const side of [-1, 1]) {
       const center = axis.clone().multiplyScalar(side * offset);
       const cap = add(

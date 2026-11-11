@@ -91,21 +91,6 @@ export function addResearchRobotDetails(model: RobotModel, add: AddMesh) {
           collar.rotation.z = -Math.PI / 2;
           collar.material.metalness = 0.75;
         }
-        if (forearm) {
-          add(
-            body,
-            new THREE.SphereGeometry(0.068, 32, 24),
-            "#aeb6b3",
-            [0, 0, 0],
-          );
-          const cap = add(
-            body,
-            new THREE.CylinderGeometry(0.057, 0.057, 0.14, 40),
-            "#e4e6e2",
-            [0, 0, 0],
-          );
-          cap.rotation.y = 0;
-        }
       }
       for (const [suffix, length, radius] of [
         ["wrist_roll", 0.055, 0.043],
@@ -116,7 +101,7 @@ export function addResearchRobotDetails(model: RobotModel, add: AddMesh) {
           const cuff = add(
             body,
             new THREE.CylinderGeometry(radius, radius, length, 32),
-            suffix === "wrist_pitch" ? "#aeb6b3" : "#e4e6e2",
+            "#e4e6e2",
             [length / 2, 0, 0],
           );
           cuff.rotation.z = Math.PI / 2;
