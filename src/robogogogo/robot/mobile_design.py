@@ -294,15 +294,15 @@ def mobile_dual_arm_urdf():
 
     from ..urdf import loads
     from .fixture_inertia import add_fixture_inertia
-    from .packaging import assembly_parts, harness_fixture_specs
+    from .packaging import mechanical_assembly_parts
     from .shoulder_wiring import cover_mass_specs
 
     # Exported fixture dimensions must not depend on the application's default
     # simulation precision. The context restores the caller's configuration.
     with enable_x64(True):
         layout = loads(ET.tostring(robot, encoding="unicode")).model
-    fittings = [dict(part, body_name=layout.names[part["body"]]) for part in assembly_parts(layout)]
-    add_fixture_inertia(robot, fittings + harness_fixture_specs() + cover_mass_specs(layout))
+    fittings = [dict(part, body_name=layout.names[part["body"]]) for part in mechanical_assembly_parts(layout)]
+    add_fixture_inertia(robot, fittings + cover_mass_specs(layout))
     ET.indent(robot)
     return ET.tostring(robot, encoding="unicode")
 

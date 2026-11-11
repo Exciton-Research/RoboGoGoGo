@@ -34,36 +34,10 @@ class MobileDynamics:
         from ..robot.self_collision import mobile_collision_world
 
         self.collision_world = mobile_collision_world(model)
-        from ..robot.shoulder_wiring import fixed_wiring_report
-
-        self.fixed_wiring = fixed_wiring_report(model)
-        if not self.fixed_wiring["valid"]:
-            raise ValueError("Shoulder fixed wiring fails installation clearance")
-        self._harness_cache = None
         self.step = jax.jit(self._step)
         self.predict = jax.jit(self._predict)
         self.center = jax.jit(self._center)
         self.static_margin = jax.jit(lambda q: self.support(q, jnp.zeros(3))[0])
-
-    def harness_report(self, q):
-        from ..robot.harness import harness_clearance, harness_routes
-
-        key = tuple(np.asarray(q).tolist())
-        if self._harness_cache is not None and self._harness_cache[0] == key:
-            return self._harness_cache[1]
-        pose = self.collision_world._poses(jnp.asarray(q))
-        routes = harness_routes(self.model, q, pose)
-        clearance = harness_clearance(self.model, q, pose, self.collision_world, routes)
-        report = dict(
-            routes=routes,
-            clearance_m=clearance.distance,
-            clearance_kind="guard-equivalent; own attachment pairs have zero free-space margin",
-            qualification="simulation only; nominal range and complete electrical loom unqualified",
-            pair=list(clearance.pair),
-            valid=clearance.distance >= self.collision_world.margin,
-        )
-        self._harness_cache = (key, report)
-        return report
 
     def _center(self, q):
         pose = sp.forward_kinematics(self.model, q)

@@ -114,18 +114,8 @@ export function SimulationStage() {
           </div>
           {showInternals && (
             <div className="engineering-note">
-              <details>
-                <summary>
-                  3 shoulder motors · Hardware qualification incomplete
-                </summary>
-                <ul>
-                  {shown?.model.shoulder_qualification?.blockers.map(
-                    (reason) => (
-                      <li key={reason}>{reason}</li>
-                    ),
-                  )}
-                </ul>
-              </details>
+              3 motors per shoulder · Mechanical inspection. Electrical
+              packaging deferred; covers are removable concepts.
             </div>
           )}
           {shown ? (

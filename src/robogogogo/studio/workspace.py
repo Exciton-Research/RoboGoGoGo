@@ -17,15 +17,11 @@ from robogogogo.robot.definition import ROBOT_ID, ROBOT_REVISION
 
 from .. import spatial as sp
 from .. import urdf
-from ..robot.hardware_qualification import shoulder_qualification
 from ..robot.packaging import (
-    arm_cable_passages,
-    assembly_parts,
-    harness_fixtures,
+    mechanical_assembly_parts,
     shoulder_packages,
 )
-from ..robot.shoulder_wiring import cover_specs, fixed_wiring_report
-from ..robot.wiring import robot_wiring
+from ..robot.shoulder_wiring import cover_specs
 from ..session import Session
 from .episodes import EpisodeService
 from .schemas import CameraSpec, Command, NewEpisode, Project
@@ -109,12 +105,11 @@ class Studio:
             masses=np.asarray(model.mass).tolist(),
             axes=np.asarray(model.axis).tolist(),
             shoulder_packages=shoulder_packages(model),
-            wiring=robot_wiring(model),
+            wiring=None,
             shoulder_covers=cover_specs(model),
-            shoulder_qualification=shoulder_qualification(model),
-            fixed_wiring=fixed_wiring_report(model),
-            assembly_parts=assembly_parts(model) + harness_fixtures(model),
-            cable_passages=arm_cable_passages(model),
+            electrical_detail="deferred; no cable fit or fatigue validation",
+            assembly_parts=mechanical_assembly_parts(model),
+            cable_passages=[],
             joint_origins=np.asarray(model.origin).tolist(),
             joint_orientations=np.asarray(model.orientation).tolist(),
             joints=[
@@ -169,12 +164,8 @@ class Studio:
             else None,
             project=dict(id=self.project_id, name=self.project_name),
             state=dict(
-                harness=self.session.mobile.harness_report(s.state.q)["routes"]
-                if self.session.mobile
-                else [],
-                harness_report=self.session.mobile.harness_report(s.state.q)
-                if self.session.mobile
-                else None,
+                harness=[],
+                harness_report=None,
                 mobile=self.session.mobile_status,
                 motion=self.session.motion_plan,
                 q=np.asarray(s.state.q).tolist(),
@@ -260,25 +251,19 @@ class Studio:
             if np.any(q < s.model.lower) or np.any(q > s.model.upper):
                 raise ValueError("Draft pose exceeds joint limits")
             clearance = s.mobile.collision_world.clearance(q)
-            harness = s.mobile.harness_report(q)
             support = float(s.mobile.static_margin(q))
-            pair = (
-                clearance.pair if clearance.distance <= harness["clearance_m"] else harness["pair"]
-            )
             pose = s._poses(jnp.asarray(q))
             return dict(
                 values=q.tolist(),
                 positions=np.asarray(pose.position).tolist(),
                 rotations=np.asarray(pose.rotation).tolist(),
                 valid=clearance.distance >= s.mobile.collision_world.margin
-                and harness["valid"]
                 and support >= s.mobile.margin,
-                clearance_m=min(clearance.distance, harness["clearance_m"]),
-                clearance_kind="guard-equivalent; includes internal wiring installation gaps",
+                clearance_m=clearance.distance,
+                clearance_kind="mechanical collision envelope",
                 rigid_clearance_m=clearance.distance,
-                harness_clearance_m=harness["clearance_m"],
                 support_margin_m=support,
-                pair=list(pair),
+                pair=list(clearance.pair),
             )
 
     def command(self, command: Command):

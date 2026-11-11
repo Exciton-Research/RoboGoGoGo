@@ -69,43 +69,26 @@ def test_trajectory_export_identifies_assumed_actuator_parameters(workspace, tmp
         assert np.all(friction[~np.isfinite(speeds)] == 0)
 
 
-def test_harness_rejection_rolls_back_simulation_state(workspace, monkeypatch):
-    from robogogogo.planning.collision import CollisionViolation
-
-    workspace.command(Command(op="reset"))
-    session = workspace.session
-    before = session.state
-    elapsed, samples = session.elapsed, len(session.history)
-    monkeypatch.setattr(
-        session.mobile,
-        "harness_report",
-        lambda q: dict(
-            valid=False, clearance_m=-0.01, pair=["test_service_loop", "arm"], routes=[]
-        ),
-    )
-    with pytest.raises(CollisionViolation, match="Cable routing"):
-        session.advance()
-    assert session.state is before
-    assert session.elapsed == elapsed and len(session.history) == samples
-    assert session.mobile_status["collision_guard"] == "blocked"
+def test_studio_omits_deferred_electrical_detail(workspace):
+    snapshot = workspace.snapshot()
+    assert snapshot["state"]["harness"] == []
+    assert snapshot["state"]["harness_report"] is None
+    assert snapshot["model"]["wiring"] is None
+    assert all("_mount_" in p["name"] for p in snapshot["model"]["assembly_parts"])
 
 
-def test_draft_preview_rejects_wiring_failure_before_apply(workspace, monkeypatch):
+def test_draft_preview_still_rejects_mechanical_collision(workspace, monkeypatch):
+    from robogogogo.planning.collision import Clearance
+
     workspace.command(Command(op="reset"))
     session = workspace.session
     before = copy.deepcopy(workspace.snapshot())
     monkeypatch.setattr(
-        session.mobile,
-        "harness_report",
-        lambda q: dict(
-            valid=False,
-            clearance_m=-0.01,
-            pair=["left_yaw_roll_internal", "cover_inner_wall"],
-            routes=[],
-        ),
+        session.mobile.collision_world,
+        "clearance",
+        lambda q: Clearance(-0.01, ("left_upper_arm", "chest_middle")),
     )
     preview = workspace.preview_pose(np.asarray(session.state.q).copy())
     assert not preview["valid"]
-    assert preview["pair"] == ["left_yaw_roll_internal", "cover_inner_wall"]
-    assert preview["rigid_clearance_m"] >= session.mobile.collision_world.margin
+    assert preview["pair"] == ["left_upper_arm", "chest_middle"]
     assert workspace.snapshot() == before

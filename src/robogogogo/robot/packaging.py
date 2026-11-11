@@ -80,7 +80,7 @@ def arm_cable_passages(model):
     ]
 
 
-def assembly_parts(model):
+def assembly_parts(model, *, electrical=True):
     """Custom mounting saddles and connector installation envelopes in parent frames.
 
     Rails and end ties form a cage around each module. Dimensions are our design,
@@ -137,6 +137,8 @@ def assembly_parts(model):
                     0.004,
                     "bracket",
                 )
+        if not electrical:
+            continue
         if drive["shoulder_axis"]:
             from .shoulder_wiring import adapter_layout, connector_interfaces, fixed_adapter_path
 
@@ -313,3 +315,15 @@ def harness_fixture_specs():
 
 def harness_fixtures(model):
     return [dict(p, body=model.names.index(p["body_name"])) for p in harness_fixture_specs()]
+
+
+def mechanical_assembly_parts(model):
+    """Motor saddles only; detailed electrical packaging is deferred."""
+    return assembly_parts(model, electrical=False)
+
+
+def mechanical_assembly_capsules(model):
+    return [
+        Capsule(p["name"], p["body"], tuple(p["start"]), tuple(p["end"]), p["radius"])
+        for p in mechanical_assembly_parts(model)
+    ]

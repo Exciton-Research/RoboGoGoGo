@@ -43,7 +43,7 @@ export interface RobotModel {
     blockers: string[];
   };
   shoulder_covers: PackagingVolume[];
-  fixed_wiring: { valid: boolean; installation_gap_m: number };
+  electrical_detail?: string;
   shoulder_packages: PackagingVolume[];
   assembly_parts: (PackagingVolume & {
     kind: "bracket" | "connector" | "clamp" | "swivel_clamp" | "wire";

@@ -321,14 +321,6 @@ class Session:
                     "Self-collision guard rejected predicted motion: "
                     f"{clearance.pair[0]} / {clearance.pair[1]}. State was not advanced."
                 )
-            harness = self.mobile.harness_report(q)
-            self.mobile_status["harness_clearance_m"] = harness["clearance_m"]
-            if not harness["valid"]:
-                self.stop_drive()
-                self.mobile_status["collision_guard"] = "blocked"
-                raise CollisionViolation(
-                    f"Cable routing guard rejected predicted motion: {harness['pair']}"
-                )
             previous = q
         self.mobile_status.update(
             collision_guard="clear",
