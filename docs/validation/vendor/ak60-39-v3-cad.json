@@ -1,0 +1,24 @@
+{
+  "file": "AK60-39 V3.0 KV80-3D.STEP",
+  "sha256": "89ad8a99fb8afcf77e1744912060aadd638382d32fb2c9bb7b88af2af28597f1",
+  "native_bounds_mm": [
+    [
+      -39.500000000000014,
+      -39.50000000000002,
+      -29.000000100000005
+    ],
+    [
+      39.50000000000001,
+      39.50000000000001,
+      38.000000000002025
+    ]
+  ],
+  "extent_mm": [
+    79.00000000000003,
+    79.00000000000003,
+    67.00000010000203
+  ],
+  "solids": 51,
+  "connector_placement_verified": false,
+  "scope": "Native bounds only; no mating-face, clocking or assembly transform inference"
+}

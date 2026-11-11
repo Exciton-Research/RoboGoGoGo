@@ -1,0 +1,41 @@
+{
+  "retrieved": "2026-11-10",
+  "sources": [
+    {
+      "id": "ak80_step",
+      "url": "https://www.cubemars.com/data/cms/202602/ak80-64-robotic-actuator-3d-drawing.zip",
+      "sha256": "8679c522af66c1870b5dfd67fd2e470a86af4d27f3faba45f09b45f957ab6776",
+      "bytes": 20367
+    },
+    {
+      "id": "ak60_step",
+      "url": "https://www.cubemars.com/data/cms/202602/ak60-39-v3-0-robotic-actuator-3d-drawing.zip",
+      "sha256": "84252ff987bdab330e90fbff717daaadcea69c9fa98f437cf5daee0f45682a66",
+      "bytes": 1482937
+    },
+    {
+      "id": "yaw_driver_step",
+      "url": "https://www.cubemars.com/data/cms/202610/driver-ak54-4810-2d-a2.zip",
+      "sha256": "3c8c23e92f3da33014ff47bba79e728d96fc35698e1061e6a868057683a7caf6",
+      "bytes": 3284140
+    },
+    {
+      "id": "yaw_driver_manual",
+      "url": "https://www.cubemars.com/data/cms/202610/ak54-4810-2d-a2-driver-installation-instructions.pdf",
+      "sha256": "9091effdba93e506bb575710a3ea610a437ad73d90c737a28281ebfa8cdab560",
+      "bytes": 686949
+    },
+    {
+      "id": "ak80_drawing",
+      "url": "https://www.cubemars.com/data/cms/202602/ak80-64-robotic-actuator-2d-drawing.pdf",
+      "sha256": "d10c81bd1b560904a4c4bb5b1707fbfafd0e12b774910eac3f90b82e0bf5380e",
+      "bytes": 48529
+    },
+    {
+      "id": "cable_catalog",
+      "url": "https://toolbox.igus.com/wp-content/uploads/2023/12/robotics-catalog-2023.pdf",
+      "sha256": "1892c9823c87f06892b9a50e072c9f94def7f94d6f8e24b416696c6474f220b9",
+      "bytes": 28100856
+    }
+  ]
+}
