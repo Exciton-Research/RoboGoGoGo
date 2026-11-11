@@ -313,14 +313,31 @@ def internal_clearance(model, q, pose, world, routes=None, external=()):
 
 def fixed_adapter_path(start, end, source_axis, target_axis, radius=0.010):
     """Two filleted bends in a rear service bay, without cubic tangent cusps."""
-    start, end, source_axis, target_axis = map(np.asarray, (start, end, source_axis, target_axis))
+    values = [np.asarray(v, dtype=float) for v in (start, end, source_axis, target_axis)]
+    if any(v.shape != (3,) or not np.isfinite(v).all() for v in values):
+        raise ValueError("Fixed lead endpoints and directions must be finite 3D vectors")
+    if not np.isfinite(radius) or radius <= 0:
+        raise ValueError("Fixed lead bend radius must be positive and finite")
+    start, end, source_axis, target_axis = values
+    if min(np.linalg.norm(source_axis), np.linalg.norm(target_axis)) < 1e-12:
+        raise ValueError("Fixed lead exit direction must be non-zero")
+    source_axis = source_axis / np.linalg.norm(source_axis)
+    target_axis = target_axis / np.linalg.norm(target_axis)
     corners = [start, start + source_axis * 0.055, end - target_axis * 0.055, end]
+    lengths = np.linalg.norm(np.diff(corners, axis=0), axis=1)
+    if np.min(lengths) < 1e-12:
+        raise ValueError("Fixed lead service legs must have non-zero length")
     transitions = []
     for a, b, c in zip(corners, corners[1:], corners[2:]):
         incoming, outgoing = b - a, c - b
         incoming /= np.linalg.norm(incoming)
         outgoing /= np.linalg.norm(outgoing)
         angle = np.arccos(np.clip(np.dot(incoming, outgoing), -1, 1))
+        if angle < 1e-8:
+            transitions.append((0.0, b[None, :]))
+            continue
+        if np.pi - angle < 1e-8:
+            raise ValueError("Fixed lead cannot reverse direction at a connector")
         distance = radius * np.tan(angle / 2)
         before = b - incoming * distance
         normal = np.cross(incoming, outgoing)
@@ -330,7 +347,10 @@ def fixed_adapter_path(start, end, source_axis, target_axis, radius=0.010):
         ts = np.linspace(0, angle, 13)
         arc = center + np.cos(ts)[:, None] * radial + np.sin(ts)[:, None] * np.cross(normal, radial)
         transitions.append((distance, arc))
-    if transitions[0][0] + transitions[1][0] >= np.linalg.norm(corners[2] - corners[1]):
+    first, last = transitions[0][0], transitions[1][0]
+    # Both connector service legs matter too: a large fillet must not extend
+    # behind the plug even when there is enough room between the two bends.
+    if first >= lengths[0] or last >= lengths[2] or first + last >= lengths[1]:
         raise ValueError("Fixed lead bends cannot fit between tray and device")
     return np.vstack((start, transitions[0][1], transitions[1][1], end))
 

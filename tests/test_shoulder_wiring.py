@@ -113,3 +113,17 @@ def test_export_does_not_depend_on_simulation_precision():
     with enable_x64(True):
         double = mobile_dual_arm_urdf()
     assert single == double
+
+
+def test_fixed_lead_fillet_cannot_extend_behind_connector():
+    from robogogogo.robot.shoulder_wiring import fixed_adapter_path
+
+    # Middle leg has ample room, but a 60 mm fillet consumes more than the
+    # 55 mm straight exit at both connectors. The old middle-only check passed.
+    with pytest.raises(ValueError, match="cannot fit"):
+        fixed_adapter_path([0, 0, 0], [0.11, 0.3, 0], [1, 0, 0], [1, 0, 0], radius=0.06)
+    points = fixed_adapter_path([0, 0, 0], [0.3, 0, 0], [2, 0, 0], [1, 0, 0])
+    assert np.isfinite(points).all()
+    assert np.all(np.diff(points[:, 0]) > 0)
+    with pytest.raises(ValueError):
+        fixed_adapter_path([0, 0, 0], [0.3, 0, 0], [0, 0, 0], [1, 0, 0])
