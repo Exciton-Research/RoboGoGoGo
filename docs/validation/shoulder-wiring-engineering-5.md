@@ -29,3 +29,57 @@ The audits intentionally return exit code 2 because each includes a legitimate b
 ## Release boundary
 
 This completes the modeled interconnections between the three shoulder adapters. It does not release a manufacturing loom: vendor connector placement, supplier bending/fatigue qualification, protection ratings, assembly access, shell mating details and strain-relief hardware still need physical validation. The covers are service envelopes with open mating interfaces, not detailed manufacturing surfaces. Incoming torso distribution and downstream arm wiring outside these shoulder interconnects remain separate work. No real robot was commanded.
+
+## Vendor inspection and cover CAD follow-up (2026-11-10)
+
+Downloaded sources and SHA-256 fingerprints are recorded in `vendor/sources.json`.
+The reproducible `scripts/engineering/inspect_step.py` reader measured the official
+AK60-39 V3 assembly at 79 x 79 x 67 mm and AK80-64 at 61.9 x 98 x 98 mm in their
+respective native STEP axes. These confirm the catalog envelopes, not connector
+mounting transforms. AK60 contains connector-named components, but their location
+has **not** been registered to our robot frame. AK80 is one simplified solid;
+its socket positions cannot be recovered from that download. Its internal STEP
+product label also differs from the advertised filename, so identity should be
+confirmed with the supplier before tooling.
+
+The [AK54-4810-2D-A2 manual](https://www.cubemars.com/data/cms/202610/ak54-4810-2d-a2-driver-installation-instructions.pdf),
+pages 6-9, identifies the yaw driver's AMASS XT30PW(2+2)-M interface and mating
+XT30(2+2)-F. The supplied lead is specified as 300 +/- 10 mm. This does not validate
+our custom shorter leads, their socket clocking, or a 10 mm bend radius.
+
+The [Igus robotics catalog](https://toolbox.igus.com/wp-content/uploads/2023/12/robotics-catalog-2023.pdf),
+printed pages 176-177 and 194-196, lists 8 mm CFROBOT2.07.04.C and 7.5 mm
+CFROBOT8.022, both requiring 10*d for twisted flexing. A conservative internal
+bundle screening radius is 92 mm (80 mm plus 8 mm bundle offset plus 4 mm cable
+radius). The modeled 40 mm requirement is incompatible with those candidates.
+They are **not** selected as a released internal loom. Existing external routing
+retains its larger, conservative 8.5 mm power-cable allowance. Studio's Engineering
+note and model API now report hardware qualification separately from simulation
+geometry validity; these checks do not enable hardware execution.
+
+`examples/robots/cad/shoulder-cover-concepts.zip` contains 12 hollow STEP halves.
+The exporter unions same-host cover envelopes and cavities before cutting the
+shell, eliminating redundant internal walls. A 0.4 mm split gap separates the
+halves; nominal walls are 2 mm. All halves passed B-rep validity, zero cavity-volume
+interference, and STEP reimport volume checks (0.01 mm3 tolerance). The report is
+`shoulder-cover-cad.json`. Shell-only mass at the existing density assumption is
+2.017 kg. This excludes bosses, screws, openings and production tolerances.
+
+These are **offline cover concepts**, not replacements for the conservative
+runtime envelopes or their inertia. They lack motor/connector openings, mounting
+bosses, fasteners and validated removal sweeps. A valid hollow solid is not proof
+of assemblability or collision-free robot movement. No vendor socket position or
+full working-range hardware clearance is newly certified by this work.
+
+Reproduce using an isolated environment with `cadquery-ocp==8.0.1.1.0`:
+
+```sh
+python scripts/engineering/inspect_step.py /path/to/vendor.step --output /tmp/vendor-measurement.json
+python scripts/engineering/export_shoulder_covers.py examples/robots/cad/shoulder-cover-envelopes.json /tmp/shoulder-covers
+```
+
+The fixed-lead generator also now validates both connector exit legs, rejects
+invalid directions and impossible reversals, and handles straight routes without
+NaNs. Validation: 12 focused wiring/qualification tests passed; Studio production
+build passed. Existing motion-audit counts above remain historical engineering-5
+results, not a CAD-based qualification of the new cover concepts.
