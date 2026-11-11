@@ -28,12 +28,12 @@ def test_shoulder_drive_proxies_enclose_hardware_and_check_moving_upper_arms():
             assert np.hypot(np.linalg.norm(np.asarray(end) - center), package["radius"] + package["cover_allowance_m"]) <= proxy.radius + 1e-9
     guard = mobile_collision_world(model)
     folded = home.copy()
-    folded[model.indices[model.names.index("left_upper_roll")]] = np.pi / 2
-    assert internals.clearance(folded).distance < 0
+    folded[model.indices[model.names.index("left_upper_roll")]] = -1.5
+    assert guard.clearance(folded).distance < 0
     assert not guard.edge_free(home, folded)
     pairs = {frozenset((guard.capsules[i].name, guard.capsules[j].name)) for i, j in guard.pairs}
     for side in ("left", "right"):
-        for suffix in ("waist", "upper_roll", "shoulder"):
+        for suffix in ("waist", "upper_roll"):
             assert frozenset((f"{side}_{suffix}_drive_package", f"{side}_upper_arm")) in pairs
 
 
@@ -74,3 +74,19 @@ def test_each_shoulder_contains_exactly_three_catalog_motors():
         assert {p["shoulder_axis"] for p in motors} == {"yaw", "roll", "pitch"}
         assert len(motors) == 3
         assert all(p["cover_allowance_m"] == 0.004 for p in motors)
+
+
+def test_compact_shoulder_uses_lift_then_axial_upper_arm_rotation():
+    model = loads(mobile_dual_arm_urdf()).model
+    for side in ("left", "right"):
+        for suffix, axis in (("waist", [0, 0, 1]), ("upper_roll", [0, 1, 0]), ("shoulder", [1, 0, 0])):
+            np.testing.assert_allclose(model.axis[model.names.index(f"{side}_{suffix}")], axis)
+    q = mobile_home(model)
+    world = mobile_collision_world(model)
+    before = world._poses(q)
+    q[model.indices[model.names.index("left_shoulder")]] += 0.3
+    after = world._poses(q)
+    # Axial rotation must not displace the elbow pivot, but rotates the forearm plane.
+    elbow = model.names.index("left_elbow")
+    np.testing.assert_allclose(before.position[elbow], after.position[elbow], atol=1e-7)
+    assert np.linalg.norm(np.asarray(before.rotation[elbow]) - after.rotation[elbow]) > 0.1

@@ -33,7 +33,7 @@ def shoulder_packages(model):
                     radius=part.diameter_m / 2,
                     mounting_offset=offset,
                     cover_allowance_m=0.004,
-                    shoulder_axis={"waist": "yaw", "upper_roll": "roll", "shoulder": "pitch"}.get(
+                    shoulder_axis={"waist": "yaw", "upper_roll": "pitch", "shoulder": "roll"}.get(
                         suffix
                     ),
                     component=part.to_dict(),
@@ -92,6 +92,9 @@ def assembly_parts(model, *, electrical=True):
         axis = (b - a) / np.linalg.norm(b - a)
         radial = np.array([1.0, 0, 0]) if abs(axis[0]) < 0.5 else np.array([0.0, 1, 0])
         other = np.cross(axis, radial)
+        # The lift yoke opens toward the descending upper arm, not across it.
+        if drive["shoulder_axis"] == "pitch" and other[2] < 0:
+            other = -other
         owner = drive["name"].removesuffix("_drive_package")
 
         def part(suffix, start, end, radius, kind):

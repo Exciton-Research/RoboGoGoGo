@@ -188,6 +188,7 @@ def mobile_dual_arm_urdf():
                     element.find("origin").set("xyz", "0 0 0")
                 if element.attrib["name"] == f"{side}_shoulder_joint":
                     element.find("parent").set("link", f"{side}_upper_roll")
+                    element.find("axis").set("xyz", "1 0 0")
                     element.find("origin").set("xyz", "0 0 0")
             if element.tag == "link" and element.attrib["name"] == f"{side}_waist":
                 element.find("inertial/origin").set("xyz", "0 0 0")
@@ -203,7 +204,7 @@ def mobile_dual_arm_urdf():
                         element.find("origin").set("xyz", f"{offset} 0 0")
             if element.tag == "link":
                 segments = {
-                    "shoulder": (0.32, 0.075),
+                    "shoulder": (0.32, 0.055),
                     "elbow": (0.28, 0.065),
                     "wrist_roll": (0.055, 0.043),
                     "wrist_pitch": (0.10, 0.043),
@@ -237,11 +238,11 @@ def mobile_dual_arm_urdf():
             f"{side}_upper_roll",
             "revolute",
             origin=(0, 0, 0),
-            axis=(1, 0, 0),
+            axis=(0, 1, 0),
             effort=60,
         )
-        # Co-located shoulder axes form a compact ball-like mechanism.
-        # The small carrier inertia remains, but no extra spacer link is drawn.
+        # Serial Z-Y-X shoulder: yaw, lift, then upper-arm axial rotation.
+        # Legacy joint IDs remain stable; engineering-7 changes their axis meaning.
     neck = link("head_pan", 0.3)
     joint(
         "head_pan_joint",
@@ -319,8 +320,8 @@ def mobile_home(model, posture="standing"):
             {
                 f"{side}_{name}": value
                 for name, value in zip(
-                    ("waist", "shoulder", "elbow", "wrist_roll", "wrist_pitch", "tool_roll"),
-                    (0.0, 1.2, -1.35, 0.0, 0.15, 0.0),
+                    ("waist", "upper_roll", "shoulder", "elbow", "wrist_roll", "wrist_pitch", "tool_roll"),
+                    (0.0, 1.2, 0.0, -1.35, 0.0, 0.15, 0.0),
                 )
             }
         )
