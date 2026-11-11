@@ -42,6 +42,10 @@ export interface RobotModel {
     hardware_ready: boolean;
     blockers: string[];
   };
+  motor_covers: (PackagingVolume & {
+    inner_radius: number;
+    seam_gap_m: number;
+  })[];
   shoulder_covers: PackagingVolume[];
   electrical_detail?: string;
   shoulder_packages: PackagingVolume[];

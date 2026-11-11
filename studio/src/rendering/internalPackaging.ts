@@ -47,21 +47,6 @@ export function addInternalPackaging(model: RobotModel, add: AddMesh) {
         p.radius,
         "#a1aeb5",
       );
-    const allowance = p.cover_allowance_m ?? 0.004;
-    const skin = add(
-      p.body,
-      new THREE.CylinderGeometry(
-        p.radius + allowance,
-        p.radius + allowance,
-        b.distanceTo(a) + 2 * allowance,
-        64,
-      ),
-      "#e4e6e2",
-      a.clone().add(b).multiplyScalar(0.5).toArray(),
-    );
-    skin.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction);
-    skin.userData.removableCover = true;
-    skin.material.roughness = 0.38;
     if (p.shoulder_axis) {
       // A segmented shoulder housing encloses each real motor. These necks
       // remain within the existing socket collision envelope and follow each
@@ -123,21 +108,38 @@ export function addInternalPackaging(model: RobotModel, add: AddMesh) {
     fitting.userData.inspectionOnly = false;
     fitting.visible = true;
   }
-  for (const cover of model.shoulder_covers ?? []) {
-    const a = new THREE.Vector3(...cover.start),
-      b = new THREE.Vector3(...cover.end);
-    const skin = add(
-      cover.body,
-      new THREE.CapsuleGeometry(cover.radius, a.distanceTo(b), 12, 40),
-      "#e4e6e2",
-      a.clone().add(b).multiplyScalar(0.5).toArray(),
-    );
-    skin.quaternion.setFromUnitVectors(
-      new THREE.Vector3(0, 1, 0),
-      b.clone().sub(a).normalize(),
-    );
-    skin.userData.removableCover = true;
-    skin.material.roughness = 0.4;
+  for (const cover of model.motor_covers ?? []) {
+    const a = new THREE.Vector3(...cover.start);
+    const b = new THREE.Vector3(...cover.end);
+    const direction = b.clone().sub(a).normalize();
+    // Two open-ended annular halves: the motor shaft stays accessible and the
+    // cover can be separated radially without threading it over the arm.
+    const gap = cover.seam_gap_m / (2 * cover.inner_radius);
+    for (const half of [0, 1]) {
+      const start = half * Math.PI + gap;
+      const end = (half + 1) * Math.PI - gap;
+      const section = new THREE.Shape();
+      section.absarc(0, 0, cover.radius, start, end, false);
+      section.lineTo(
+        cover.inner_radius * Math.cos(end),
+        cover.inner_radius * Math.sin(end),
+      );
+      section.absarc(0, 0, cover.inner_radius, end, start, true);
+      section.closePath();
+      const skin = add(
+        cover.body,
+        new THREE.ExtrudeGeometry(section, {
+          depth: a.distanceTo(b),
+          bevelEnabled: false,
+          curveSegments: 40,
+        }),
+        "#e4e6e2",
+        a.toArray(),
+      );
+      skin.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), direction);
+      skin.userData.removableCover = true;
+      skin.material.roughness = 0.38;
+    }
   }
   for (const p of model.cable_passages) {
     const a = new THREE.Vector3(...p.start),

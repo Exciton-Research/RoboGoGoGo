@@ -17,11 +17,11 @@ from robogogogo.robot.definition import ROBOT_ID, ROBOT_REVISION
 
 from .. import spatial as sp
 from .. import urdf
+from ..robot.mechanical_covers import motor_cover_specs
 from ..robot.packaging import (
     mechanical_assembly_parts,
     shoulder_packages,
 )
-from ..robot.shoulder_wiring import cover_specs
 from ..session import Session
 from .episodes import EpisodeService
 from .schemas import CameraSpec, Command, NewEpisode, Project
@@ -106,7 +106,8 @@ class Studio:
             axes=np.asarray(model.axis).tolist(),
             shoulder_packages=shoulder_packages(model),
             wiring=None,
-            shoulder_covers=cover_specs(model),
+            shoulder_covers=[],
+            motor_covers=motor_cover_specs(model),
             electrical_detail="deferred; no cable fit or fatigue validation",
             assembly_parts=mechanical_assembly_parts(model),
             cable_passages=[],

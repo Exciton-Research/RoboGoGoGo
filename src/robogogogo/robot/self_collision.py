@@ -77,30 +77,6 @@ def mobile_collision_world(model):
             for chest in ("chest_lower", "chest_middle", "chest_upper"):
                 exclusions.append((part.name, chest))
     capsules.extend(internals)
-    from .shoulder_wiring import cover_specs
-
-    # Service hoods are hollow, with explicit interior checks for the loom.
-    # Only their own contained shoulder hardware and overlap seams are exempt.
-    covers = cover_specs(model)
-    for cover in covers:
-        side = cover["side"]
-        for part in capsules:
-            contained = part.name == f"{side}_socket" or any(
-                part.name.startswith(f"{side}_{suffix}_")
-                for suffix in ("waist", "upper_roll", "shoulder")
-            )
-            if contained and "_harness_" not in part.name:
-                exclusions.append((cover["name"], part.name))
-        for other in covers:
-            if other["side"] == side:
-                exclusions.append((cover["name"], other["name"]))
-        capsules.append(
-            Capsule(
-                cover["name"],
-                cover["body"],
-                tuple(cover["start"]),
-                tuple(cover["end"]),
-                cover["radius"],
-            )
-        )
+    # Slim motor sleeves fit inside each drive's existing 4 mm package allowance.
+    # No separate cable-service hoods or electrical attachment exemptions remain.
     return CollisionWorld(model, capsules, margin=0.012, excluded_capsule_pairs=exclusions)
