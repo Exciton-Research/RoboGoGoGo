@@ -20,8 +20,8 @@ from .self_collision import mobile_collision_world
 
 # Roll is outward on each side; all values radians.
 WORKING_RANGES = {
-    "waist": (-0.35, 0.35),
-    "upper_roll": (0.25, 1.2),
+    "waist": (0.25, 1.2),
+    "upper_roll": (-0.35, 0.35),
     "shoulder": (-0.4, 0.4),
     "elbow": (-1.6, -0.3),
     "wrist_roll": (-0.25, 0.25),
@@ -44,7 +44,7 @@ def configurations(model, count=512, seed=43):
         start = mobile_home(model, "standing")
         end = mobile_home(model, posture)
         for side, sign in (("left", 1), ("right", -1)):
-            for suffix, value in (("upper_roll", 1.0), ("shoulder", sign * 0.25), ("elbow", -1.2)):
+            for suffix, value in (("waist", 1.0), ("shoulder", sign * 0.25), ("elbow", -1.2)):
                 end[model.indices[model.names.index(f"{side}_{suffix}")]] = value
         for t in np.linspace(0, 1, 41):
             yield f"transition:{posture}:{t:.3f}", start * (1 - t) + end * t
@@ -93,7 +93,7 @@ def audit(count=512, seed=43):
         motor_cover_mass_kg=sum(p["mass_kg"] for p in motor_cover_specs(model)),
         seed=seed,
         ranges_rad=WORKING_RANGES,
-        roll_convention="Z-Y-X: waist yaw, upper_roll lift, shoulder axial roll; radians",
+        roll_convention="Y-Z-X: waist lift, upper_roll swing, shoulder axial roll; radians",
         counts=dict(counts),
         margin_m=world.margin,
         minimum_guard_equivalent_clearance_m=minimum,

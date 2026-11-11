@@ -61,8 +61,8 @@ AK45 = Actuator(
     "https://www.cubemars.com/product/ak45-36-v3-0-kv80-robotic-actuator.html",
 )
 ARM_COMPONENTS = {
-    "waist": AK60,
-    "upper_roll": AK80,
+    "waist": AK80,
+    "upper_roll": AK60,
     "shoulder": AK80,
     "elbow": AK60,
     "wrist_roll": AK45,
@@ -74,13 +74,15 @@ ARM_COMPONENTS = {
 def mounting_offset(suffix):
     # Catalog assemblies are mounted outside the intersecting axes; a custom
     # output coupling/yoke bridges to the joint. Connectors need separate clearance.
-    return {"waist": 0.065, "upper_roll": 0.095, "shoulder": 0.09}.get(suffix, 0.025)
+    return {"waist": 0.12, "upper_roll": 0.07, "shoulder": 0.09}.get(suffix, 0.025)
 
 
 def mounting_sign(side, suffix):
+    if suffix == "waist":
+        return -1 if side == "left" else 1
     if suffix == "wrist_roll":
         return -1
-    return -1 if side == "right" and suffix in ("upper_roll", "elbow", "wrist_pitch") else 1
+    return -1 if side == "right" and suffix in ("elbow", "wrist_pitch") else 1
 
 
 def mounting_mass(suffix):

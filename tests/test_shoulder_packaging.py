@@ -77,7 +77,7 @@ def test_each_shoulder_contains_exactly_three_catalog_motors():
     packages = shoulder_packages(model)
     for side in ("left", "right"):
         motors = [p for p in packages if p["name"].startswith(side + "_") and p["shoulder_axis"]]
-        assert {p["shoulder_axis"] for p in motors} == {"yaw", "roll", "pitch"}
+        assert {p["shoulder_axis"] for p in motors} == {"lift", "roll", "swing"}
         assert len(motors) == 3
         assert all(p["cover_allowance_m"] == 0.004 for p in motors)
 
@@ -86,8 +86,8 @@ def test_compact_shoulder_uses_lift_then_axial_upper_arm_rotation():
     model = loads(mobile_dual_arm_urdf()).model
     for side in ("left", "right"):
         for suffix, axis in (
-            ("waist", [0, 0, 1]),
-            ("upper_roll", [0, 1, 0]),
+            ("waist", [0, 1, 0]),
+            ("upper_roll", [0, 0, 1]),
             ("shoulder", [1, 0, 0]),
         ):
             np.testing.assert_allclose(model.axis[model.names.index(f"{side}_{suffix}")], axis)
@@ -116,3 +116,17 @@ def test_shoulder_fork_carriers_leave_clearance_around_motor_covers():
         for part in fork:
             assert np.linalg.norm(np.asarray(part["section_m"]) / 2) <= part["radius"]
         assert 0.014 - fork[0]["radius"] - 0.003 > 0.004
+
+
+def test_lift_motors_are_inboard_and_cross_axis_motors_follow_lift():
+    model = loads(mobile_dual_arm_urdf()).model
+    motors = {p["name"]: p for p in shoulder_packages(model)}
+    for side, sign in (("left", 1), ("right", -1)):
+        lift = motors[f"{side}_waist_drive_package"]
+        swing = motors[f"{side}_upper_roll_drive_package"]
+        assert lift["body"] == model.names.index(f"{side}_pedestal")
+        assert swing["body"] == model.names.index(f"{side}_waist")
+        # Lift is on the torso side of the joint, never a vertical chimney.
+        assert all(point[1] * sign < -0.1 for point in (lift["start"], lift["end"]))
+        assert all(abs(point[2]) < 1e-8 for point in (lift["start"], lift["end"]))
+        assert swing["end"][2] > swing["start"][2] > 0

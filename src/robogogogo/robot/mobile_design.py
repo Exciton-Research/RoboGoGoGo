@@ -186,6 +186,7 @@ def mobile_dual_arm_urdf():
                     item.set("link", f"{side}_{item.attrib['link']}")
                 if element.attrib["name"] == f"{side}_waist_joint":
                     element.find("origin").set("xyz", "0 0 0")
+                    element.find("axis").set("xyz", "0 1 0")
                 if element.attrib["name"] == f"{side}_shoulder_joint":
                     element.find("parent").set("link", f"{side}_upper_roll")
                     element.find("axis").set("xyz", "1 0 0")
@@ -238,11 +239,11 @@ def mobile_dual_arm_urdf():
             f"{side}_upper_roll",
             "revolute",
             origin=(0, 0, 0),
-            axis=(0, 1, 0),
+            axis=(0, 0, 1),
             effort=60,
         )
-        # Serial Z-Y-X shoulder: yaw, lift, then upper-arm axial rotation.
-        # Legacy joint IDs remain stable; engineering-7 changes their axis meaning.
+        # Serial Y-Z-X shoulder: torso-mounted lift, cross-axis swing, axial roll.
+        # Engineering-8 changes joint semantics; older trajectories are incompatible.
     neck = link("head_pan", 0.3)
     joint(
         "head_pan_joint",
@@ -332,7 +333,7 @@ def mobile_home(model, posture="standing"):
                         "wrist_pitch",
                         "tool_roll",
                     ),
-                    (0.0, 1.2, 0.0, -1.35, 0.0, 0.15, 0.0),
+                    (1.2, 0.0, 0.0, -1.35, 0.0, 0.15, 0.0),
                 )
             }
         )

@@ -22,7 +22,7 @@ export interface PackagingVolume {
   section_m?: [number, number];
   box_size?: Vec3;
   cover_allowance_m?: number;
-  shoulder_axis?: "yaw" | "roll" | "pitch" | null;
+  shoulder_axis?: "lift" | "roll" | "swing" | null;
   mounting_offset?: number;
   component?: {
     model: string;

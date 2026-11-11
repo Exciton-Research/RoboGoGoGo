@@ -117,9 +117,9 @@ class Studio:
                 dict(
                     name=model.names[i],
                     label=model.names[i]
-                    .replace("_upper_roll", " shoulder lift")
+                    .replace("_upper_roll", " shoulder swing")
                     .replace("_shoulder", " upper-arm roll")
-                    .replace("_waist", " shoulder yaw")
+                    .replace("_waist", " shoulder lift")
                     .replace("_", " "),
                     body=i,
                     kind=model.kinds[i],
