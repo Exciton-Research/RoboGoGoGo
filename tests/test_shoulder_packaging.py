@@ -165,7 +165,7 @@ def test_distal_sleeve_collision_envelope_covers_its_full_length():
     for side in ("left", "right"):
         sleeve = next(c for c in world.capsules if c.name == f"{side}_upper_arm")
         assert sleeve.start == (0.202, 0, 0)
-        assert sleeve.end == (0.32, 0, 0)
+        assert sleeve.end == (0.255, 0, 0)
         assert sleeve.radius >= 0.055
         # The proximal drive remains checked against the centered cross-axis drive.
         pairs = {
@@ -190,7 +190,9 @@ def test_serial_connections_follow_each_motor_output_and_preserve_remote_guards(
             "roll_to_arm": f"{side}_shoulder",
         }
         connections = [
-            p for p in parts if p["owner"].startswith(side + "_") and p.get("connection_role")
+            p
+            for p in parts
+            if p["owner"].startswith(side + "_") and p.get("connection_role") in expected
         ]
         assert {p["connection_role"] for p in connections} == set(expected)
         for p in connections:

@@ -48,18 +48,7 @@ export function addInternalPackaging(model: RobotModel, add: AddMesh) {
         p.radius,
         "#a1aeb5",
       );
-    // Shoulder connections are physical backend parts with mass and collision
-    // envelopes. Do not add decorative shafts bypassing the serial load path.
-    if (!p.shoulder_axis) {
-      const distance = p.mounting_offset ?? 0.025;
-      segment(
-        p.body,
-        a.clone().addScaledVector(direction, -distance + 0.012),
-        a,
-        0.012,
-        "#778d99",
-      );
-    }
+    // All output connections come from backend parts on the rotating link.
   }
   for (const p of model.assembly_parts ?? []) {
     const fitting = segment(

@@ -155,7 +155,9 @@ def assembly_parts(model, *, electrical=True):
             continue
         # Two side rails with end ties, leaving both module faces accessible.
         spacing = drive["radius"] + 0.008
-        front, rear = a - axis * 0.006, b + axis * 0.006
+        # Keep the stator tie behind the output face so the rotating link
+        # has clearance, rather than putting a bar across its sweep.
+        front, rear = a + axis * (0.003 if not electrical else -0.006), b + axis * 0.006
         for sign in (-1, 1):
             part(
                 f"mount_rail_{sign}",
@@ -434,6 +436,39 @@ def mechanical_assembly_parts(model):
             0.022,
             "roll_to_arm",
         )
+        # Elbow/wrist outputs belong to the rotating child, not the stator.
+        for suffix in ("elbow", "wrist_roll", "wrist_pitch", "tool_roll"):
+            drive = drives[f"{side}_{suffix}_drive_package"]
+            body = drive["joint_body"]
+            origin = np.asarray(model.origin[body])
+            rotation = np.asarray(model.orientation[body])
+            face = drive["end"] if suffix == "tool_roll" else drive["start"]
+            start = rotation.T @ (np.asarray(face) - origin)
+            end = np.array([0.13, 0, 0]) if suffix == "tool_roll" else np.zeros(3)
+            connection(
+                f"{side}_{suffix}", "arm_output", body, start, end, 0.012, "arm_joint_output"
+            )
+            if suffix != "tool_roll":
+                end = np.array([0.075 if suffix == "elbow" else 0.125, 0, 0])
+                if suffix == "wrist_roll":
+                    # Attach to the next stator's existing mounting rail, not
+                    # through its rotating shaft at the joint origin.
+                    end = np.asarray(
+                        next(
+                            p["start"]
+                            for p in parts
+                            if p["name"] == f"{side}_wrist_pitch_mount_rail_-1"
+                        )
+                    )
+                connection(
+                    f"{side}_{suffix}",
+                    "arm_output_link",
+                    body,
+                    [0, 0, 0],
+                    end,
+                    0.008,
+                    "arm_joint_output",
+                )
     return parts
 
 

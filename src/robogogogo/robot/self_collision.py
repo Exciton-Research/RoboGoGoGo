@@ -31,11 +31,17 @@ def mobile_collision_world(model):
     exclusions = list(combinations(body_names, 2))
     for side in ("left", "right"):
         add(f"{side}_socket", f"{side}_waist", (0, 0, 0), (0, 0, 0), 0.17)
-        # Distal sleeve starts after the axial actuator. Its proximal carrier
-        # is enclosed by the separately checked motor package, not a full sleeve.
-        add(f"{side}_upper_arm", f"{side}_shoulder", (0.202, 0, 0), (0.32, 0, 0), 0.055)
-        add(f"{side}_forearm", f"{side}_elbow", (0.065, 0, 0), (0.215, 0, 0), 0.065)
-        add(f"{side}_elbow_cap", f"{side}_elbow", (0, -0.07, 0), (0, 0.07, 0), 0.057)
+        from .arm_structure import ARM_STRUCTURE
+
+        for suffix, label in (("shoulder", "upper_arm"), ("elbow", "forearm")):
+            spec = ARM_STRUCTURE[suffix]
+            add(
+                f"{side}_{label}",
+                f"{side}_{suffix}",
+                (spec["sleeve_start"], 0, 0),
+                (spec["sleeve_end"], 0, 0),
+                spec["radius"],
+            )
         add(f"{side}_wrist_roll", f"{side}_wrist_roll", (0, 0, 0), (0.055, 0, 0), 0.044)
         add(f"{side}_wrist_pitch", f"{side}_wrist_pitch", (0, 0, 0), (0.10, 0, 0), 0.044)
         add(f"{side}_wrist_tip", f"{side}_tool_roll", (0, 0, 0), (0.13, 0, 0), 0.041)
@@ -45,7 +51,6 @@ def mobile_collision_world(model):
         attached = [
             ("socket", "upper_arm"),
             ("upper_arm", "forearm"),
-            ("upper_arm", "elbow_cap"),
             ("forearm", "wrist_roll"),
             ("forearm", "wrist_pitch"),
             ("wrist_roll", "wrist_pitch"),
@@ -65,7 +70,7 @@ def mobile_collision_world(model):
         "waist": ("socket",),
         "upper_roll": ("socket",),
         "shoulder": ("socket", "upper_arm"),
-        "elbow": ("upper_arm", "forearm", "elbow_cap"),
+        "elbow": ("upper_arm", "forearm"),
         "wrist_roll": ("forearm", "wrist_roll", "wrist_pitch"),
         "wrist_pitch": ("wrist_roll", "wrist_pitch", "wrist_tip"),
         "tool_roll": ("wrist_pitch", "wrist_tip", "hand"),
@@ -85,6 +90,13 @@ def mobile_collision_world(model):
             ("waist", "lift_output"),
             ("upper_roll", "swing_output"),
             ("shoulder", "roll_output"),
+            ("elbow", "arm_output"),
+            ("wrist_roll", "arm_output"),
+            ("wrist_pitch", "arm_output"),
+            ("tool_roll", "arm_output"),
+            ("elbow", "arm_output_link"),
+            ("wrist_roll", "arm_output_link"),
+            ("wrist_pitch", "arm_output_link"),
         ):
             exclusions.append((f"{side}_{suffix}_mount_{shaft}", f"{side}_{suffix}_drive_package"))
     capsules.extend(internals)

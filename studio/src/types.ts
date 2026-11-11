@@ -41,6 +41,14 @@ export interface PackagingVolume {
   bundle_radius?: number;
 }
 export interface RobotModel {
+  arm_structure: {
+    body: number;
+    sleeve_start: number;
+    sleeve_end: number;
+    carrier_start: number;
+    carrier_end: number;
+    radius: number;
+  }[];
   motor_covers: (PackagingVolume & {
     inner_radius: number;
     seam_gap_m: number;

@@ -39,10 +39,17 @@ export function addBackbone(model: RobotModel, add: AddMesh) {
     const parent = model.parents[body],
       end = new THREE.Vector3(...model.joint_origins[body]);
     if (parent < 0 || end.length() < 0.1) return;
+    if (
+      /^(left|right)_(wrist_roll|wrist_pitch|tool_roll)$/.test(
+        model.names[parent],
+      )
+    )
+      return;
     for (const side of [-1, 1]) {
       const offset = new THREE.Vector3(0, side * 0.025, 0);
       const start = offset.clone();
       if (/^(left|right)_shoulder$/.test(model.names[parent])) start.x = 0.11;
+      if (/^(left|right)_elbow$/.test(model.names[parent])) start.x = 0.075;
       beam(parent, start, end.clone().add(offset), 0.009);
     }
     beam(

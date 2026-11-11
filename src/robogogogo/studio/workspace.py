@@ -83,7 +83,10 @@ class Studio:
         def finite(value):
             return float(value) if np.isfinite(float(value)) else None
 
+        from ..robot.arm_structure import arm_structure_specs
+
         self.model_info = dict(
+            arm_structure=arm_structure_specs(model),
             name=label,
             mobile_design=DESIGN if scene == "mobile_dual_arm" else None,
             scene=scene,
