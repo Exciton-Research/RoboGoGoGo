@@ -389,7 +389,7 @@ def mechanical_assembly_parts(model):
             f"{side}_waist",
             "torso_input",
             lift["body"],
-            [0, -sign * 0.325, 0],
+            [0, -sign * 0.325, -0.02],
             lift["end"],
             0.012,
             "torso_to_lift",
