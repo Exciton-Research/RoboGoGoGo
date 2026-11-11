@@ -116,6 +116,11 @@ class Studio:
             joints=[
                 dict(
                     name=model.names[i],
+                    label=model.names[i]
+                    .replace("_upper_roll", " shoulder lift")
+                    .replace("_shoulder", " upper-arm roll")
+                    .replace("_waist", " shoulder yaw")
+                    .replace("_", " "),
                     body=i,
                     kind=model.kinds[i],
                     lower=finite(model.lower[j]),

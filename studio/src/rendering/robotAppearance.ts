@@ -51,7 +51,7 @@ export function addResearchRobotDetails(model: RobotModel, add: AddMesh) {
       const forearm = name.endsWith("elbow");
       if (upper || forearm) {
         const length = upper ? 0.32 : 0.28;
-        const radius = upper ? 0.075 : 0.065;
+        const radius = upper ? 0.055 : 0.065;
         // Two removable shells around a continuous dark structural carrier.
         const carrier = add(
           body,
@@ -62,13 +62,19 @@ export function addResearchRobotDetails(model: RobotModel, add: AddMesh) {
         carrier.userData.removableCover = true;
         carrier.rotation.z = -Math.PI / 2;
         for (const half of [0, 1]) {
-          const sleeve = add(body, armShell(length, radius, half), shell);
+          const sleeveStart = upper ? 0.182 : 0;
+          const sleeve = add(
+            body,
+            armShell(length - sleeveStart, radius, half),
+            shell,
+            [sleeveStart, 0, 0],
+          );
           sleeve.userData.removableCover = true;
           sleeve.rotation.z = -Math.PI / 2;
           sleeve.material.roughness = 0.46;
           sleeve.material.metalness = 0.08;
         }
-        for (const x of [0.025, length - 0.03]) {
+        for (const x of [upper ? 0.187 : 0.025, length - 0.03]) {
           const collar = add(
             body,
             new THREE.CylinderGeometry(radius * 0.6, radius * 0.6, 0.009, 48),

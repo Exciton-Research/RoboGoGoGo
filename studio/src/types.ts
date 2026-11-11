@@ -1,5 +1,6 @@
 export type Vec3 = [number, number, number];
 export interface Joint {
+  label?: string;
   name: string;
   body: number;
   kind: string;
@@ -16,6 +17,9 @@ export interface Visual {
   rpy: Vec3;
 }
 export interface PackagingVolume {
+  joint_body?: number;
+  render_style?: string;
+  section_m?: [number, number];
   box_size?: Vec3;
   cover_allowance_m?: number;
   shoulder_axis?: "yaw" | "roll" | "pitch" | null;

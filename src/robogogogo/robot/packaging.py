@@ -28,6 +28,7 @@ def shoulder_packages(model):
                 dict(
                     name=f"{side}_{suffix}_drive_package",
                     body=model.parents[body],
+                    joint_body=body,
                     start=(origin + axis * offset).tolist(),
                     end=(origin + axis * (offset + part.length_m)).tolist(),
                     radius=part.diameter_m / 2,
@@ -116,6 +117,37 @@ def assembly_parts(model, *, electrical=True):
                 )
             )
 
+        if not electrical and drive["shoulder_axis"]:
+            # Custom fork carrier: two cheeks joined on the stator side.
+            # The axial roll output remains open toward the distal upper arm.
+            spacing = drive["radius"] + 0.014
+            front, rear = a - axis * 0.012, b + axis * 0.012
+            bridge = front if drive["shoulder_axis"] == "roll" else rear
+            for sign in (-1, 1):
+                part(
+                    f"mount_cheek_{sign}",
+                    front + radial * spacing * sign,
+                    rear + radial * spacing * sign,
+                    0.006403125,
+                    "bracket",
+                )
+            part(
+                "mount_bridge",
+                bridge - radial * spacing,
+                bridge + radial * spacing,
+                0.006403125,
+                "bracket",
+            )
+            for item in result[-3:]:
+                item.update(
+                    render_style="shoulder_yoke",
+                    section_m=[0.008, 0.010],
+                    mass_kg=float(
+                        2700 * 0.008 * 0.010 * np.linalg.norm(np.array(item["end"]) - item["start"])
+                    ),
+                    provenance="custom aluminum fork carrier; mounting-hole and strength qualification pending",
+                )
+            continue
         # Two side rails with end ties, leaving both module faces accessible.
         spacing = drive["radius"] + 0.008
         front, rear = a - axis * 0.006, b + axis * 0.006

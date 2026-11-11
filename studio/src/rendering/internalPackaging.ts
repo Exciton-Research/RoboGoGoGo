@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import type { RobotModel } from "../types";
 
 type AddMesh = (
@@ -37,7 +38,7 @@ export function addInternalPackaging(model: RobotModel, add: AddMesh) {
     const a = new THREE.Vector3(...p.start),
       b = new THREE.Vector3(...p.end);
     // Complete catalog motor/gearbox/driver module; do not invent vendor internals.
-    segment(p.body, a, b, p.radius, "#34414a");
+    segment(p.body, a, b, p.radius, p.shoulder_axis ? "#263e60" : "#34414a");
     const direction = b.clone().sub(a).normalize();
     for (const end of [a, b])
       segment(
@@ -47,7 +48,7 @@ export function addInternalPackaging(model: RobotModel, add: AddMesh) {
         p.radius,
         "#a1aeb5",
       );
-    if (p.shoulder_axis) {
+    if (p.shoulder_axis && p.shoulder_axis !== "roll") {
       // A segmented shoulder housing encloses each real motor. These necks
       // remain within the existing socket collision envelope and follow each
       // motor's actual parent; a single rigid shell would bind the three axes.
@@ -65,15 +66,28 @@ export function addInternalPackaging(model: RobotModel, add: AddMesh) {
       neck.visible = true;
       neck.material.metalness = 0.15;
     }
-    // Custom coaxial output coupling between module and the joint carrier.
-    const distance = p.mounting_offset ?? 0.025;
-    segment(
-      p.body,
-      a.clone().addScaledVector(direction, -distance + 0.012),
-      a,
-      0.012,
-      "#778d99",
-    );
+    // Axial upper-arm drive has its output facing the distal arm. The output
+    // collar follows the rotating arm, while the motor case stays on the lift carrier.
+    if (p.shoulder_axis === "roll") {
+      const output = segment(
+        p.joint_body ?? p.body,
+        b,
+        b.clone().addScaledVector(direction, 0.028),
+        0.022,
+        "#8799a6",
+      );
+      output.userData.inspectionOnly = false;
+      output.visible = true;
+    } else {
+      const distance = p.mounting_offset ?? 0.025;
+      segment(
+        p.body,
+        a.clone().addScaledVector(direction, -distance + 0.012),
+        a,
+        0.012,
+        "#778d99",
+      );
+    }
   }
   for (const p of model.assembly_parts ?? []) {
     const fitting = segment(
@@ -83,6 +97,22 @@ export function addInternalPackaging(model: RobotModel, add: AddMesh) {
       p.radius,
       p.kind === "connector" || p.kind === "wire" ? "#232b30" : "#9aa8b1",
     );
+    if (p.render_style === "shoulder_yoke") {
+      fitting.geometry.dispose();
+      const length = new THREE.Vector3(...p.end).distanceTo(
+        new THREE.Vector3(...p.start),
+      );
+      fitting.geometry = new RoundedBoxGeometry(
+        p.section_m![0],
+        length,
+        p.section_m![1],
+        3,
+        0.002,
+      );
+      fitting.material.color.set("#e4e6e2");
+      fitting.material.roughness = 0.34;
+      fitting.material.metalness = 0.22;
+    }
     if (p.kind === "connector") {
       fitting.geometry.dispose();
       fitting.geometry = new THREE.BoxGeometry(
@@ -126,19 +156,36 @@ export function addInternalPackaging(model: RobotModel, add: AddMesh) {
       );
       section.absarc(0, 0, cover.inner_radius, end, start, true);
       section.closePath();
-      const skin = add(
-        cover.body,
-        new THREE.ExtrudeGeometry(section, {
-          depth: a.distanceTo(b),
-          bevelEnabled: false,
-          curveSegments: 40,
-        }),
-        "#e4e6e2",
-        a.toArray(),
+      const length = a.distanceTo(b);
+      const shoulder = /_(waist|upper_roll|shoulder)_split_cover$/.test(
+        cover.name,
       );
-      skin.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), direction);
-      skin.userData.removableCover = true;
-      skin.material.roughness = 0.38;
+      const zones = shoulder
+        ? ([
+            [0, 0.012, "#e4e6e2"],
+            [0.012, length - 0.024, "#263e60"],
+            [length - 0.012, 0.012, "#e4e6e2"],
+          ] as const)
+        : ([[0, length, "#e4e6e2"]] as const);
+      for (const [offset, depth, color] of zones) {
+        const skin = add(
+          cover.body,
+          new THREE.ExtrudeGeometry(section, {
+            depth,
+            bevelEnabled: false,
+            curveSegments: 40,
+          }),
+          color,
+          a.clone().addScaledVector(direction, offset).toArray(),
+        );
+        skin.quaternion.setFromUnitVectors(
+          new THREE.Vector3(0, 0, 1),
+          direction,
+        );
+        skin.userData.removableCover = true;
+        skin.material.roughness = color === "#263e60" ? 0.48 : 0.34;
+        skin.material.metalness = color === "#263e60" ? 0.5 : 0.15;
+      }
     }
   }
   for (const p of model.cable_passages) {

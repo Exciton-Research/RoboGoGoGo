@@ -73,7 +73,7 @@
   <joint name="front_left_steer_joint" type="revolute">
     <parent link="base_link" />
     <child link="front_left_steer" />
-    <origin xyz="0.25 0.34 -0.08" />
+    <origin xyz="0.25 0.35 -0.08" />
     <axis xyz="0 0 1" />
     <limit lower="-2.8" upper="2.8" effort="20" velocity="1.0" />
     <dynamics damping="0.2" />
@@ -109,7 +109,7 @@
   <joint name="front_right_steer_joint" type="revolute">
     <parent link="base_link" />
     <child link="front_right_steer" />
-    <origin xyz="0.25 -0.34 -0.08" />
+    <origin xyz="0.25 -0.35 -0.08" />
     <axis xyz="0 0 1" />
     <limit lower="-2.8" upper="2.8" effort="20" velocity="1.0" />
     <dynamics damping="0.2" />
@@ -145,7 +145,7 @@
   <joint name="rear_left_steer_joint" type="revolute">
     <parent link="base_link" />
     <child link="rear_left_steer" />
-    <origin xyz="-0.25 0.34 -0.08" />
+    <origin xyz="-0.25 0.35 -0.08" />
     <axis xyz="0 0 1" />
     <limit lower="-2.8" upper="2.8" effort="20" velocity="1.0" />
     <dynamics damping="0.2" />
@@ -181,7 +181,7 @@
   <joint name="rear_right_steer_joint" type="revolute">
     <parent link="base_link" />
     <child link="rear_right_steer" />
-    <origin xyz="-0.25 -0.34 -0.08" />
+    <origin xyz="-0.25 -0.35 -0.08" />
     <axis xyz="0 0 1" />
     <limit lower="-2.8" upper="2.8" effort="20" velocity="1.0" />
     <dynamics damping="0.2" />
@@ -293,9 +293,9 @@
   </joint>
   <link name="left_pedestal">
     <inertial>
-      <origin xyz="0.0 0.015478307819348265 0.09850000000000002" />
-      <mass value="0.11869942354911397" />
-      <inertia ixx="0.0002007986879935733" iyy="0.00027761780370521227" izz="0.0002541929124198502" ixy="5.293955920339377e-22" ixz="-1.6940658945086007e-21" iyz="-1.588186776101813e-20" />
+      <origin xyz="0.0 0.0 0.1082272921865862" />
+      <mass value="0.10810778373144145" />
+      <inertia ixx="0.00012527343377092374" iyy="0.00025960808171449795" izz="0.00021433892056358538" ixy="0.0" ixz="0.0" iyz="0.0" />
     </inertial>
     <visual>
       <origin xyz="0.0 0.0 0.0" />
@@ -306,9 +306,9 @@
   </link>
   <link name="left_waist">
     <inertial>
-      <origin xyz="0.0 0.007917895009079573 0.00123967135516038" />
-      <mass value="2.134165107191619" />
-      <inertia ixx="0.003940692973212012" iyy="0.0020996016158318933" izz="0.004009144233485441" ixy="0.0" ixz="1.6940658945086007e-21" iyz="-0.00031227321436489976" />
+      <origin xyz="0.0 0.007487515522856332 0.0" />
+      <mass value="2.116544101760558" />
+      <inertia ixx="0.0038198744733762193" iyy="0.001953539246361944" izz="0.004002887104509775" ixy="0.0" ixz="0.0" iyz="0.0" />
     </inertial>
   </link>
   <joint name="left_waist_joint" type="revolute">
@@ -446,13 +446,13 @@
   <joint name="left_mount" type="fixed">
     <parent link="torso" />
     <child link="left_pedestal" />
-    <origin xyz="0 0.4 0.22" />
+    <origin xyz="0 0.35 0.22" />
   </joint>
   <link name="left_upper_roll">
     <inertial>
-      <origin xyz="0.025588398874053786 -8.548264168040265e-20 0.0041718841364269885" />
-      <mass value="0.634165107191618" />
-      <inertia ixx="0.0012918439679404287" iyy="0.0026858759944418035" izz="0.002762084902606697" ixy="-4.638764554820061e-22" ixz="-0.000252294693150422" iyz="1.7143595850825606e-21" />
+      <origin xyz="0.020967002800003753 0.0 0.0" />
+      <mass value="0.6165441017605573" />
+      <inertia ixx="0.0011535392463619442" iyy="0.002146401942249425" izz="0.0023294145733829793" ixy="-2.710505431213761e-20" ixz="0.0" iyz="0.0" />
     </inertial>
   </link>
   <joint name="left_upper_roll_joint" type="revolute">
@@ -465,9 +465,9 @@
   </joint>
   <link name="right_pedestal">
     <inertial>
-      <origin xyz="0.0 0.015478307819348265 0.09850000000000002" />
-      <mass value="0.11869942354911397" />
-      <inertia ixx="0.0002007986879935733" iyy="0.00027761780370521227" izz="0.0002541929124198502" ixy="5.293955920339377e-22" ixz="-1.6940658945086007e-21" iyz="-1.588186776101813e-20" />
+      <origin xyz="0.0 0.0 0.1082272921865862" />
+      <mass value="0.10810778373144145" />
+      <inertia ixx="0.00012527343377092374" iyy="0.00025960808171449795" izz="0.00021433892056358538" ixy="0.0" ixz="0.0" iyz="0.0" />
     </inertial>
     <visual>
       <origin xyz="0.0 0.0 0.0" />
@@ -478,9 +478,9 @@
   </link>
   <link name="right_waist">
     <inertial>
-      <origin xyz="0.0 -0.007917895009079573 0.00123967135516038" />
-      <mass value="2.134165107191619" />
-      <inertia ixx="0.003940692973212012" iyy="0.0020996016158318933" izz="0.004009144233485441" ixy="0.0" ixz="1.6940658945086007e-21" iyz="0.00031227321436489976" />
+      <origin xyz="0.0 -0.007487515522856332 0.0" />
+      <mass value="2.116544101760558" />
+      <inertia ixx="0.0038198744733762193" iyy="0.001953539246361944" izz="0.004002887104509775" ixy="0.0" ixz="0.0" iyz="0.0" />
     </inertial>
   </link>
   <joint name="right_waist_joint" type="revolute">
@@ -618,13 +618,13 @@
   <joint name="right_mount" type="fixed">
     <parent link="torso" />
     <child link="right_pedestal" />
-    <origin xyz="0 -0.4 0.22" />
+    <origin xyz="0 -0.35 0.22" />
   </joint>
   <link name="right_upper_roll">
     <inertial>
-      <origin xyz="0.025588398874053786 -8.548264168040265e-20 0.0041718841364269885" />
-      <mass value="0.634165107191618" />
-      <inertia ixx="0.0012918439679404287" iyy="0.0026858759944418035" izz="0.002762084902606697" ixy="-4.638764554820061e-22" ixz="-0.000252294693150422" iyz="1.7143595850825606e-21" />
+      <origin xyz="0.020967002800003753 0.0 0.0" />
+      <mass value="0.6165441017605573" />
+      <inertia ixx="0.0011535392463619442" iyy="0.002146401942249425" izz="0.0023294145733829793" ixy="-2.710505431213761e-20" ixz="0.0" iyz="0.0" />
     </inertial>
   </link>
   <joint name="right_upper_roll_joint" type="revolute">

@@ -139,7 +139,7 @@ export function Inspector() {
                           <div className="joint-heading">
                             <label htmlFor={`joint-${i}`}>
                               <span>J{i + 1}</span>
-                              {joint.name.replaceAll("_", " ")}
+                              {joint.label ?? joint.name.replaceAll("_", " ")}
                             </label>
                             <div className="joint-number">
                               <input

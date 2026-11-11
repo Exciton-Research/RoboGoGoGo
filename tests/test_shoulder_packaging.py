@@ -25,7 +25,13 @@ def test_shoulder_drive_proxies_enclose_hardware_and_check_moving_upper_arms():
     for proxy, package in zip(parts, shoulder_packages(model)):
         center = np.asarray(proxy.start)
         for end in (package["start"], package["end"]):
-            assert np.hypot(np.linalg.norm(np.asarray(end) - center), package["radius"] + package["cover_allowance_m"]) <= proxy.radius + 1e-9
+            assert (
+                np.hypot(
+                    np.linalg.norm(np.asarray(end) - center),
+                    package["radius"] + package["cover_allowance_m"],
+                )
+                <= proxy.radius + 1e-9
+            )
     guard = mobile_collision_world(model)
     folded = home.copy()
     folded[model.indices[model.names.index("left_upper_roll")]] = -1.5
@@ -79,7 +85,11 @@ def test_each_shoulder_contains_exactly_three_catalog_motors():
 def test_compact_shoulder_uses_lift_then_axial_upper_arm_rotation():
     model = loads(mobile_dual_arm_urdf()).model
     for side in ("left", "right"):
-        for suffix, axis in (("waist", [0, 0, 1]), ("upper_roll", [0, 1, 0]), ("shoulder", [1, 0, 0])):
+        for suffix, axis in (
+            ("waist", [0, 0, 1]),
+            ("upper_roll", [0, 1, 0]),
+            ("shoulder", [1, 0, 0]),
+        ):
             np.testing.assert_allclose(model.axis[model.names.index(f"{side}_{suffix}")], axis)
     q = mobile_home(model)
     world = mobile_collision_world(model)
@@ -90,3 +100,19 @@ def test_compact_shoulder_uses_lift_then_axial_upper_arm_rotation():
     elbow = model.names.index("left_elbow")
     np.testing.assert_allclose(before.position[elbow], after.position[elbow], atol=1e-7)
     assert np.linalg.norm(np.asarray(before.rotation[elbow]) - after.rotation[elbow]) > 0.1
+
+
+def test_shoulder_fork_carriers_leave_clearance_around_motor_covers():
+    model = loads(mobile_dual_arm_urdf()).model
+    parts = mechanical_assembly_parts(model)
+    for motor in shoulder_packages(model):
+        if not motor["shoulder_axis"]:
+            continue
+        owner = motor["name"].removesuffix("_drive_package")
+        fork = [part for part in parts if part["owner"] == owner]
+        assert len(fork) == 3
+        assert all(part["render_style"] == "shoulder_yoke" for part in fork)
+        # Rectangular cheek mesh stays inside the same capsule used by the guard.
+        for part in fork:
+            assert np.linalg.norm(np.asarray(part["section_m"]) / 2) <= part["radius"]
+        assert 0.014 - fork[0]["radius"] - 0.003 > 0.004

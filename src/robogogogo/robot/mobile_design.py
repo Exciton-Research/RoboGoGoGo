@@ -105,7 +105,7 @@ def mobile_dual_arm_urdf():
         visual(base, "box", (0.76, 0.20, 0.22), origin=(0, y, 0))
     visual(base, "box", (0.22, 0.72, 0.18), origin=(-0.27, 0, 0.02))
     for longitudinal, x in (("front", 0.25), ("rear", -0.25)):
-        for side, y in (("left", 0.34), ("right", -0.34)):
+        for side, y in (("left", 0.35), ("right", -0.35)):
             prefix = f"{longitudinal}_{side}"
             link(f"{prefix}_steer", 0.4)
             joint(
@@ -176,7 +176,7 @@ def mobile_dual_arm_urdf():
     template = ET.fromstring(
         files("robogogogo").joinpath("assets/mobile_arm_chain.urdf").read_text()
     )
-    for side, y in (("left", 0.40), ("right", -0.40)):
+    for side, y in (("left", 0.35), ("right", -0.35)):
         for child in template:
             element = deepcopy(child)
             element.set("name", f"{side}_{element.attrib['name']}")
@@ -302,7 +302,10 @@ def mobile_dual_arm_urdf():
     # simulation precision. The context restores the caller's configuration.
     with enable_x64(True):
         layout = loads(ET.tostring(robot, encoding="unicode")).model
-    fittings = [dict(part, body_name=layout.names[part["body"]]) for part in mechanical_assembly_parts(layout)]
+    fittings = [
+        dict(part, body_name=layout.names[part["body"]])
+        for part in mechanical_assembly_parts(layout)
+    ]
     add_fixture_inertia(robot, fittings + motor_cover_specs(layout))
     ET.indent(robot)
     return ET.tostring(robot, encoding="unicode")
@@ -320,7 +323,15 @@ def mobile_home(model, posture="standing"):
             {
                 f"{side}_{name}": value
                 for name, value in zip(
-                    ("waist", "upper_roll", "shoulder", "elbow", "wrist_roll", "wrist_pitch", "tool_roll"),
+                    (
+                        "waist",
+                        "upper_roll",
+                        "shoulder",
+                        "elbow",
+                        "wrist_roll",
+                        "wrist_pitch",
+                        "tool_roll",
+                    ),
                     (0.0, 1.2, 0.0, -1.35, 0.0, 0.15, 0.0),
                 )
             }
