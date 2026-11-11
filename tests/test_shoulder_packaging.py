@@ -129,4 +129,27 @@ def test_lift_motors_are_inboard_and_cross_axis_motors_follow_lift():
         # Lift is on the torso side of the joint, never a vertical chimney.
         assert all(point[1] * sign < -0.1 for point in (lift["start"], lift["end"]))
         assert all(abs(point[2]) < 1e-8 for point in (lift["start"], lift["end"]))
-        assert swing["end"][2] > swing["start"][2] > 0
+        assert swing["start"][2] < 0 < swing["end"][2]
+
+
+def test_cross_axis_motor_is_centered_in_shoulder_plane_without_moving_other_drives():
+    model = loads(mobile_dual_arm_urdf()).model
+    world = mobile_collision_world(model)
+    q = mobile_home(model)
+    poses = world._poses(q)
+    for side in ("left", "right"):
+        lift_body = model.names.index(f"{side}_waist")
+        centers = {}
+        for motor in shoulder_packages(model):
+            if not motor["name"].startswith(side + "_") or not motor["shoulder_axis"]:
+                continue
+            local = (np.asarray(motor["start"]) + motor["end"]) / 2
+            world_center = poses.position[motor["body"]] + poses.rotation[motor["body"]] @ local
+            centers[motor["shoulder_axis"]] = poses.rotation[lift_body].T @ (
+                world_center - poses.position[lift_body]
+            )
+        # The lift-frame XY plane contains all three centers at neutral swing.
+        assert all(abs(center[2]) < 1e-7 for center in centers.values())
+        np.testing.assert_allclose(centers["swing"], [-0.06, 0, 0], atol=1e-7)
+        np.testing.assert_allclose(centers["roll"], [0.12095, 0, 0], atol=1e-7)
+        assert abs(abs(centers["lift"][1]) - 0.15095) < 1e-7

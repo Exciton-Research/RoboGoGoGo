@@ -48,7 +48,7 @@ export function addInternalPackaging(model: RobotModel, add: AddMesh) {
         p.radius,
         "#a1aeb5",
       );
-    if (p.shoulder_axis && p.shoulder_axis !== "roll") {
+    if (p.shoulder_axis === "lift") {
       // A segmented shoulder housing encloses each real motor. These necks
       // remain within the existing socket collision envelope and follow each
       // motor's actual parent; a single rigid shell would bind the three axes.
@@ -69,16 +69,21 @@ export function addInternalPackaging(model: RobotModel, add: AddMesh) {
     // Axial upper-arm drive has its output facing the distal arm. The output
     // collar follows the rotating arm, while the motor case stays on the lift carrier.
     if (p.shoulder_axis === "roll") {
+      // Package endpoints are in the parent frame; the collar belongs to the
+      // child. Remove its rest translation before using child-local coordinates.
+      const outputStart = b.clone().sub(
+        new THREE.Vector3(...model.joint_origins[p.joint_body ?? p.body]),
+      );
       const output = segment(
         p.joint_body ?? p.body,
-        b,
-        b.clone().addScaledVector(direction, 0.034),
+        outputStart,
+        outputStart.clone().addScaledVector(direction, 0.034),
         0.022,
         "#8799a6",
       );
       output.userData.inspectionOnly = false;
       output.visible = true;
-    } else {
+    } else if (p.shoulder_axis !== "swing") {
       const distance = p.mounting_offset ?? 0.025;
       segment(
         p.body,

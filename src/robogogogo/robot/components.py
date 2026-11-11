@@ -74,7 +74,10 @@ ARM_COMPONENTS = {
 def mounting_offset(suffix):
     # Catalog assemblies are mounted outside the intersecting axes; a custom
     # output coupling/yoke bridges to the joint. Connectors need separate clearance.
-    return {"waist": 0.12, "upper_roll": 0.07, "shoulder": 0.09}.get(suffix, 0.025)
+    # Center the cross-axis motor on the shoulder mounting plane.
+    if suffix == "upper_roll":
+        return -ARM_COMPONENTS[suffix].length_m / 2
+    return {"waist": 0.12, "shoulder": 0.09}.get(suffix, 0.025)
 
 
 def mounting_sign(side, suffix):
