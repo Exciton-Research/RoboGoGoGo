@@ -1,7 +1,5 @@
 """Internal numerical regression fixture; not a supported robot workflow."""
 
-
-
 try:
     from .structural_handover import make_rig
 except ImportError:

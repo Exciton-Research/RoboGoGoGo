@@ -20,13 +20,17 @@ def test_canonical_arm_netlist(wiring):
     assert wiring["qualification"]["complete_3d_branch_routing"] is False
 
 
-@pytest.mark.parametrize("fault", ["open", "short", "crossed_can", "id", "termination", "device", "voltage"])
+@pytest.mark.parametrize(
+    "fault", ["open", "short", "crossed_can", "id", "termination", "device", "voltage"]
+)
 def test_detect_electrical_faults(wiring, fault):
     broken = deepcopy(wiring)
     if fault == "open":
         broken["wires"].pop(0)
     elif fault == "short":
-        broken["wires"].append(dict(source=["left_distribution", "48V+"], target=["left_distribution", "24V+"]))
+        broken["wires"].append(
+            dict(source=["left_distribution", "48V+"], target=["left_distribution", "24V+"])
+        )
     elif fault == "crossed_can":
         lead = next(w for w in broken["wires"] if w["source"] == ["left_can_gateway", "CAN_H"])
         lead["target"][1] = "CAN_L"

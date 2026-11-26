@@ -15,6 +15,7 @@ import numpy as np
 
 from .. import spatial as sp
 from ..urdf import loads
+from .components import ARM_COMPONENTS
 from .definition import ROBOT_REVISION
 from .harness import harness_clearance, harness_routes
 from .mobile_design import mobile_dual_arm_urdf, mobile_home
@@ -128,7 +129,10 @@ def audit(samples=29, random_samples=128):
 def payload_report(model, payload_kg=1.0, reserve_target=0.15):
     q = mobile_home(model)
     for side in ("left", "right"):
-        for suffix in ("shoulder", "elbow", "wrist_pitch"):
+        # The current waist joint is shoulder lift, not the old yaw axis.
+        # Leaving it at home (1.2 rad) tilts the extended arm down and greatly
+        # understates the horizontal payload moment. Neutralize all seven axes.
+        for suffix in ARM_COMPONENTS:
             q[model.indices[model.names.index(f"{side}_{suffix}")]] = 0.0
     q = jnp.array(q)
     torque = sp.inverse_dynamics(model, q, jnp.zeros_like(q), jnp.zeros_like(q))
@@ -147,6 +151,7 @@ def payload_report(model, payload_kg=1.0, reserve_target=0.15):
             )
     minimum = min(j["reserve"] for j in joints.values())
     return dict(
+        pose="horizontal_full_extension",
         payload_kg_per_hand=payload_kg,
         minimum_reserve=minimum,
         target_reserve=reserve_target,

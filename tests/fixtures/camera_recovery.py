@@ -1,6 +1,5 @@
 """Internal numerical regression fixture; not a supported robot workflow."""
 
-
 import numpy as np
 
 from robogogogo.perception.recovery import backproject, detect, fuse

@@ -1,6 +1,5 @@
 """Internal numerical regression fixture; not a supported robot workflow."""
 
-
 import numpy as np
 from camera_recovery import render_camera
 from recovery_search import fixture

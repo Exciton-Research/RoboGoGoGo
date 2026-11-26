@@ -241,19 +241,32 @@ class CollisionWorld:
         # Joint-specific bound on distance to descendant proxy endpoints.
         lengths = np.linalg.norm(np.asarray(model.origin), axis=1)
         self.weights = np.zeros(self.lower.shape, dtype=float)
-        for capsule in self.capsules:
+        self.capsule_weights = np.zeros((len(self.capsules), len(self.lower)))
+        influence = np.zeros_like(self.capsule_weights, dtype=bool)
+        for row, capsule in enumerate(self.capsules):
             reach = max(np.linalg.norm(capsule.start), np.linalg.norm(capsule.end))
             body = capsule.body
             while body >= 0:
                 index = model.indices[body]
                 if index >= 0:
+                    influence[row, index] = True
                     if model.kinds[body] == "prismatic":
+                        self.capsule_weights[row, index] = 1.0
                         self.weights[index] = max(self.weights[index], 1.0)
                         reach += max(abs(self.lower[index]), abs(self.upper[index]))
                     else:
+                        self.capsule_weights[row, index] = reach
                         self.weights[index] = max(self.weights[index], reach)
                 reach += lengths[body]
                 body = model.parents[body]
+        i, j = self.pairs.T
+        # A common ancestor rigidly transforms both capsules and cannot change
+        # their separation. Only joints below their shared chain contribute.
+        self.pair_weights = np.where(
+            influence[i] & influence[j],
+            0.0,
+            self.capsule_weights[i] + self.capsule_weights[j],
+        )
         self.checks = 0
 
     def geometry(self, q):
@@ -367,6 +380,9 @@ class CollisionWorld:
         if min(ca, cb) < self.margin:
             return False
 
+        if not self.obstacles and object_start is None and object_end is None:
+            return self._self_edge_free(start, end, max_depth, deadline)
+
         def check(a, b, da, db, oa, ob, depth):
             if deadline is not None and time.monotonic() > deadline:
                 raise TimeoutError("Collision edge certification exceeded the planning budget")
@@ -390,6 +406,47 @@ class CollisionWorld:
             )
 
         return check(start, end, ca, cb, object_start, object_end, max_depth)
+
+    def _self_edge_free(self, start, end, max_depth, deadline):
+        """Certify each self/floor pair with its own kinematic motion bound."""
+        weights = np.concatenate((self.pair_weights, self.capsule_weights))
+
+        def distances(q):
+            self.checks += 1
+            a, b = self.geometry(q)
+            i, j = self.pairs.T
+            pairs = segment_distance(a[i], b[i], a[j], b[j]) - self.radii[i] - self.radii[j]
+            floor = np.where(
+                self.moving, np.minimum(a[:, 2], b[:, 2]) - self.radii - self.floor, np.inf
+            )
+            values = np.r_[pairs, floor]
+            index = int(np.argmin(values))
+            if values[index] < self.last_edge_clearance.distance:
+                names = (
+                    tuple(self.capsules[k].name for k in self.pairs[index])
+                    if index < len(self.pairs)
+                    else (self.capsules[index - len(self.pairs)].name, "floor")
+                )
+                self.last_edge_clearance = Clearance(float(values[index]), names)
+            return values
+
+        def check(a, b, da, db, depth):
+            if deadline is not None and time.monotonic() > deadline:
+                raise TimeoutError("Collision edge certification exceeded the planning budget")
+            bounds = np.einsum("ij,j->i", weights, np.abs(b - a))
+            if np.all(np.maximum(da, db) - bounds >= self.margin + 1e-6):
+                return True
+            if depth == 0:
+                return False
+            mid = (a + b) / 2
+            dm = distances(mid)
+            return (
+                np.min(dm) >= self.margin
+                and check(a, mid, da, dm, depth - 1)
+                and check(mid, b, dm, db, depth - 1)
+            )
+
+        return check(start, end, distances(start), distances(end), max_depth)
 
 
 def adjacent_exclusions(model, *, hops=2):

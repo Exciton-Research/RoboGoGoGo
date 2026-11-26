@@ -1,6 +1,5 @@
 """Internal numerical regression fixture; not a supported robot workflow."""
 
-
 import jax.numpy as jnp
 import numpy as np
 

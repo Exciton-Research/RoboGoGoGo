@@ -71,6 +71,93 @@ def test_swept_edge_rejects_collision_with_clear_endpoints():
         plan_motion(world, [-0.8, 0], [0, 0])
 
 
+def test_common_ancestor_motion_preserves_close_pair_clearance_without_subdivision():
+    builder = ModelBuilder()
+    parent = builder.add_link(
+        "carrier",
+        joint="revolute",
+        axis=(0, 0, 1),
+        origin=(0, 0, 1),
+        mass=1,
+        inertia=np.eye(3) * 0.01,
+        limits=(-3, 3),
+    )
+    first = builder.add_link(
+        "a", parent=parent, joint="fixed", origin=(0.2, 0, 0), inertia=np.eye(3) * 0.01
+    )
+    second = builder.add_link(
+        "b", parent=parent, joint="fixed", origin=(0.2, 0.0211, 0), inertia=np.eye(3) * 0.01
+    )
+    world = CollisionWorld(
+        builder.build(),
+        [
+            Capsule("a", first, (0, 0, 0), (0, 0, 0), 0.01),
+            Capsule("b", second, (0, 0, 0), (0, 0, 0), 0.01),
+        ],
+        margin=0.001,
+    )
+    assert world.edge_free([0], [2], max_depth=0)
+    assert world.clearance([0]).distance == pytest.approx(world.clearance([2]).distance)
+
+
+def test_shared_carrier_does_not_exempt_independent_child_motion():
+    builder = ModelBuilder()
+    parent = builder.add_link(
+        "carrier",
+        joint="revolute",
+        origin=(0, 0, 1),
+        inertia=np.eye(3) * 0.01,
+        limits=(-3, 3),
+    )
+    moving = builder.add_link(
+        "slider",
+        parent=parent,
+        joint="prismatic",
+        axis=(0, 1, 0),
+        origin=(0.2, 0, 0),
+        inertia=np.eye(3) * 0.01,
+        limits=(-1, 1),
+    )
+    fixed = builder.add_link(
+        "stop",
+        parent=parent,
+        joint="fixed",
+        origin=(0.2, 0, 0),
+        inertia=np.eye(3) * 0.01,
+    )
+    world = CollisionWorld(
+        builder.build(),
+        [
+            Capsule("slider", moving, (0, 0, 0), (0, 0, 0), 0.05),
+            Capsule("stop", fixed, (0, 0, 0), (0, 0, 0), 0.05),
+        ],
+    )
+    assert world.clearance([0, -0.8]).distance > world.margin
+    assert world.clearance([2, 0.8]).distance > world.margin
+    assert not world.edge_free([0, -0.8], [2, 0.8])
+
+
+def test_pairwise_edge_bounds_still_reject_swept_floor_collisions():
+    builder = ModelBuilder()
+    body = builder.add_link(
+        "swing",
+        joint="revolute",
+        axis=(0, 1, 0),
+        origin=(0, 0, 0.6),
+        inertia=np.eye(3) * 0.01,
+        limits=(-3, 3),
+    )
+    world = CollisionWorld(
+        builder.build(),
+        [
+            Capsule("tip", body, (0.8, 0, 0), (0.8, 0, 0), 0.05),
+        ],
+    )
+    assert world.clearance([0.2]).distance > world.margin
+    assert world.clearance([2.9]).distance > world.margin
+    assert not world.edge_free([0.2], [2.9])
+
+
 def test_rrt_finds_reproducible_detour_and_every_edge_is_clear():
     world = xy_world()
     first = plan_motion(world, [-0.8, 0], [0.8, 0], seed=13, max_iterations=400)

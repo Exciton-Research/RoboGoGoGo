@@ -37,20 +37,24 @@ def test_catalog_masses_and_continuous_ratings_are_in_dynamics(model):
 def test_one_kg_per_hand_at_full_extension_has_static_continuous_torque_reserve(model):
     q = mobile_home(model)
     for side in ("left", "right"):
-        for suffix in ("shoulder", "elbow", "wrist_pitch"):
+        for suffix in ARM_COMPONENTS:
             q[model.indices[model.names.index(f"{side}_{suffix}")]] = 0
     q = jnp.array(q)
+    pose = sp.forward_kinematics(model, q)
+    for side in ("left", "right"):
+        displacement = (
+            pose.position[model.names.index(f"{side}_tool")]
+            - pose.position[model.names.index(f"{side}_waist")]
+        )
+        np.testing.assert_allclose(displacement, [0.885, 0, 0], atol=1e-8)
     torque = sp.inverse_dynamics(model, q, jnp.zeros_like(q), jnp.zeros_like(q))
     for side in ("left", "right"):
         torque += 9.81 * sp.point_jacobian(model, q, model.names.index(f"{side}_tool"))[2]
-    # Static rating compliance is distinct from the unmet 15% design reserve.
+    # Static rating compliance does not qualify the deferred electrical harness.
     for index in range(15, 29):
         assert abs(float(torque[index])) < float(model.effort[index])
     world = mobile_collision_world(model)
     assert world.clearance(q).distance >= world.margin
-    assert (
-        harness_clearance(model, q, sp.forward_kinematics(model, q), world).distance >= world.margin
-    )
 
 
 def test_dress_pack_length_and_endpoints_follow_both_attached_links(model):
@@ -71,21 +75,22 @@ def test_dress_pack_length_and_endpoints_follow_both_attached_links(model):
                 body = model.names.index(name)
                 expected = np.array(pose.position[body]) + np.array(pose.rotation[body]) @ anchor
                 np.testing.assert_allclose(points[0 if endpoint == 0 else -1], expected, atol=1e-8)
-        world = mobile_collision_world(model)
-        assert harness_clearance(model, q, pose, world, routes).distance >= world.margin
     _, _, valid = routed_curve([0, 0, 0], [2, 0, 0], [0, 1, 0], [0, 1, 0], 0.5)
     assert not valid  # An unreachable anchor does not stretch the cable.
 
 
-def test_reference_postures_keep_loops_clear_and_rotated_base_preserves_clearance(model):
+def test_unqualified_internal_routes_fail_closed_in_every_reference_posture(model):
     world = mobile_collision_world(model)
     for posture in ("standing", "low", "reach"):
         q = mobile_home(model, posture)
         pose = sp.forward_kinematics(model, jnp.array(q))
         report = harness_routes(model, q, pose)
-        assert len(report) == 10 and all(route["valid"] for route in report)
+        assert len(report) == 10
+        assert all(route["valid"] for route in report if not route.get("internal"))
+        assert any(not route["valid"] for route in report if route.get("internal"))
         before = harness_clearance(model, q, pose, world)
-        assert before.distance >= world.margin
+        assert before.distance < world.margin
+        assert "internal" in before.pair[0]
         q[:3] = [0.4, -0.3, 0.6]
         moved = harness_clearance(model, q, sp.forward_kinematics(model, jnp.array(q)), world)
         assert moved.distance == pytest.approx(before.distance, abs=1e-6)
@@ -102,25 +107,43 @@ def test_external_harness_checks_floor(model):
     assert report.pair[1] == "floor"
 
 
-def test_added_fixture_mass_is_reported_as_an_unmet_reserve_target(model):
+def test_horizontal_payload_reserve_does_not_inherit_tilted_home_pose(model):
     from robogogogo.robot.validate_harness import payload_report
 
     report = payload_report(model)
+    assert report["pose"] == "horizontal_full_extension"
     assert report["within_continuous_ratings"]
     assert not report["reserve_target_met"]
+    assert report["minimum_reserve"] == pytest.approx(0.078625184, abs=1e-8)
     assert report["minimum_reserve"] < report["target_reserve"]
 
 
-def test_clamp_contact_exemption_does_not_hide_midspan_penetration(model):
-    world = mobile_collision_world(model)
+def test_clamp_contact_exemption_does_not_hide_midspan_penetration(model, monkeypatch):
+    from robogogogo.planning.collision import Capsule, Clearance, CollisionWorld
+    from robogogogo.robot import shoulder_wiring
+
+    # Isolate the external cable/clamp algorithm using explicit mathematical
+    # fixtures. Production clamps were removed; current internal routing remains
+    # unqualified and is checked separately above.
+    monkeypatch.setattr(
+        shoulder_wiring, "internal_clearance", lambda *a, **kw: Clearance(float("inf"), ("", ""))
+    )
+    world = CollisionWorld(
+        model, [Capsule("fixture_clamp", 0, (0, 0, 1), (0, 0, 1), 0.02)], margin=0.012
+    )
     q = mobile_home(model)
     pose = world._poses(q)
-    routes = harness_routes(model, q, pose)
-    a, b = world.geometry(q)
-    clamp = next(
-        i for i, c in enumerate(world.capsules) if c.name == routes[0]["attachments"][0] + "_clamp"
-    )
-    routes[0]["points"][32] = ((a[clamp] + b[clamp]) / 2).tolist()
+    routes = [
+        dict(
+            name=f"cable_{i}",
+            points=np.c_[np.linspace(0, 1, 65), np.full(65, y), np.ones(65)].tolist(),
+            valid=True,
+            attachments=["fixture"] if i == 0 else [],
+        )
+        for i, y in enumerate((0, 2))
+    ]
+    assert harness_clearance(model, q, pose, world, routes).distance >= world.margin
+    routes[0]["points"][32] = [0, 0, 1]
     assert harness_clearance(model, q, pose, world, routes).distance < world.margin
 
 

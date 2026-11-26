@@ -137,7 +137,7 @@ def test_compact_humanlike_shoulder_has_coincident_three_axes(model):
         ) == pytest.approx(0.32)
 
 
-def test_reference_arm_silhouette_has_low_elbows_forward_hands_and_short_wrists(model):
+def test_reference_arm_silhouette_has_low_elbows_forward_hands_and_catalog_wrists(model):
     pose = sp.forward_kinematics(model, model.home)
     for side in ("left", "right"):
         shoulder, elbow, wrist, hand = [
@@ -146,5 +146,6 @@ def test_reference_arm_silhouette_has_low_elbows_forward_hands_and_short_wrists(
         ]
         assert elbow[2] < shoulder[2] - 0.25
         assert hand[0] > elbow[0] + 0.3
-        assert np.linalg.norm(hand - wrist) < 0.12
+        # Current three-actuator wrist has 55 + 100 + 130 mm carrier offsets.
+        assert np.linalg.norm(hand - wrist) == pytest.approx(0.285, abs=0.001)
         assert abs(shoulder[1]) == pytest.approx(0.35)

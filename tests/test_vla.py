@@ -128,6 +128,31 @@ def test_stale_or_missing_observations_are_rejected(client):
     )
 
 
+def test_recording_cap_rejects_entire_action_before_advancing(client):
+    observed = capture(client)
+    studio = client.app.state.studio
+    before = client.get("/api/snapshot").json()
+    original = studio.max_samples
+    studio.max_samples = len(studio.session.history) + 2
+    try:
+        result = client.post(
+            "/api/vla/act",
+            json={"delta": [0.1] * 6, "observation": observed["observation"], "control_ticks": 3},
+        )
+        assert result.status_code == 422
+        after = client.get("/api/snapshot").json()
+        assert after["state"]["time"] == before["state"]["time"]
+        assert after["state"]["q"] == before["state"]["q"]
+        assert after["state"]["goal"] == before["state"]["goal"]
+        assert after["state"]["samples"] == before["state"]["samples"]
+        assert after["episode"]["actions"] == 0
+        assert studio.session.elapsed == before["state"]["time"]
+        assert len(studio.session.history) == before["state"]["samples"]
+        np.testing.assert_array_equal(studio.session.target_q, before["state"]["goal"])
+    finally:
+        studio.max_samples = original
+
+
 def test_debug_controls_invalidate_episode_instead_of_mislabeling_data(client):
     capture(client)
     result = client.post("/api/command", json={"op": "step"}).json()

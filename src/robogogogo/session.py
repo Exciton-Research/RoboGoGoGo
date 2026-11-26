@@ -587,6 +587,10 @@ class Session:
             jax_version=jax.__version__,
             dtype=str(self.state.q.dtype),
         )
+        if self.mobile is not None:
+            from .robot.definition import ROBOT_ID, ROBOT_REVISION
+
+            metadata["robot"] = dict(id=ROBOT_ID, revision=ROBOT_REVISION)
         times, q, qd, torque, target, arm_targets = zip(*self.history)
         arrays = {
             f"model_{f.name}": np.asarray(getattr(self.model, f.name))

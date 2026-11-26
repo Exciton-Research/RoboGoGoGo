@@ -71,7 +71,7 @@ class Studio:
         robot = urdf.loads(xml, dt=dt)
         model = replace(robot.model, home=jnp.asarray(mobile_home(robot.model)))
         label, visuals = robot.name, list(robot.visuals)
-        candidate = Session(model, substeps=substeps, arms=arms, mobile=True)
+        candidate = Session(model, scene=scene, substeps=substeps, arms=arms, mobile=True)
         self.session, self.scene, self.xml = candidate, scene, xml
         self.episode = None
         self.task = None

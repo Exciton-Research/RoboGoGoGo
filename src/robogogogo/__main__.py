@@ -31,7 +31,7 @@ def main():
 
     model = loads(mobile_dual_arm_urdf()).model
     model = replace(model, home=jnp.asarray(mobile_home(model)))
-    session = Session(model, arms=mobile_arm_definitions(), mobile=True)
+    session = Session(model, scene="mobile_dual_arm", arms=mobile_arm_definitions(), mobile=True)
     for _ in range(args.steps):
         session.advance()
     result = dict(robot="RG Mobile Duo", seconds=session.elapsed, mobile=session.mobile_status)

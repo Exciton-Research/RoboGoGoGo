@@ -138,6 +138,10 @@ class EpisodeService:
                 raise ValueError(
                     "Observation is stale. Capture the current robot state before acting."
                 )
+            if len(s.history) + request.control_ticks > workspace.max_samples:
+                raise ValueError(
+                    "Physics recording limit would be exceeded. Export and start a new episode."
+                )
             delta = np.asarray(request.delta, dtype=float)
             if delta.shape != s.model.home.shape or not np.isfinite(delta).all():
                 raise ValueError("Action delta must contain one finite value per joint")
@@ -153,10 +157,6 @@ class EpisodeService:
             executed, failed = 0, False
             try:
                 for _ in range(request.control_ticks):
-                    if len(s.history) >= workspace.max_samples:
-                        raise ValueError(
-                            "Physics recording limit reached. Export and start a new episode."
-                        )
                     s.advance(collision_world=collision_world)
                     executed += 1
                     if task_step and workspace.task_service.after_tick():

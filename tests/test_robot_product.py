@@ -48,3 +48,17 @@ def test_learning_rejects_reordered_robot_joints(tmp_path):
         archive.writestr("episode.json", json.dumps(manifest))
     with pytest.raises(ValueError, match="joint ordering"):
         inspect_dataset(path)
+
+
+def test_mobile_trajectory_preserves_robot_identity(tmp_path):
+    import numpy as np
+
+    from robogogogo.robot.definition import ROBOT_ID, ROBOT_REVISION
+    from robogogogo.studio.workspace import Studio
+
+    studio = Studio(tmp_path)
+    path = studio.session.export(tmp_path / "trajectory.npz")
+    with np.load(path, allow_pickle=False) as archive:
+        metadata = json.loads(str(archive["metadata"]))
+    assert metadata["scene"] == "mobile_dual_arm"
+    assert metadata["robot"] == dict(id=ROBOT_ID, revision=ROBOT_REVISION)
