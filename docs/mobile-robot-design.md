@@ -1,5 +1,19 @@
 # Articulated mobile dual-arm reference design
 
+For installation and an illustrated tour of the controls, start with the
+[installation guide](installation.md) and [Studio walkthrough](getting-started.md).
+The supported robot revision is `engineering-11`; sections explicitly labeled
+with earlier engineering revisions below are historical design evidence. In the
+current Studio, cable routing/electrical detail is deferred, and no validated
+harness fit or fatigue claim is made. Earlier cable-clamp geometry and its payload
+reserve numbers must not be interpreted as current hardware qualification.
+
+The current static 1 kg-per-hand calculation neutralizes all seven arm axes for
+horizontal full extension (885 mm shoulder-to-tool). It reports about 7.9% minimum
+continuous-torque reserve, below the 15% design target. This is an unresolved
+design limit, separate from simulation collision clearance and electrical
+qualification; it does not establish dynamic or thermal payload capacity.
+
 Robogogogo now defaults to an original mobile robot concept inspired by the
 architecture described for [DYNA Taku](https://www.dyna.co/dyna-2.1): four steerable
 wheels, an articulated lower body and two seven-joint arms. This is not Taku CAD
@@ -247,6 +261,13 @@ The draft cannot move base/wheel/head coordinates or modify the live robot,
 recordings, or controller state. Its outline is hidden from RGB/depth capture;
 recorded observations always depict the actual simulated robot.
 
+
+## Historical engineering notes (engineering-3)
+
+The following sections describe the earlier catalog, clamp, cover, and harness
+iteration. Their measurements and release gates are retained as historical
+evidence. They are not the current `engineering-11` assembly or a qualification
+of its electrical routing.
 
 ### Catalog arm drives and 1 kg payload target
 

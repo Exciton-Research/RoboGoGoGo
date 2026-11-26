@@ -6,14 +6,18 @@ permissions:
   contents: read
 jobs:
   python:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
           cache: pip
-      - run: pip install -e '.[dev,studio,viewer,perception]'
+      - run: pip install -e '.[dev,studio,perception]'
       - run: ruff check src tests examples
       - run: ruff format --check src tests examples
       - run: pytest -q
@@ -32,6 +36,24 @@ jobs:
           cache: npm
           cache-dependency-path: studio/package-lock.json
       - run: npm ci
+      - run: npm test
       - run: npm run format:check
       - run: npm run typecheck
       - run: npm run build
+  setup:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: studio/package-lock.json
+      - run: bash scripts/setup.sh

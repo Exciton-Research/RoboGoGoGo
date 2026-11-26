@@ -95,7 +95,8 @@ episode library and stage blockers. `POST /api/data/{episode_uuid}/validate` val
 an existing local archive. These APIs neither move hardware nor launch training. The separate
 [command execution test console](command-execution.md) can exercise group commands
 without physical actuators using `--test-execution`.
-Learning validation requires the `rg_mobile_duo` / `concept-1` robot identity
+Learning validation requires the `rg_mobile_duo` identity and the current
+`ROBOT_REVISION` from `robot/definition.py` (`engineering-11` at this writing)
 and 31-coordinate simulation action contract. Historical archives remain readable
 through the low-level reader but are rejected as current training inputs. A simulation recording never becomes a physical demonstration because
 an action is labeled `policy` or the configured robot happens to have matching DOFs.

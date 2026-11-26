@@ -1,5 +1,9 @@
 # Calibrated hardware perception
 
+See [installation](installation.md) for the local runtime and the
+[illustrated hardware screen](getting-started.md#8-understand-the-hardware-screen)
+for its initial disconnected state.
+
 This path consumes real robot telemetry, camera calibration, and acquisition
 clocks. It never substitutes simulation poses or generated depth. A missing or
 incompatible input blocks fusion. Raw previews remain available independently.
@@ -110,9 +114,11 @@ python -m robogogogo.server --port 8765 \
   --ros-camera head_left=/head/left/image/compressed \
   --ros-camera head_right=/head/right/image/compressed \
   --ros-camera wrist_left=/wrist/left/image/compressed \
+  --ros-camera wrist_right=/wrist/right/image/compressed \
   --ros-camera-info head_left=/head/left/camera_info \
   --ros-camera-info head_right=/head/right/camera_info \
   --ros-camera-info wrist_left=/wrist/left/camera_info \
+  --ros-camera-info wrist_right=/wrist/right/camera_info \
   --hardware-profile /path/robot-profile.json
 ```
 

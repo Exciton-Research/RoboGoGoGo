@@ -1,5 +1,8 @@
 # Dual-arm command execution
 
+New to the project? Follow [installation](installation.md) first, then the
+[illustrated command test walkthrough](getting-started.md#7-exercise-command-ownership-without-hardware).
+
 This service implements coordinated command validation, ownership, watchdogs, stop
 and takeover using a deterministic **test backend**. It never connects to physical
 actuators. Existing ROS 2 and SDK telemetry backends remain read-only. The execution

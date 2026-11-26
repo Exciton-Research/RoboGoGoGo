@@ -6,6 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "robogogogo"
 version = "0.2.0"
 description = "RG Mobile Duo robotics workflow with Python/JAX simulation and hardware integration"
+readme = "README.md"
 requires-python = ">=3.11"
 dependencies = ["jax>=0.4.35", "numpy>=1.26"]
 

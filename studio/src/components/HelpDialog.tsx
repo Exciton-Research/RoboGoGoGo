@@ -27,7 +27,7 @@ export function HelpDialog() {
             <p>
               Build language-conditioned episodes from aligned RGB observations,
               robot state, and explicit actions. Python/JAX advances the robot;
-              the fixed browser camera supplies the visual observation.
+              the browser renders synchronized head and wrist camera views.
             </p>
             <ol>
               <li>
@@ -40,7 +40,7 @@ export function HelpDialog() {
                 <strong>Observe and act</strong>
                 <span>
                   Capture RGB, execute joint-delta actions, or collect a
-                  scripted reference demo.
+                  rule-based reach demo.
                 </span>
               </li>
               <li>
@@ -65,11 +65,12 @@ export function HelpDialog() {
             <p className="help-foot">
               This local server is one shared robotics workspace. Saved setups
               store state checkpoints; episode exports contain aligned visual
-              data. The reference collector uses scripted IK, not a pretrained
+              data. The reference collector uses rule-based IK, not a pretrained
               VLA. The timeline keeps the latest 600 browser frames. Physics
-              recording stops at 18,000 control ticks. URDF import supports
-              fixed-base trees and primitive visuals; general body collisions
-              and floating bases are not available yet.
+              recording stops at 18,000 control ticks. RG Mobile Duo is the
+              supported robot. Its mobile dynamics use a flat-ground model with
+              self-collision and support guards; external obstacle planning and
+              physical grasping are not integrated.
             </p>
             <a href="/docs" target="_blank" rel="noreferrer" className="button">
               Open API documentation
