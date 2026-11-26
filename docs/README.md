@@ -16,6 +16,9 @@ boundaries.
 
 ## Go deeper
 
+- **[Contributing](../CONTRIBUTING.md)** explains issues, pull requests, and licensing.
+- **[Security policy](../SECURITY.md)** explains reporting and the local deployment boundary.
+
 - **[Platform layers](platform.md)** explains robot identity, data contracts,
   runtime ownership, compatibility imports, and the remaining integration work.
 - **[Mobile robot design](mobile-robot-design.md)** covers geometry, coordinate

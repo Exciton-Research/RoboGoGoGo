@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,17 +7,24 @@ name = "robogogogo"
 version = "0.2.0"
 description = "RG Mobile Duo robotics workflow with Python/JAX simulation and hardware integration"
 readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md"]
 requires-python = ">=3.11"
 dependencies = ["jax>=0.4.35", "numpy>=1.26"]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "httpx>=0.28,<1", "ruff>=0.11,<1"]
+dev = ["pytest>=8", "httpx>=0.28,<1", "ruff>=0.11,<1", "build>=1.2,<2"]
 perception = ["opencv-python-headless>=4.10,<5"]
 studio = ["fastapi>=0.115,<1", "uvicorn[standard]>=0.34,<1"]
 
 [project.scripts]
 robogogogo = "robogogogo.__main__:main"
 robogogogo-studio = "robogogogo.server:main"
+
+[project.urls]
+Homepage = "https://github.com/Exciton-Research/robogogogo"
+Repository = "https://github.com/Exciton-Research/robogogogo"
+Issues = "https://github.com/Exciton-Research/robogogogo/issues"
 
 [tool.setuptools.package-data]
 robogogogo = ["assets/*.urdf", "web/*", "web/assets/*"]

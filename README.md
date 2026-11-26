@@ -121,8 +121,8 @@ For development, install test tools and run the checks:
 ```sh
 bash scripts/setup.sh --dev
 .venv/bin/pytest -q
-.venv/bin/ruff check src tests examples
-.venv/bin/ruff format --check src tests examples
+.venv/bin/ruff check src tests examples scripts
+.venv/bin/ruff format --check src tests examples scripts
 npm test --prefix studio
 npm run format:check --prefix studio
 npm run typecheck --prefix studio
@@ -160,3 +160,16 @@ measurement. Nothing in this workbench certifies hardware readiness.
 Physical deployment requires selected actuators, measured limits and calibration,
 a commissioned command adapter, physical stop integration, and real evaluation.
 ROS and SDK adapters currently remain read-only.
+
+## License and contributions
+
+The project's original source code, documentation, screenshots, and robot design
+assets are licensed under [Apache-2.0](LICENSE). See [NOTICE](NOTICE) for the project
+notice and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for Studio's upstream
+software and font licenses. Third-party materials retain their own licenses;
+vendor product references do not grant rights to vendor trademarks or CAD.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for bug reports and pull requests, and
+[SECURITY.md](SECURITY.md) for vulnerability reporting. Redistribution must retain
+the applicable license texts and notices. Simulation and conceptual design assets
+do not certify a physical robot or establish hardware readiness.

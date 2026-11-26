@@ -1,2 +1,13 @@
+include LICENSE NOTICE THIRD_PARTY_NOTICES.md README.md CONTRIBUTING.md SECURITY.md
+include scripts/setup.sh scripts/check_release.py
+include studio/package.json studio/package-lock.json studio/next.config.ts studio/tsconfig.json studio/next-env.d.ts
+recursive-include studio/app *.tsx *.css
+recursive-include studio/src *.ts *.tsx *.css
+recursive-include studio/scripts *.mjs
+recursive-include studio/tests *.mjs
+recursive-include studio/public *.svg
+recursive-include docs *.md *.json *.png
+recursive-include examples *.py *.json *.urdf *.zip
+recursive-include tests *.py
 recursive-include src/robogogogo/web *
 recursive-include src/robogogogo/assets *.urdf

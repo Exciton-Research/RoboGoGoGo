@@ -2,6 +2,12 @@
   "name": "robogogogo-studio",
   "private": true,
   "version": "0.1.0",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Exciton-Research/robogogogo.git",
+    "directory": "studio"
+  },
   "type": "module",
   "engines": {
     "node": ">=22.6.0"
@@ -10,7 +16,9 @@
     "test": "node --experimental-strip-types --test tests/*.test.mjs",
     "screenshots": "node scripts/capture-docs.mjs",
     "dev": "next dev --hostname 127.0.0.1 --port 3000",
-    "build": "next build --webpack && node scripts/package-static.mjs",
+    "build": "npm run notices:check && next build --webpack && node scripts/package-static.mjs",
+    "notices": "node scripts/generate-notices.mjs",
+    "notices:check": "node scripts/generate-notices.mjs --check",
     "typecheck": "next typegen && tsc --noEmit",
     "format": "prettier --write src app scripts tests next.config.ts package.json tsconfig.json",
     "format:check": "prettier --check src app scripts tests next.config.ts package.json tsconfig.json"

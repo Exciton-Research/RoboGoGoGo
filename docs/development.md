@@ -61,8 +61,8 @@ intended to include Studio must be built after packaging the UI.
 ## Checks
 
 ```sh
-.venv/bin/ruff check src tests examples
-.venv/bin/ruff format --check src tests examples
+.venv/bin/ruff check src tests examples scripts
+.venv/bin/ruff format --check src tests examples scripts
 .venv/bin/pytest -q
 npm test --prefix studio
 npm run format:check --prefix studio
@@ -160,3 +160,38 @@ Use `inspect_dataset` for current training-input validation and `iter_transition
 to read aligned observations/actions. Validate before downstream preprocessing.
 Do not relabel historical robot revisions or simulation data as measured hardware
 demonstrations. See the [walkthrough](getting-started.md) for the archive layout.
+
+## Prepare a release
+
+Original project materials use Apache-2.0. Preserve `LICENSE`, `NOTICE`, and
+`THIRD_PARTY_NOTICES.md` in distributions. The latter contains the upstream texts
+for Studio's JavaScript and fonts, including Next.js's vendored notices. Python
+dependencies remain separately installed distributions with their own licenses;
+do not redistribute downloaded vendor CAD under the project's license.
+
+After changing npm dependencies, use `npm ci --prefix studio`, run
+`npm run notices --prefix studio`, review the generated changes, and commit the
+lockfile and notices together. `npm run build --prefix studio` checks that the
+committed notices match the installed dependencies and copies all three legal
+files to both the static export and Python's packaged UI.
+
+Build and inspect a release locally (requires the `dev` extra):
+
+```sh
+npm ci --prefix studio
+npm run build --prefix studio
+.venv/bin/python -m build
+.venv/bin/python scripts/check_release.py
+```
+
+The check inspects the wheel and source archive without extracting them. It
+requires the project license metadata, exact legal files, built Studio pages,
+and bundled fonts, and rejects local credentials, recordings, caches, and
+dependency directories. It does not upload a release or change repository
+visibility. CI runs this same artifact check on Linux; the setup checks also
+cover macOS.
+
+Before publication, review the [security reporting instructions](../SECURITY.md)
+and make sure a private reporting channel is actually available in the repository
+settings. Confirm ownership and attribution of any newly added assets. Existing
+simulation and hardware limitations remain applicable to an open-source release.
