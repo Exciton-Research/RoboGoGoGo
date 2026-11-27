@@ -4,6 +4,7 @@ ROBOT_ID = "rg_mobile_duo"
 ROBOT_REVISION = "engineering-11"
 ARM_DOF = 7
 SIMULATION_DOF = 31
+SIMULATION_JOINT_UNITS = ("m", "m") + ("rad",) * (SIMULATION_DOF - 2)
 
 # Public recording order uses the moving body names in the canonical model.
 SIMULATION_JOINT_NAMES = (

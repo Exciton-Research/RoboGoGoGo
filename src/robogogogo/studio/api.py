@@ -4,6 +4,7 @@ import asyncio
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from uuid import UUID
 
@@ -95,7 +96,11 @@ def create_app(
             finally:
                 await asyncio.to_thread(app.state.hardware.close)
 
-    app = FastAPI(title="robogogogo Studio API", version="0.1.0", lifespan=lifespan)
+    try:
+        package_version = version("robogogogo")
+    except PackageNotFoundError:
+        package_version = "0+unknown"
+    app = FastAPI(title="robogogogo Studio API", version=package_version, lifespan=lifespan)
     app.include_router(execution_router)
     app.include_router(
         create_demo_router(Path.cwd() / "runs" / "demo" / "assets", legacy_workspace=True)

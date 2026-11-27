@@ -15,6 +15,8 @@ import numpy as np
 
 from robogogogo.runtime.contracts import Observation
 
+from .images import validate_camera_png
+
 
 @dataclass(frozen=True)
 class Transition:
@@ -37,17 +39,36 @@ def iter_transitions(path: str | Path, *, include_ground_truth=False) -> Iterato
         if archive.getinfo("episode.json").file_size > 20_000_000:
             raise ValueError("Episode manifest is oversized")
         manifest = json.loads(archive.read("episode.json"))
+        if not isinstance(manifest, dict):
+            raise ValueError("Episode manifest must be an object")
+        if not isinstance(manifest.get("action_spec"), dict):
+            raise ValueError("Episode action specification must be an object")
         if manifest.get("format") not in ("robogogogo-episode-v1", "robogogogo-episode-v2"):
             raise ValueError("Unsupported episode format")
         if manifest.get("action_spec", {}).get("representation") != "joint_position_delta":
             raise ValueError("Unsupported action representation")
         observations = manifest["observations"]
+        cameras = manifest.get("cameras", [manifest.get("camera", {})])
+        if (
+            not isinstance(cameras, list)
+            or not cameras
+            or any(
+                not isinstance(camera, dict)
+                or not isinstance(camera.get("name"), str)
+                or not camera["name"]
+                for camera in cameras
+            )
+        ):
+            raise ValueError("Episode requires named camera streams")
+        if len({camera["name"] for camera in cameras}) != len(cameras):
+            raise ValueError("Episode camera names must be unique")
 
         def observation(index):
             if not isinstance(index, int) or index < 0 or index >= len(observations):
                 raise ValueError("Transition has no aligned camera observation")
             data = observations[index]
-            cameras = manifest.get("cameras", [manifest.get("camera", {})])
+            if not isinstance(data, dict):
+                raise ValueError("Episode observation must be an object")
             images = {}
             for camera in cameras:
                 camera_name = camera["name"]
@@ -59,7 +80,7 @@ def iter_transitions(path: str | Path, *, include_ground_truth=False) -> Iterato
                 reference = data.get("images", {camera_name: data.get("image")}).get(camera_name)
                 if reference != name or archive.getinfo(name).file_size > 512_000:
                     raise ValueError("Invalid camera frame reference")
-                images[camera_name] = archive.read(name)
+                images[camera_name] = validate_camera_png(archive.read(name), camera)
             depths = {}
             if include_ground_truth:
                 for camera in cameras:
@@ -96,6 +117,8 @@ def iter_transitions(path: str | Path, *, include_ground_truth=False) -> Iterato
             )
 
         for transition in manifest["transitions"]:
+            if not isinstance(transition, dict):
+                raise ValueError("Episode transition must be an object")
             before = observation(transition["observation"])
             after = observation(transition["next_observation"])
             action = tuple(transition["applied_delta"])

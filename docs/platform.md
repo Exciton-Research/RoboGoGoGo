@@ -97,7 +97,10 @@ an existing local archive. These APIs neither move hardware nor launch training.
 without physical actuators using `--test-execution`.
 Learning validation requires the `rg_mobile_duo` identity and the current
 `ROBOT_REVISION` from `robot/definition.py` (`engineering-11` at this writing)
-and 31-coordinate simulation action contract. Historical archives remain readable
+and 31-coordinate simulation action contract, including meter/radian units,
+the `joint_coordinates` frame, and no normalization. PNG frames must have valid
+checksums, decodable pixel data, and dimensions matching their camera metadata;
+camera stream names must be nonempty and unique. Historical archives remain readable
 through the low-level reader but are rejected as current training inputs. A simulation recording never becomes a physical demonstration because
 an action is labeled `policy` or the configured robot happens to have matching DOFs.
 

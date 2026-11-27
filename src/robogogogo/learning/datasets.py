@@ -11,6 +11,7 @@ from robogogogo.robot.definition import (
     ROBOT_REVISION,
     SIMULATION_DOF,
     SIMULATION_JOINT_NAMES,
+    SIMULATION_JOINT_UNITS,
 )
 
 
@@ -26,14 +27,25 @@ def inspect_dataset(path):
         if archive.getinfo("episode.json").file_size > 20_000_000:
             raise ValueError("Episode manifest exceeds size limit")
         manifest = json.loads(archive.read("episode.json"))
+    if not isinstance(manifest, dict):
+        raise ValueError("Episode manifest must be an object")
     if manifest.get("robot") != dict(id=ROBOT_ID, revision=ROBOT_REVISION):
         raise ValueError(
             f"Learning requires an RG Mobile Duo {ROBOT_REVISION} episode; legacy robot data is unsupported"
         )
+    if not isinstance(manifest.get("action_spec"), dict):
+        raise ValueError("Episode action specification must be an object")
     if manifest["action_spec"].get("dimensions") != SIMULATION_DOF:
         raise ValueError("RG Mobile Duo episodes require 31 simulation coordinates")
     if tuple(manifest["action_spec"].get("names", ())) != SIMULATION_JOINT_NAMES:
         raise ValueError("RG Mobile Duo joint ordering does not match the robot contract")
+    specification = manifest["action_spec"]
+    if specification.get("units") != list(SIMULATION_JOINT_UNITS):
+        raise ValueError("RG Mobile Duo action units must match the robot contract")
+    if specification.get("frame") != "joint_coordinates":
+        raise ValueError("RG Mobile Duo actions require the joint_coordinates frame")
+    if specification.get("normalization") != "none":
+        raise ValueError("RG Mobile Duo action normalization must be none")
     count, sources, shape = 0, set(), None
     for transition in iter_transitions(path):
         signature = (

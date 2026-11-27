@@ -2,11 +2,16 @@
 
 import json
 import zipfile
+from importlib.metadata import version
 
 import pytest
 
 from robogogogo.learning.datasets import inspect_dataset
 from robogogogo.studio.api import create_app
+
+
+def test_api_reports_the_installed_package_version(tmp_path):
+    assert create_app(project_dir=tmp_path).openapi()["info"]["version"] == version("robogogogo")
 
 
 def test_unsupported_product_routes_are_absent(tmp_path):
@@ -25,7 +30,7 @@ def test_learning_rejects_other_or_unversioned_robot(tmp_path, robot):
 
 
 def test_canonical_joint_order_matches_model():
-    from robogogogo.robot.definition import SIMULATION_JOINT_NAMES
+    from robogogogo.robot.definition import SIMULATION_JOINT_NAMES, SIMULATION_JOINT_UNITS
     from robogogogo.robot.mobile_design import mobile_dual_arm_urdf
     from robogogogo.urdf import loads
 
@@ -33,6 +38,10 @@ def test_canonical_joint_order_matches_model():
     assert (
         tuple(name for name, i in zip(model.names, model.indices) if i >= 0)
         == SIMULATION_JOINT_NAMES
+    )
+    assert (
+        tuple("m" if kind == "prismatic" else "rad" for kind in model.kinds if kind != "fixed")
+        == SIMULATION_JOINT_UNITS
     )
 
 
