@@ -57,6 +57,7 @@ def main():
         action="store_true",
         help="Download the Panda model and the curated YCB object library, then exit",
     )
+    parser.add_argument("--setup-vlm", action="store_true", help="Download pinned OWLv2 weights for local text-conditioned detection")
     args = parser.parse_args()
     if args.setup:
         from .assets import download
@@ -66,6 +67,11 @@ def main():
         for identifier in CATALOG:
             print(f"Preparing {identifier}…", flush=True)
             download_object(args.assets, identifier)
+    if args.setup_vlm:
+        from .pretrained import download_model
+
+        print(f"Prepared OWLv2: {download_model(args.assets)}")
+    if args.setup or args.setup_vlm:
         return
     if not 1024 <= args.port <= 65535:
         parser.error("port must be between 1024 and 65535")

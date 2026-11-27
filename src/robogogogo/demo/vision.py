@@ -51,7 +51,7 @@ def descriptor(rgb, mask):
     return hist
 
 
-def proposals(rgb, depth, position, rotation, fovy):
+def proposals(rgb, depth, position, rotation, fovy, *, with_appearance=True):
     points = point_cloud(depth, position, rotation, fovy)
     x, y, z = points.transpose(2, 0, 1)
     # A calibrated pickup workspace, not slots or object-specific locations.
@@ -90,11 +90,37 @@ def proposals(rgb, depth, position, rotation, fovy):
                 "box": [int(left), int(top), int(left + width), int(top + height)],
                 "xy": (low[:2] + high[:2]) / 2,
                 "size": np.r_[np.sort(high[:2] - low[:2]), high[2] - TABLE_Z],
-                "feature": descriptor(rgb, selected),
+                "feature": descriptor(rgb, selected) if with_appearance else None,
                 "cloud": cloud,
             }
         )
     return result
+
+
+def localize_box(box, *, rgb, depth, position, rotation, fovy):
+    """Refine a text detector's pixel box using depth geometry, without object priors."""
+    from .pretrained import box_iou
+
+    regions = proposals(rgb, depth, position, rotation, fovy, with_appearance=False)
+    ranked = sorted(((box_iou(box, region["box"]), region) for region in regions), key=lambda item: item[0], reverse=True)
+    if not ranked or ranked[0][0] < 0.3:
+        raise ValueError("Detection has no reliable depth region in the pickup workspace")
+    if len(ranked) > 1 and ranked[1][0] > ranked[0][0] * 0.75:
+        raise ValueError("Detection overlaps multiple depth regions; no motion started")
+    region = ranked[0][1]
+    left, top, right, bottom = region["box"]
+    focal = depth.shape[0] / (2 * np.tan(np.deg2rad(fovy) / 2))
+    ray = np.asarray(rotation).reshape(3, 3) @ np.array([
+        ((left + right) / 2 - depth.shape[1] / 2) / focal,
+        -((top + bottom) / 2 - depth.shape[0] / 2) / focal, -1,
+    ])
+    # Upright resting-object assumption; observed height replaces catalog dimensions.
+    height = region["size"][2]
+    if not 0.015 <= height <= 0.15 or abs(ray[2]) < 1e-6:
+        raise ValueError("Depth cannot support an upright tabletop pickup")
+    center_z = TABLE_Z + height / 2
+    pick = np.asarray(position) + ray * ((center_z - position[2]) / ray[2])
+    return pick, region["box"]
 
 
 class CatalogVision:
