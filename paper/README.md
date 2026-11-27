@@ -2,7 +2,8 @@
 
 **Robogogogo: An Early Robot Simulation Environment for Demonstration Data Collection**
 
-Tian Shi, Exciton Research LLC. Working paper dated November 27, 2026.
+Tian Shi, Exciton Research LLC; Ping Wang, Department of Computer Science,
+Stevens Institute of Technology. Working paper dated November 27, 2026.
 
 **[Read the paper (PDF)](robogogogo.pdf)**
 
