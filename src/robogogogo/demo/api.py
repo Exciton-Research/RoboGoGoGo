@@ -11,6 +11,8 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse, PlainTextResponse, Response
 from pydantic import BaseModel, Field
 
+from .pretrained import ModelNotReady
+
 
 class ResetRequest(BaseModel):
     seed: int = Field(default=0, ge=0, le=1_000_000)
@@ -18,7 +20,13 @@ class ResetRequest(BaseModel):
 
 class CommandRequest(ResetRequest):
     command: Literal["run", "pause", "reset"]
-    perception: Literal["camera", "simulator"] = "simulator"
+    perception: Literal["camera", "simulator", "vlm"] = "simulator"
+    query: str | None = Field(default=None, min_length=1, max_length=120)
+
+
+class FindRequest(BaseModel):
+    query: str = Field(min_length=1, max_length=120)
+    expected_revision: int | None = Field(default=None, ge=0)
 
 
 class StepRequest(BaseModel):
@@ -71,6 +79,8 @@ def create_demo_router(cache, *, legacy_workspace=False, recordings=None):
         try:
             target = get_session()
             return await asyncio.to_thread(target.call, method, **kwargs)
+        except ModelNotReady as error:
+            raise HTTPException(503, str(error)) from error
         except (ImportError, FileNotFoundError) as error:
             raise HTTPException(
                 503, str(error) + ". Install .[studio,demo] and run robogogogo-demo --setup."
@@ -140,12 +150,16 @@ def create_demo_router(cache, *, legacy_workspace=False, recordings=None):
         return await call("policy_observation", images=images)
 
     @router.get("/vision/image")
-    async def vision_image(episode_id: str):
+    async def vision_image(episode_id: str, detection_id: str | None = None):
         return Response(
-            await call("vision_image", episode_id=episode_id),
+            await call("vision_image", episode_id=episode_id, detection_id=detection_id),
             media_type="image/png",
             headers={"Cache-Control": "no-store"},
         )
+
+    @router.post("/vision/find")
+    async def find_named_object(body: FindRequest):
+        return await call("find", **body.model_dump())
 
     @router.post("/reset")
     async def reset(body: ResetRequest):

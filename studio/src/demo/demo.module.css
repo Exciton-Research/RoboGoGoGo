@@ -967,11 +967,32 @@
   color: #455344;
 }
 
-.visionToggle {
-  display: flex;
-  align-items: center;
+.detectorControls {
+  display: grid;
   gap: 8px;
-  font-size: 12px;
+  margin: 12px 0;
+  font-size: 11px;
+}
+
+.detectorControls select,
+.detectorControls input,
+.detectorControls button {
+  width: 100%;
+  padding: 9px;
+  border: 1px solid #d8ddd2;
+  border-radius: 3px;
+  background: #fafaf5;
+  color: #455344;
+}
+
+.detectorControls button {
+  cursor: pointer;
+  background: #e8efde;
+}
+
+.detectorControls button:disabled {
+  cursor: default;
+  opacity: 0.5;
 }
 
 .visionResult {
@@ -996,7 +1017,7 @@
   line-height: 1.5;
   color: #71836b;
 }
-.objectLibrary > .poseNotice {
+.poseNotice {
   font: 9px/1.6 var(--mono);
   color: #71836b;
   border-left: 2px solid #9bad8d;

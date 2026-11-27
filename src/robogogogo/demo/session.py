@@ -17,6 +17,7 @@ from PIL import Image
 from .controller import ReferenceController
 from .environment import PandaEnv
 from .objects import CATALOG, catalog
+from .pretrained import PretrainedDetector, model_ready
 from .recording import Episode, Recording
 
 
@@ -47,6 +48,8 @@ class PandaSession:
             )
             self.seed, self.revision, self.controller = 0, 0, None
             self.vision, self.detection = None, None
+            self.pretrained_detector = None
+            self.pretrained_ready = model_ready(self.assets)
             self.recording, self.replay, self.backup = None, None, None
             self.frame, self.playing, self.next_tick = 0, False, time.perf_counter()
             self.last_saved = None
@@ -107,15 +110,14 @@ class PandaSession:
             "mode": self.mode,
             "controller_perception": None
             if controller is None or self.replay
-            else "camera"
-            if controller.camera_based
-            else "simulator",
+            else controller.perception,
+            "pretrained_ready": self.pretrained_ready,
             "message": self.message,
             "vision": None
             if self.detection is None or self.replay
             else {
                 **{key: value for key, value in self.detection.items() if key != "image"},
-                "image_url": f"/api/demo/vision/image?episode_id={self.episode_id}",
+                "image_url": f"/api/demo/vision/image?episode_id={self.episode_id}&detection_id={self.detection['id']}",
             },
             "phase": controller.phase if controller is not None else 0,
             "phases": list(ReferenceController.labels),
@@ -189,10 +191,29 @@ class PandaSession:
             },
         }
 
-    def _vision_image(self, episode_id):
+    def _vision_image(self, episode_id, detection_id=None):
         if self.detection is None or episode_id != self.episode_id or self.replay is not None:
             raise ValueError("No camera detection for this episode")
+        if detection_id is not None and detection_id != self.detection["id"]:
+            raise ValueError("Camera detection changed; request its latest image")
         return base64.b64decode(self.detection["image"].split(",", 1)[1])
+
+    def _find(self, query, expected_revision=None):
+        self._guard_live(expected_revision)
+        self.controller, self.mode, self.status = None, "manual", "ready"
+        # Failed queries clear any previous result, never retain a different target.
+        self.detection = None
+        self.revision += 1
+        if self.pretrained_detector is None:
+            self.pretrained_detector = PretrainedDetector(self.assets)
+        self.detection = {
+            **self.pretrained_detector.find(query, **self.env.capture_rgbd()),
+            "id": str(uuid4()),
+        }
+        self.message = (
+            "Pretrained image detection ready. Collect uses the selected task's destination."
+        )
+        return self._snapshot()
 
     def _select_object(self, identifier, seed=0, clutter=False):
         if self.replay is not None or self.recording is not None or self.playing:
@@ -309,7 +330,7 @@ class PandaSession:
         self.revision += 1
         return self._snapshot()
 
-    def _command(self, command, seed=0, perception="simulator"):
+    def _command(self, command, seed=0, perception="simulator", query=None):
         if command == "reset":
             return self._reset(seed)
         if command == "pause":
@@ -317,14 +338,22 @@ class PandaSession:
             self.status = "paused"
         elif command == "run":
             self._guard_live()
-            if perception not in ("camera", "simulator"):
+            if perception not in ("camera", "simulator", "vlm"):
                 raise ValueError("Unknown perception mode")
-            camera_based = perception == "camera"
-            if self.controller is not None and self.controller.camera_based != camera_based:
+            camera_based = perception != "simulator"
+            if self.controller is not None and self.controller.perception != perception:
                 raise ValueError("Reset the task before changing the controller's perception mode")
             if self.controller is None:
                 self.detection = None
-                if camera_based:
+                if perception == "vlm":
+                    self._find(query or self.env.object["name"])
+                    if self.detection["position"] is None:
+                        raise ValueError(self.detection["pickup_error"])
+                    self.controller = ReferenceController(
+                        self.env, camera_pick=self.detection["position"]
+                    )
+                    self.controller.perception = "vlm"
+                elif camera_based:
                     from .vision import CatalogVision
 
                     if self.vision is None:
@@ -343,7 +372,7 @@ class PandaSession:
                     self.controller = ReferenceController(
                         self.env, camera_pick=detection["position"]
                     )
-                    self.detection = detection
+                    self.detection = {**detection, "id": str(uuid4())}
                 else:
                     self.controller = ReferenceController(self.env)
             self.mode, self.status, self.playing = "script", "running", True
@@ -361,7 +390,14 @@ class PandaSession:
                 self.playing, self.status = False, "paused"
             return
         action = self.controller.action(self.env)
-        self._advance(action, "camera_scripted" if self.controller.camera_based else "scripted")
+        self._advance(
+            action,
+            {
+                "camera": "camera_scripted",
+                "vlm": "vlm_scripted",
+                "simulator": "scripted",
+            }[self.controller.perception],
+        )
         if not self.env.terminated and not self.env.truncated:
             self.controller.advance(self.env)
             self.message = self.controller.labels[self.controller.phase]

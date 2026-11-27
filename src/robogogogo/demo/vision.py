@@ -102,7 +102,11 @@ def localize_box(box, *, rgb, depth, position, rotation, fovy):
     from .pretrained import box_iou
 
     regions = proposals(rgb, depth, position, rotation, fovy, with_appearance=False)
-    ranked = sorted(((box_iou(box, region["box"]), region) for region in regions), key=lambda item: item[0], reverse=True)
+    ranked = sorted(
+        ((box_iou(box, region["box"]), region) for region in regions),
+        key=lambda item: item[0],
+        reverse=True,
+    )
     if not ranked or ranked[0][0] < 0.3:
         raise ValueError("Detection has no reliable depth region in the pickup workspace")
     if len(ranked) > 1 and ranked[1][0] > ranked[0][0] * 0.75:
@@ -110,10 +114,13 @@ def localize_box(box, *, rgb, depth, position, rotation, fovy):
     region = ranked[0][1]
     left, top, right, bottom = region["box"]
     focal = depth.shape[0] / (2 * np.tan(np.deg2rad(fovy) / 2))
-    ray = np.asarray(rotation).reshape(3, 3) @ np.array([
-        ((left + right) / 2 - depth.shape[1] / 2) / focal,
-        -((top + bottom) / 2 - depth.shape[0] / 2) / focal, -1,
-    ])
+    ray = np.asarray(rotation).reshape(3, 3) @ np.array(
+        [
+            ((left + right) / 2 - depth.shape[1] / 2) / focal,
+            -((top + bottom) / 2 - depth.shape[0] / 2) / focal,
+            -1,
+        ]
+    )
     # Upright resting-object assumption; observed height replaces catalog dimensions.
     height = region["size"][2]
     if not 0.015 <= height <= 0.15 or abs(ray[2]) < 1e-6:

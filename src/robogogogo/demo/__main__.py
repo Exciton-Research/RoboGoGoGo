@@ -57,7 +57,11 @@ def main():
         action="store_true",
         help="Download the Panda model and the curated YCB object library, then exit",
     )
-    parser.add_argument("--setup-vlm", action="store_true", help="Download pinned OWLv2 weights for local text-conditioned detection")
+    parser.add_argument(
+        "--setup-vlm",
+        action="store_true",
+        help="Download pinned OWLv2 weights for local text-conditioned detection",
+    )
     args = parser.parse_args()
     if args.setup:
         from .assets import download

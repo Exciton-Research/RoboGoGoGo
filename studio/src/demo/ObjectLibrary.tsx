@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Box, Check, Download, Package } from "lucide-react";
-import type { LibraryObject, TaskState } from "./types";
+import type { LibraryObject, PerceptionMode, TaskState } from "./types";
 import styles from "./demo.module.css";
 
 export default function ObjectLibrary({
@@ -12,8 +12,11 @@ export default function ObjectLibrary({
   load,
   loadClutter,
   selectTarget,
-  cameraMatching,
-  setCameraMatching,
+  perception,
+  setPerception,
+  query,
+  setQuery,
+  find,
 }: {
   objects: LibraryObject[];
   state: TaskState;
@@ -21,8 +24,11 @@ export default function ObjectLibrary({
   load: (object: LibraryObject) => Promise<void>;
   loadClutter: () => Promise<void>;
   selectTarget: (identifier: string) => Promise<void>;
-  cameraMatching: boolean;
-  setCameraMatching: (enabled: boolean) => void;
+  perception: PerceptionMode;
+  setPerception: (mode: PerceptionMode) => void;
+  query: string;
+  setQuery: (query: string) => void;
+  find: () => Promise<void>;
 }) {
   const [search, setSearch] = useState("");
   const clutter = state.layout === "clutter";
@@ -47,26 +53,57 @@ export default function ObjectLibrary({
             : "Load all eight scans together, or choose one object from the library."}
         </p>
       </div>
-      {state.object.id !== "block" && (
-        <>
-          <label className={styles.visionToggle}>
+      <div className={styles.detectorControls}>
+        <label htmlFor="object-localization">Find objects with</label>
+        <select
+          id="object-localization"
+          value={perception}
+          disabled={
+            locked || (state.mode === "script" && state.status === "paused")
+          }
+          onChange={(event) =>
+            setPerception(event.target.value as PerceptionMode)
+          }
+        >
+          <option value="vlm" disabled={!state.pretrained_ready}>
+            Pretrained OWLv2{!state.pretrained_ready ? " · setup required" : ""}
+          </option>
+          <option value="camera" disabled={state.object.id === "block"}>
+            Catalog image baseline
+          </option>
+          <option value="simulator">Simulator-pose reference</option>
+        </select>
+        <p className={styles.poseNotice}>
+          {perception === "vlm"
+            ? "Text + RGB detection · depth-based pickup · no catalog images or dimensions. Stops on uncertain matches."
+            : perception === "camera"
+              ? "Catalog image matching + depth · known object dimensions."
+              : "Simulator reference · uses known object poses."}
+        </p>
+        {perception === "vlm" && (
+          <>
+            <label htmlFor="object-description">
+              Describe the selected target
+            </label>
             <input
-              type="checkbox"
-              checked={cameraMatching}
+              id="object-description"
+              value={query}
+              maxLength={120}
+              placeholder="e.g. yellow citrus fruit"
               disabled={
                 locked || (state.mode === "script" && state.status === "paused")
               }
-              onChange={(event) => setCameraMatching(event.target.checked)}
+              onChange={(event) => setQuery(event.target.value)}
             />
-            Find target from camera images
-          </label>
-          <p className={styles.poseNotice}>
-            {cameraMatching
-              ? "Inspection RGB + depth · library image matching · scripted grasp. Stops on uncertain matches."
-              : "Simulator reference · uses known object poses."}
-          </p>
-        </>
-      )}
+            <button
+              disabled={locked || !query.trim() || state.ended}
+              onClick={() => void find()}
+            >
+              Find in image
+            </button>
+          </>
+        )}
+      </div>
       {state.vision && (
         <figure className={styles.visionResult}>
           <img
@@ -76,11 +113,16 @@ export default function ObjectLibrary({
             alt={`Inspection camera detection: ${state.vision.name}`}
           />
           <figcaption>
-            Found {state.vision.name} · image match{" "}
+            Detected {state.vision.name} ·{" "}
+            {state.vision.model ? "OWLv2 score" : "image match"}{" "}
             {state.vision.score.toFixed(2)}
             <small>
-              Catalog similarity score, not a probability. Pickup estimated from
-              depth and known upright dimensions.
+              {state.vision.model
+                ? "Pretrained model score; not calibrated certainty. Pickup estimated from depth."
+                : "Catalog similarity score, not a probability. Pickup uses known upright dimensions."}
+              {state.vision.pickup_error && (
+                <span> {state.vision.pickup_error}</span>
+              )}
             </small>
           </figcaption>
         </figure>

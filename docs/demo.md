@@ -113,7 +113,7 @@ bookkeeping and the episode identity; it does not reposition the robot or object
 Reset restores the complete seeded table. Active recordings must be saved or
 discarded before changing targets.
 
-**Camera collection (default for scans):** the name selects a catalog reference,
+**Catalog image baseline:** the name selects a catalog reference,
 not a live object pose. A fixed front inspection camera captures 640 × 384 RGB
 and metric depth. The overhead view can be occluded by the arm, so inspection
 uses a separate calibrated view. Depth above the calibrated table produces candidate
@@ -135,9 +135,10 @@ Ground-truth simulator state still drives rendering and evaluates success; it is
 excluded from camera matching and camera-controlled motion. This is an initial
 image-based pickup followed by scripted motion, not continuous visual servoing.
 
-Clear **Find target from camera images** to use the original simulator-pose
+Choose **Simulator-pose reference** under **Find objects with** to use the original
 reference, which compensates for object nudges and measured grasp slip. Reset before
-switching modes during a paused reference run. The original block uses this reference.
+switching modes during a paused reference run. The original block supports this
+reference and pretrained detection, but not catalog image matching.
 Other objects remain physical obstacles; this is a bounded tabletop arrangement,
 not a general collision-free planner or arbitrary clutter-solving policy.
 
@@ -171,6 +172,67 @@ field reports the most recent detection and its inspection image URL. It is clea
 on reset, target changes, and manual takeover, and hidden during replay. References
 are generated locally from cached assets; there is no model service or image upload.
 
+### Pretrained text-conditioned detection
+
+The optional [Google OWLv2](https://huggingface.co/google/owlv2-base-patch16-ensemble)
+mode accepts an RGB image and a free-text noun phrase. It uses the published
+CLIP-based text-conditioned detector from
+[Scaling Open-Vocabulary Object Detection](https://arxiv.org/abs/2306.09683),
+without fine-tuning on this environment, rendered reference images, a catalog label
+list, or catalog dimensions. The detector is separate from the scripted arm controller.
+
+Install once, then restart the server:
+
+```sh
+.venv/bin/pip install -e '.[vlm]'
+.venv/bin/robogogogo-demo --setup-vlm
+```
+
+Setup downloads only the pinned safetensors weights, processor/tokenizer files,
+and model card into ignored `runs/demo/assets/models/owlv2/`. The weight download
+is about 620 MB. Revision `cfd3195ba4ea9592eec887ded089f4c08eff231d` and its
+local weight digest are retained in `source.json`. The model card declares Apache-2.0.
+Weights are not bundled with the package or committed. Runtime uses local files,
+disables remote model code, and does not download models or upload camera images.
+PyTorch selects CUDA, Apple MPS, or CPU, depending on local availability.
+Basic simulation and the catalog baseline do not require PyTorch/Transformers.
+
+When weights are ready, new scenes select **Pretrained OWLv2**. Choose a task
+target and describe it, for example **yellow citrus fruit** for the lemon.
+**Find in image** runs detection without advancing physics. It displays the model's
+actual bounding box and score. **Find & collect target** captures and detects again
+before moving, so a previous detection is never reused as a fresh pickup.
+The task's selected target still defines its destination and success evaluation;
+the free-text description should refer to that selected target.
+
+OWLv2 predicts text-conditioned pixel boxes. Nonmaximum suppression removes
+duplicate boxes, and low or closely competing scores stop collection. Scores are
+model confidences, not calibrated guarantees. Depth regions refine the chosen box;
+observed height above the calibrated table estimates an upright grasp height, and
+the region's center ray estimates horizontal pickup. This stage uses no catalog
+dimensions. A detection with unreliable depth remains visible but cannot start motion.
+There is no catalog or simulator-pose fallback in pretrained mode.
+
+`POST /api/demo/vision/find` accepts `{"query": "yellow citrus fruit"}` and an
+optional `expected_revision`. It returns the state with detection metadata and
+a versioned image URL, without moving the arm. A failed query clears the previous
+detection. `POST /api/demo/command` accepts
+`{"command": "run", "perception": "vlm", "query": "yellow citrus fruit"}`.
+The `vision` result includes model ID, pinned revision, query, score, device,
+inference duration, pickup estimate, and any depth-localization error.
+
+For arbitrary RGB images, `PretrainedDetector(cache).detect(rgb, query)` returns
+pixel boxes and scores independently of Panda scene assets. Import it from
+`robogogogo.demo.pretrained`; pass a uint8 RGB array. `find(query, **sensor_packet)`
+adds tabletop depth localization. Neither method accepts a catalog or live object poses.
+
+The detector's vocabulary is broader than the simulation's eight current assets.
+This does not add arbitrary object imports or general grasp planning. Synthetic
+appearance, small objects, occlusion, ambiguous descriptions, and domain shift can
+cause misses or wrong detections. A confident wrong prediction can still cause a
+wrong grasp. The pickup estimator assumes upright resting objects and calibrated,
+ideal simulated depth; this is not real-camera validation or a trained VLA policy.
+
 ### Policy / future VLA interface
 
 `PandaPolicy.act(observation, *, instruction)` returns an action with the existing
@@ -192,8 +254,8 @@ rendering. No clock advances merely by reading an observation.
 Send the policy action to `POST /api/demo/step` with the packet's
 `expected_revision`; stale actions and actions during replay/reference playback
 are rejected. This leaves the environment ready for an external VLA adapter;
-no learned model or training implementation is included. The catalog camera matcher
-is a separate local baseline, not a VLA implementation.
+no VLA policy or training implementation is included. OWLv2 is a pretrained
+perception component; it does not generate the robot's actions.
 
 **Asset attribution:** YCB Object and Model Set, Calli et al., Google 16k scans.
 The scanned assets are [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
@@ -288,7 +350,8 @@ Recordings can start partway through a live run. The first observation is the
 state at recording start; times retain their offset from the current task episode. Selecting a new target
 starts a new task episode without changing physical state.
 Manual sources are labeled `manual`, the simulator-pose reference `scripted`,
-camera-based scripted motion `camera_scripted`, and direct step
+catalog-camera scripted motion `camera_scripted`, pretrained-camera scripted motion
+`vlm_scripted`, and direct step
 requests `api`. Partial and unsuccessful runs are retained when saved. Replay
 requires a matching model hash and MuJoCo version. It is state playback, not a
 claim of cross-version deterministic re-simulation.
@@ -323,6 +386,16 @@ ROBOGOGOGO_VISION_ASSETS=runs/demo/assets .venv/bin/python -m pytest -q tests/te
 These checks move objects to shuffled positions, reject absent/occluded targets,
 and block object-pose and labeled-contact access while the camera controller runs.
 They do not download assets. Install the `dev` extra for pytest.
+
+After explicit pretrained setup, include the real-model checks with:
+
+```sh
+ROBOGOGOGO_VLM_ASSETS=runs/demo/assets .venv/bin/python -m pytest -q tests/test_pretrained_vision.py
+```
+
+They exercise free-text grounding, moved objects, absent queries, catalog access
+blocked during localization, collection without privileged object state, and
+API detection/recording provenance. Tests never download weights implicitly.
 
 ## Model provenance
 

@@ -1,3 +1,5 @@
+export type PerceptionMode = "vlm" | "camera" | "simulator";
+
 export type TaskState = {
   object: LibraryObject;
   scene_id: string;
@@ -13,13 +15,18 @@ export type TaskState = {
   message: string;
   vision: {
     name: string;
-    position: number[];
+    position: number[] | null;
     score: number;
     margin: number;
     box: number[];
     image_url: string;
     method: string;
+    model?: string;
+    query?: string;
+    pickup_error?: string | null;
+    inference_seconds?: number;
   } | null;
+  pretrained_ready: boolean;
   phase: number;
   time: number;
   phases: string[];
@@ -42,7 +49,7 @@ export type TaskState = {
   step_index: number;
   seed: number;
   mode: "manual" | "script" | "replay";
-  controller_perception: "camera" | "simulator" | null;
+  controller_perception: PerceptionMode | null;
   joint_target: number[];
   cameras: Record<
     string,

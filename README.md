@@ -10,9 +10,10 @@ Three.js renders the official Panda meshes and live overhead/wrist views.
 Seeded reset, explicit 20 Hz stepping, manual control, native RGB recording,
 and read-only episode replay are available through the browser and Python API.
 A policy interface accepts task instructions, camera images, and proprioception
-for future VLA integration. Camera collection matches the named library object
-from inspection RGB, estimates its pickup point from calibrated depth, and
-shows the detected region. A simulator-pose reference remains available.
+for future VLA integration. Optional **pretrained OWLv2** locates objects from
+free-text descriptions and inspection RGB, then estimates pickup from calibrated
+depth without catalog references or dimensions. Catalog matching and a
+simulator-pose reference remain available for comparison.
 
 The controller is scripted. This is a working simulation demonstration, with
 no learned-policy or real-robot performance claim. Start with the
@@ -63,11 +64,23 @@ bash scripts/setup.sh
 
 Open **[http://127.0.0.1:8765](http://127.0.0.1:8765)** and choose
 **Load cluttered table · 8 objects**, select a target, then **Find & collect target**.
-Camera matching is enabled by default for scans; clear its checkbox to compare
-with the simulator-pose reference. Matching is limited to the installed catalog,
-upright objects, and the calibrated pickup area. It is not open-vocabulary vision.
+Choose **Find objects with** to compare pretrained detection, catalog matching,
+and the simulator reference. The basic installation uses catalog matching for scans.
 Use **Record episode** before collection to save RGB and physical state. Stop the
 server with Ctrl+C.
+
+For pretrained text detection, install its optional dependencies and weights once:
+
+```sh
+.venv/bin/pip install -e '.[vlm]'
+.venv/bin/robogogogo-demo --setup-vlm
+```
+
+Restart the demo, select **Pretrained OWLv2**, and enter a short description such
+as **yellow citrus fruit**. **Find in image** shows the detection without motion;
+**Find & collect target** detects again before grasping. OWLv2 runs locally with
+pinned Google weights (about 620 MB). The scene still has eight scanned assets,
+and physical collection assumes upright objects in the calibrated pickup area.
 
 The setup script creates a local `.venv`, installs Python dependencies, builds
 Studio from the npm lockfile, and caches the pinned Panda model and eight YCB

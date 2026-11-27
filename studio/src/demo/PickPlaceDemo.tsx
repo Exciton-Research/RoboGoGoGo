@@ -19,7 +19,12 @@ import {
   RecordingControls,
   EpisodeControls,
 } from "./EnvironmentControls";
-import type { LibraryObject, SceneData, TaskState } from "./types";
+import type {
+  LibraryObject,
+  PerceptionMode,
+  SceneData,
+  TaskState,
+} from "./types";
 import styles from "./demo.module.css";
 
 export default function PickPlaceDemo() {
@@ -29,7 +34,9 @@ export default function PickPlaceDemo() {
   const [busy, setBusy] = useState(false);
   const [view, setView] = useState(0);
   const [seed, setSeed] = useState(0);
-  const [cameraMatching, setCameraMatching] = useState(true);
+  const [perception, setPerception] = useState<PerceptionMode>("simulator");
+  const [query, setQuery] = useState("");
+  const perceptionSession = useRef("");
   const [connected, setConnected] = useState(false);
   const [tab, setTab] = useState<"objects" | "task" | "manual" | "episodes">(
     "objects",
@@ -73,6 +80,13 @@ export default function PickPlaceDemo() {
           seed,
         }),
       );
+      setPerception(
+        state?.pretrained_ready
+          ? "vlm"
+          : object.id === "block"
+            ? "simulator"
+            : "camera",
+      );
     } catch (failure) {
       setError(
         failure instanceof Error
@@ -98,6 +112,7 @@ export default function PickPlaceDemo() {
           seed,
         }),
       );
+      setPerception(state?.pretrained_ready ? "vlm" : "camera");
     } catch (failure) {
       setError(
         failure instanceof Error
@@ -165,13 +180,36 @@ export default function PickPlaceDemo() {
     }
   }
   useEffect(() => {
+    if (state && perceptionSession.current !== state.session_id) {
+      perceptionSession.current = state.session_id;
+      setPerception(
+        state.controller_perception ??
+          (state.pretrained_ready
+            ? "vlm"
+            : state.object.id === "block"
+              ? "simulator"
+              : "camera"),
+      );
+    }
     if (
       state?.mode === "script" &&
       state.controller_perception &&
       (state.status === "running" || state.status === "paused")
-    )
-      setCameraMatching(state.controller_perception === "camera");
-  }, [state?.mode, state?.controller_perception, state?.status]);
+    ) {
+      setPerception(state.controller_perception);
+      if (state.vision?.query) setQuery(state.vision.query);
+    }
+  }, [
+    state?.mode,
+    state?.controller_perception,
+    state?.status,
+    state?.session_id,
+    state?.pretrained_ready,
+    state?.vision?.query,
+  ]);
+  useEffect(() => {
+    if (state) setQuery(state.vision?.query ?? state.object.name);
+  }, [state?.episode_id]);
   const running = state?.status === "running";
   const finished = state?.status === "complete" || state?.status === "failed";
   const replaying = Boolean(state?.replay);
@@ -272,10 +310,8 @@ export default function PickPlaceDemo() {
                   : void act("/command", {
                       command: running ? "pause" : finished ? "reset" : "run",
                       seed,
-                      perception:
-                        cameraMatching && state?.object.id !== "block"
-                          ? "camera"
-                          : "simulator",
+                      perception,
+                      query: perception === "vlm" ? query : undefined,
                     })
               }
             >
@@ -299,7 +335,7 @@ export default function PickPlaceDemo() {
                       : state?.status === "paused" && state.mode === "script"
                         ? "Resume reference"
                         : state?.layout === "clutter"
-                          ? cameraMatching
+                          ? perception !== "simulator"
                             ? "Find & collect target"
                             : "Collect target"
                           : "Run reference task"}
@@ -393,8 +429,16 @@ export default function PickPlaceDemo() {
                   load={loadObject}
                   loadClutter={loadClutter}
                   selectTarget={(identifier) => act("/target", { identifier })}
-                  cameraMatching={cameraMatching}
-                  setCameraMatching={setCameraMatching}
+                  perception={perception}
+                  setPerception={setPerception}
+                  query={query}
+                  setQuery={setQuery}
+                  find={() =>
+                    act("/vision/find", {
+                      query,
+                      expected_revision: state.revision,
+                    })
+                  }
                 />
               )}
               {tab === "manual" && (

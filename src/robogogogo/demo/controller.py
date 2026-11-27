@@ -18,6 +18,7 @@ class ReferenceController:
 
     def __init__(self, env, *, camera_pick=None):
         self.camera_based = camera_pick is not None
+        self.perception = "camera" if self.camera_based else "simulator"
         pick = (
             np.asarray(camera_pick, dtype=float).copy()
             if self.camera_based
