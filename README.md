@@ -34,8 +34,7 @@ design is illustrative; physical hardware has not been commissioned.
 
 **[Read the paper (PDF)](paper/robogogogo.pdf)**:
 *Robogogogo: An Early Robot Simulation Environment for Demonstration Data
-Collection*, by Tian Shi (Exciton Research LLC) and Ping Wang (Department of
-Computer Science, Stevens Institute of Technology).
+Collection*, by the Robo Team.
 
 The early paper describes the original environment, data representation,
 preliminary geometric analysis, and research directions for VLA policies and

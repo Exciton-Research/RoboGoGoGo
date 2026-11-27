@@ -2,8 +2,7 @@
 
 **Robogogogo: An Early Robot Simulation Environment for Demonstration Data Collection**
 
-Tian Shi, Exciton Research LLC; Ping Wang, Department of Computer Science,
-Stevens Institute of Technology.
+the Robo Team.
 
 **[Read the paper (PDF)](robogogogo.pdf)**
 
