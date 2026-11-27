@@ -26,7 +26,7 @@ Computer Science, Stevens Institute of Technology).
 
 The paper describes the environment, data representation, preliminary geometric
 analysis, and research directions for VLA policies and learned world models.
-[LaTeX sources, references, supporting evidence, and build instructions](paper/)
+[LaTeX sources, references, figures, and build instructions](paper/)
 are included in this repository.
 
 ## Install and run

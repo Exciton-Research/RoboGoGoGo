@@ -11,7 +11,6 @@
 \definecolor{ink}{HTML}{273747}
 \setlength{\emergencystretch}{2em}
 \setlength{\textfloatsep}{12pt plus 3pt minus 3pt}
-\input{evidence/results.tex}
 \title{Robogogogo: An Early Robot Simulation Environment\\for Demonstration Data Collection}
 \author{Tian Shi\\Exciton Research LLC
 \and Ping Wang\\Department of Computer Science\\Stevens Institute of Technology}
@@ -151,7 +150,7 @@ The preliminary analysis examines self-clearance within the reference model's de
 Configurations are evaluated using capsule-based collision proxies with a required positive clearance of 12\,mm. Random configurations are drawn from specified practical arm intervals across three nominal torso postures. Two posture transitions contribute 41 discretized configurations each. The first sample contains 24 random configurations at seed~42 and the 82 transition configurations. A previously recorded analysis of the same embodiment contains 512 random configurations at seed~43 and the same 82 transition configurations. The transition configurations are shared deterministic samples, rather than independent observations in the two analyses.
 
 \subsection{Observed Clearance}
-All \PracticalCount{} configurations in the smaller sample meet the modeled clearance threshold. In the broader sample, 532 of 594 configurations meet the full rigid-body threshold and 538 meet the shoulder-pair threshold. The 62 full-body clearance violations occur in the random subset; all 82 transition configurations meet the threshold. The minimum guard-equivalent clearance is approximately $-63.9$\,mm. Negative values indicate overlap of the collision proxies. Reported interference includes upper-arm/chest and hand/base pairs, with additional wrist/torso and cross-arm cases described in the accompanying model analysis.
+All 106 configurations in the smaller sample meet the modeled clearance threshold. In the broader sample, 532 of 594 configurations meet the full rigid-body threshold and 538 meet the shoulder-pair threshold. The 62 full-body clearance violations occur in the random subset; all 82 transition configurations meet the threshold. The minimum guard-equivalent clearance is approximately $-63.9$\,mm. Negative values indicate overlap of the collision proxies. Reported interference includes upper-arm/chest and hand/base pairs, with additional wrist/torso and cross-arm cases described in the accompanying model analysis.
 
 \begin{table}[ht]
 \centering\small
@@ -202,7 +201,7 @@ Finally, a structurally consistent episode need not be an informative demonstrat
 Robogogogo integrates mobile dual-arm simulation, multi-camera observation, and demonstration recording around an explicit relationship between language, robot state, commands, and subsequent motion. The proposed episode representation preserves embodiment identity and distinguishes a bounded command from its realized outcome. Preliminary geometric characterization identifies limitations of the modeled collection domain, including clearance violations missed by a smaller sample. The next research stage is to evaluate sustained rendered collection and external data integration, followed by controlled studies of policy learning, language grounding, and action-conditioned prediction. These studies will determine the environment's utility as data infrastructure for VLA and world-model research.
 
 \paragraph{Code and artifact availability.}
-Source code and documentation are available in the project repository~\cite{robogogogo}. Reproduction procedures and detailed artifact provenance accompany the manuscript in the supporting documentation.
+Source code and documentation are available in the project repository~\cite{robogogogo}. The manuscript source and build instructions accompany the paper.
 
 \bibliographystyle{plainnat}
 \bibliography{references}

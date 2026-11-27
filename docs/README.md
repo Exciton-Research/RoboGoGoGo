@@ -17,7 +17,7 @@ boundaries.
 ## Go deeper
 
 - **[Research paper](../paper/)** provides the manuscript, reading PDF,
-  bibliography, supporting evidence, and reproduction instructions.
+  bibliography, figures, and build instructions.
 - **[Contributing](../CONTRIBUTING.md)** explains issues, pull requests, and licensing.
 - **[Security policy](../SECURITY.md)** explains reporting and the local deployment boundary.
 
