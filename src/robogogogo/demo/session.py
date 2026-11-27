@@ -1,5 +1,7 @@
 """One simulation actor: explicit stepping, reference playback, recording, and replay."""
 
+import base64
+import io
 import json
 import queue
 import threading
@@ -10,10 +12,11 @@ from pathlib import Path
 from uuid import UUID, uuid4
 
 import numpy as np
+from PIL import Image
 
 from .controller import ReferenceController
 from .environment import PandaEnv
-from .objects import catalog
+from .objects import CATALOG, catalog
 from .recording import Episode, Recording
 
 
@@ -137,12 +140,51 @@ class PandaSession:
     def _scene(self):
         return {**self.env.geometry(), "objects": catalog(self.assets), "state": self._snapshot()}
 
-    def _select_object(self, identifier, seed=0):
+    def _policy_observation(self, images=False):
+        observation = self.env.observe()
+        if images:
+            observation.update(self.env.render_cameras())
+        frames = {}
+        for name in ("overhead", "wrist"):
+            if name in observation:
+                rgb = observation.pop(name)
+                buffer = io.BytesIO()
+                Image.fromarray(rgb).save(buffer, format="PNG")
+                frames[name] = {
+                    "encoding": "png",
+                    "width": rgb.shape[1],
+                    "height": rgb.shape[0],
+                    "data": base64.b64encode(buffer.getvalue()).decode(),
+                }
+        return {
+            "schema": "panda-policy-v1",
+            "session_id": self.session_id,
+            "episode_id": self.episode_id,
+            "revision": self.revision,
+            "instruction": self.env.instruction,
+            "observation": {key: value.tolist() for key, value in observation.items()},
+            "images": frames,
+            "cameras": self.env.snapshot()["cameras"],
+            "read_only": bool(
+                self.playing or self.replay is not None or self.env.terminated or self.env.truncated
+            ),
+            "action_spec": {
+                "representation": "absolute joint targets and total finger opening",
+                "units": ["rad"] * 7 + ["m"],
+                "low": self.env.action_space.low.tolist(),
+                "high": self.env.action_space.high.tolist(),
+                "control_dt": self.env.dt,
+            },
+        }
+
+    def _select_object(self, identifier, seed=0, clutter=False):
         if self.replay is not None or self.recording is not None or self.playing:
             raise ValueError(
                 "Pause playback and save or discard any recording before changing objects"
             )
-        replacement = PandaEnv(self.assets, object_id=identifier)
+        replacement = PandaEnv(
+            self.assets, object_id=identifier, object_ids=list(CATALOG) if clutter else None
+        )
         try:
             replacement.reset(seed=seed)
         except Exception:
@@ -155,6 +197,16 @@ class PandaSession:
         self.message = (
             f"{replacement.object['name']} loaded. Ready for manual control or the reference task."
         )
+        self.revision += 1
+        return self._snapshot()
+
+    def _select_target(self, identifier):
+        if self.replay is not None or self.recording is not None or self.playing:
+            raise ValueError("Pause and finish the active recording before selecting a new target")
+        self.env.select_target(identifier)
+        self.controller, self.mode, self.status = None, "manual", "ready"
+        self.episode_id = str(uuid4())
+        self.message = f"Collect the {self.env.object['name']}. Uses known scene identity and pose, not camera recognition."
         self.revision += 1
         return self._snapshot()
 
@@ -302,7 +354,10 @@ class PandaSession:
                     if archive.getinfo("episode.json").file_size > 100_000:
                         continue
                     row = json.loads(archive.read("episode.json"))
-                if row.get("schema") == "panda-episode-v1" and str(UUID(row["id"])) == path.stem:
+                if (
+                    row.get("schema") in {"panda-episode-v1", "panda-episode-v2"}
+                    and str(UUID(row["id"])) == path.stem
+                ):
                     episodes.append(
                         {
                             "object_name": row.get("object", {}).get("name", "Original block"),
@@ -335,7 +390,11 @@ class PandaSession:
             if archive.getinfo("episode.json").file_size > 100_000:
                 raise ValueError("Episode metadata exceeds supported size")
             manifest = json.loads(archive.read("episode.json"))
-        replay_env = PandaEnv(self.assets, object_id=manifest.get("object", {}).get("id", "block"))
+        replay_env = PandaEnv(
+            self.assets,
+            object_id=manifest.get("object", {}).get("id", "block"),
+            object_ids=manifest.get("scene", {}).get("objects"),
+        )
         try:
             episode = Episode(path, replay_env)
         except Exception:

@@ -42,7 +42,12 @@ class ReplayRequest(BaseModel):
 
 
 class ObjectRequest(ResetRequest):
-    identifier: Literal["block", "soup-can", "rubiks-cube"]
+    identifier: str
+    clutter: bool = False
+
+
+class TargetRequest(BaseModel):
+    identifier: str
 
 
 def create_demo_router(cache, *, legacy_workspace=False, recordings=None):
@@ -92,9 +97,16 @@ def create_demo_router(cache, *, legacy_workspace=False, recordings=None):
     async def select_object(body: ObjectRequest):
         return await call("select_object", **body.model_dump())
 
+    @router.post("/target")
+    async def select_target(body: TargetRequest):
+        return await call("select_target", identifier=body.identifier)
+
     @router.post("/objects/{identifier}/download")
-    async def download_object(identifier: Literal["soup-can", "rubiks-cube"]):
-        from .objects import download_object
+    async def download_object(identifier: str):
+        from .objects import CATALOG, download_object
+
+        if identifier not in CATALOG:
+            raise HTTPException(404, "Unknown library object")
 
         try:
             return await asyncio.to_thread(download_object, cache, identifier)
@@ -102,8 +114,11 @@ def create_demo_router(cache, *, legacy_workspace=False, recordings=None):
             raise HTTPException(502, f"Object download failed: {error}") from error
 
     @router.get("/objects/{identifier}/texture")
-    async def object_texture(identifier: Literal["soup-can", "rubiks-cube"]):
-        from .objects import directory, require_object
+    async def object_texture(identifier: str):
+        from .objects import CATALOG, directory, require_object
+
+        if identifier not in CATALOG:
+            raise HTTPException(404, "Unknown library object")
 
         try:
             await asyncio.to_thread(require_object, cache, identifier)
@@ -118,6 +133,10 @@ def create_demo_router(cache, *, legacy_workspace=False, recordings=None):
     @router.get("/state")
     async def state():
         return await call("snapshot")
+
+    @router.get("/observation")
+    async def policy_observation(images: bool = False):
+        return await call("policy_observation", images=images)
 
     @router.post("/reset")
     async def reset(body: ResetRequest):

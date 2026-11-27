@@ -934,3 +934,69 @@
 .objectLibrary > .objectCredit {
   font-size: 10px;
 }
+
+.clutterControl {
+  margin: 16px 0 12px;
+}
+.clutterControl button {
+  width: 100%;
+  padding: 11px;
+  background: #e4eadc;
+  border: 1px solid #bdc9b4;
+  border-radius: 4px;
+  color: #415e45;
+  font-size: 11px;
+}
+.clutterControl button:disabled {
+  opacity: 0.5;
+}
+.clutterControl p {
+  font-size: 11px;
+  line-height: 1.6;
+  color: #7a8277;
+  margin-top: 9px;
+}
+.objectSearch {
+  width: 100%;
+  border: 1px solid #d8ddd2;
+  border-radius: 3px;
+  padding: 9px 10px;
+  font-size: 11px;
+  margin: 4px 0 7px;
+  background: #fafaf5;
+  color: #455344;
+}
+.objectLibrary > .poseNotice {
+  font: 9px/1.6 var(--mono);
+  color: #71836b;
+  border-left: 2px solid #9bad8d;
+  padding-left: 9px;
+}
+.targetList {
+  display: grid;
+  gap: 5px;
+}
+.targetList button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  text-align: left;
+  border: 1px solid #d6ddce;
+  border-radius: 3px;
+  background: #f6f8f0;
+  padding: 11px 10px;
+  font-size: 11px;
+}
+.targetList button small {
+  color: #87917e;
+  font-size: 9px;
+  white-space: nowrap;
+}
+.targetList button[data-selected="true"] {
+  background: #e8efde;
+  border-color: #9eae8e;
+}
+.targetList button:disabled {
+  cursor: default;
+}

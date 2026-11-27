@@ -1,4 +1,4 @@
-"""The single Panda task: official robot, workbench, and a free-joint block."""
+"""Panda tabletop scenes with textured free objects and collection cells."""
 
 import xml.etree.ElementTree as ET
 
@@ -10,7 +10,7 @@ TARGET = np.array([0.47, 0.19, TABLE_Z + HALF_CUBE])
 HOME = np.array([0, -0.35, 0, -2.1, 0, 1.75, -0.7854])
 
 
-def scene_xml(path, *, object_spec=None, object_dir=None):
+def scene_xml(path, *, object_spec=None, object_dir=None, other_objects=None):
     root = ET.parse(path).getroot()
     root.find("compiler").set("meshdir", str(path.parent / "assets"))
     root.find("option").set("timestep", "0.002")
@@ -67,45 +67,35 @@ def scene_xml(path, *, object_spec=None, object_dir=None):
         gripper.set("gainprm", "0.04705882353 0 0")
         gripper.set("biasprm", "0 -300 -30")
         cube.remove(cube.find("geom"))
-        asset = root.find("asset")
-        ET.SubElement(asset, "mesh", name="object_mesh", file=str(object_dir / "visual.obj"))
-        ET.SubElement(
-            asset, "texture", name="object_texture", type="2d", file=str(object_dir / "texture.png")
+        add_scan(root, cube, object_spec, object_dir)
+    for index, (spec, folder) in enumerate(other_objects or [], start=1):
+        body = ET.SubElement(
+            world,
+            "body",
+            name=f"clutter_{index}",
+            pos=f"0.47 -0.17 {TABLE_Z + spec['dimensions'][2] / 2 + 0.002}",
         )
-        ET.SubElement(
-            asset,
-            "material",
-            name="object_material",
-            texture="object_texture",
-            specular="0.15",
-            shininess="0.1",
-        )
-        ET.SubElement(
-            cube,
-            "geom",
-            name="object_visual",
-            type="mesh",
-            mesh="object_mesh",
-            material="object_material",
-            contype="0",
-            conaffinity="0",
-            mass="0",
-            group="2",
-        )
-        half = np.asarray(object_spec["dimensions"]) / 2
-        size = [max(half[:2]), half[2]] if object_spec["collision"] == "cylinder" else half
-        ET.SubElement(
-            cube,
-            "geom",
-            name="object_collision",
-            type=object_spec["collision"],
-            size=" ".join(map(str, size)),
-            mass=str(object_spec["mass"]),
-            friction=f"{object_spec['friction']} 0.01 0.0001",
-            condim="4",
-            solref="0.005 1",
-            group="3",
-        )
+        ET.SubElement(body, "freejoint", name=f"clutter_{index}_free")
+        add_scan(root, body, spec, folder, suffix=f"_{index}")
+    if other_objects:
+        for index in range(1 + len(other_objects)):
+            x, y = 0.28 + index % 4 * 0.15, 0.16 + index // 4 * 0.14
+            for axis in range(2):
+                for sign in (-1, 1):
+                    position = [x, y, TABLE_Z + 0.015]
+                    position[axis] += sign * 0.065
+                    size = [0.065, 0.065, 0.015]
+                    size[axis] = 0.002
+                    ET.SubElement(
+                        world,
+                        "geom",
+                        name=f"collection_{index}_{axis}_{sign}",
+                        type="box",
+                        pos=" ".join(map(str, position)),
+                        size=" ".join(map(str, size)),
+                        rgba="0.45 0.52 0.44 1",
+                        friction="0.8 0.005 0.0001",
+                    )
     ET.SubElement(world, "camera", name="overhead", pos="0.47 0 1.75", fovy="42")
     ET.SubElement(
         hand,
@@ -136,3 +126,49 @@ def scene_xml(path, *, object_spec=None, object_dir=None):
         group="2",
     )
     return ET.tostring(root, encoding="unicode")
+
+
+def add_scan(root, body, spec, folder, suffix=""):
+    asset = root.find("asset")
+    mesh, texture, material = (
+        name + suffix for name in ("object_mesh", "object_texture", "object_material")
+    )
+    ET.SubElement(asset, "mesh", name=mesh, file=str(folder / "visual.obj"))
+    ET.SubElement(asset, "texture", name=texture, type="2d", file=str(folder / "texture.png"))
+    ET.SubElement(
+        asset, "material", name=material, texture=texture, specular="0.15", shininess="0.1"
+    )
+    ET.SubElement(
+        body,
+        "geom",
+        name="object_visual" + suffix,
+        type="mesh",
+        mesh=mesh,
+        material=material,
+        contype="0",
+        conaffinity="0",
+        mass="0",
+        group="2",
+    )
+    half = np.asarray(spec["dimensions"]) / 2
+    attributes = (
+        {"mesh": mesh}
+        if spec["collision"] == "mesh"
+        else {
+            "size": " ".join(
+                map(str, [max(half[:2]), half[2]] if spec["collision"] == "cylinder" else half)
+            )
+        }
+    )
+    ET.SubElement(
+        body,
+        "geom",
+        name="object_collision" + suffix,
+        type=spec["collision"],
+        **attributes,
+        mass=str(spec["mass"]),
+        friction=f"{spec['friction']} 0.01 0.0001",
+        condim="4",
+        solref="0.005 1",
+        group="3",
+    )

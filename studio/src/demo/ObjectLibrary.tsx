@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Box, Check, Download, Package } from "lucide-react";
 import type { LibraryObject, TaskState } from "./types";
 import styles from "./demo.module.css";
@@ -9,12 +10,18 @@ export default function ObjectLibrary({
   state,
   busy,
   load,
+  loadClutter,
+  selectTarget,
 }: {
   objects: LibraryObject[];
   state: TaskState;
   busy: boolean;
   load: (object: LibraryObject) => Promise<void>;
+  loadClutter: () => Promise<void>;
+  selectTarget: (identifier: string) => Promise<void>;
 }) {
+  const [search, setSearch] = useState("");
+  const clutter = state.layout === "clutter";
   const locked =
     busy ||
     Boolean(state.recording) ||
@@ -22,65 +29,118 @@ export default function ObjectLibrary({
     state.status === "running";
   return (
     <section className={styles.objectLibrary} aria-label="Object library">
-      <p>
-        Real object scans at their original size. Loading an object starts a
-        fresh task.
-      </p>
-      {objects.map((object) => (
-        <article
-          key={object.id}
-          className={styles.objectCard}
-          data-selected={state.object.id === object.id}
-        >
-          <div className={styles.objectCardHeading}>
-            <span className={styles.objectIcon}>
-              {object.category === "Household" ? (
-                <Package size={21} />
-              ) : (
-                <Box size={21} />
-              )}
-            </span>
-            <div>
-              <span>
-                {object.category}
-                {object.source ? " · YCB scan" : ""}
-              </span>
-              <h3>{object.name}</h3>
-            </div>
-            {state.object.id === object.id && (
-              <Check size={15} aria-label="Selected object" />
-            )}
-          </div>
-          {object.dimensions && (
-            <p>
-              {object.dimensions
-                .map((value) => (value * 100).toFixed(1))
-                .join(" × ")}{" "}
-              cm
-              {object.mass !== undefined &&
-                ` · ${Math.round(object.mass * 1000)} g`}
-            </p>
-          )}
-          <div className={styles.objectCardActions}>
-            <button
-              disabled={locked || state.object.id === object.id}
-              onClick={() => void load(object)}
+      <div className={styles.clutterControl}>
+        <button disabled={locked} onClick={() => void loadClutter()}>
+          {busy
+            ? "Preparing…"
+            : clutter
+              ? "Reset cluttered table"
+              : "Load cluttered table · 8 objects"}
+        </button>
+        <p>
+          {clutter
+            ? "Choose a target below, then Collect target. Other objects remain on the table."
+            : "Load all eight scans together, or choose one object from the library."}
+        </p>
+      </div>
+      {clutter && (
+        <p className={styles.poseNotice}>
+          Known scene identities and poses · scripted collection · no camera
+          recognition
+        </p>
+      )}
+      <input
+        className={styles.objectSearch}
+        aria-label="Find object by name"
+        placeholder="Find an object by name…"
+        value={search}
+        onChange={(event) => setSearch(event.target.value)}
+      />
+      {clutter ? (
+        <div className={styles.targetList} aria-label="Objects on the table">
+          {state.instances
+            .filter((item) =>
+              item.name.toLowerCase().includes(search.toLowerCase()),
+            )
+            .map((item) => (
+              <button
+                key={item.id}
+                disabled={locked || item.selected || item.at_collection}
+                data-selected={item.selected}
+                onClick={() => void selectTarget(item.id)}
+              >
+                <span>{item.name}</span>
+                <small>
+                  {item.at_collection
+                    ? "Collected"
+                    : item.selected
+                      ? "Target"
+                      : "Choose target"}
+                </small>
+              </button>
+            ))}
+        </div>
+      ) : (
+        objects
+          .filter((object) =>
+            object.name.toLowerCase().includes(search.toLowerCase()),
+          )
+          .map((object) => (
+            <article
+              key={object.id}
+              className={styles.objectCard}
+              data-selected={state.object.id === object.id}
             >
-              {!object.ready && <Download size={12} />}
-              {state.object.id === object.id
-                ? "In scene"
-                : object.ready
-                  ? "Load object"
-                  : "Download & load"}
-            </button>
-            {object.source && (
-              <a href={object.source} target="_blank" rel="noreferrer">
-                Source
-              </a>
-            )}
-          </div>
-        </article>
-      ))}
+              <div className={styles.objectCardHeading}>
+                <span className={styles.objectIcon}>
+                  {object.category === "Household" ? (
+                    <Package size={21} />
+                  ) : (
+                    <Box size={21} />
+                  )}
+                </span>
+                <div>
+                  <span>
+                    {object.category}
+                    {object.source ? " · YCB scan" : ""}
+                  </span>
+                  <h3>{object.name}</h3>
+                </div>
+                {state.object.id === object.id && (
+                  <Check size={15} aria-label="Selected object" />
+                )}
+              </div>
+              {object.dimensions && (
+                <p>
+                  {object.dimensions
+                    .map((value) => (value * 100).toFixed(1))
+                    .join(" × ")}{" "}
+                  cm
+                  {object.mass !== undefined &&
+                    ` · ${Math.round(object.mass * 1000)} g`}
+                </p>
+              )}
+              <div className={styles.objectCardActions}>
+                <button
+                  disabled={locked || state.object.id === object.id}
+                  onClick={() => void load(object)}
+                >
+                  {!object.ready && <Download size={12} />}
+                  {state.object.id === object.id
+                    ? "In scene"
+                    : object.ready
+                      ? "Load object"
+                      : "Download & load"}
+                </button>
+                {object.source && (
+                  <a href={object.source} target="_blank" rel="noreferrer">
+                    Source
+                  </a>
+                )}
+              </div>
+            </article>
+          ))
+      )}
       {(state.recording || state.replay || state.status === "running") && (
         <p>
           Pause playback and finish the active recording before changing
@@ -88,9 +148,10 @@ export default function ObjectLibrary({
         </p>
       )}
       <p className={styles.objectPhysicsNote}>
-        Scans retain their textures and metric scale. The can uses a cylindrical
-        collision shape; the toy uses a box. Mass and friction are assigned
-        simulation values. The toy is one rigid body.
+        Scans retain their textures and metric scale. Boxes/cylinders use fitted
+        collision shapes; fruit and the meat can use convex mesh collisions.
+        Mass and friction are assigned simulation values. The toy is one rigid
+        body.
       </p>
       <p className={styles.objectCredit}>
         Scans: YCB Object and Model Set, Calli et al. ·{" "}

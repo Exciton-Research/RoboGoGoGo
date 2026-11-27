@@ -11,7 +11,7 @@ It is not a learned policy or a real-robot result. The selected object has a fre
 throughout the task; it is never attached or welded to the hand. Only reset
 writes its initial position.
 
-![The Panda environment replaying a recorded grasp with overhead and wrist RGB](images/panda-grasp-place.jpg)
+![Recorded lemon collection from an eight-object table with overhead and wrist RGB](images/panda-grasp-place.jpg)
 
 ## Start
 
@@ -37,7 +37,7 @@ and `/workflow/`.
 
 ## Object library
 
-The **Objects** tab includes two textured scans from the
+The **Objects** tab includes eight textured scans from the
 [YCB Object and Model Set](https://ycb-benchmarks.s3.amazonaws.com/index.html):
 
 - **Tomato soup can**, `soup-can` / `005_tomato_soup_can`: about 6.8 × 6.8 × 10.2 cm,
@@ -46,18 +46,23 @@ The **Objects** tab includes two textured scans from the
   with a box for collision and an assigned mass of 90 g. It is a single rigid body;
   its faces do not turn.
 
+Additional scans are chocolate pudding and strawberry gelatin boxes, a potted
+meat can, a strawberry, a lemon, and an orange. Boxes are oriented upright without
+changing their metric dimensions. Fruit and the meat can use MuJoCo convex mesh
+collisions; their small concavities are approximated by the convex hull.
+
 The original 50 mm block remains available. Select **Load object** to start a new
 task with the chosen object. Pause a reference run and save/discard any recording
-before switching. Exit replay before loading another object.
+before switching. Exit replay before loading another scene.
 
-Setup downloads both pinned Google 16k scan archives. Existing installations can
+Setup downloads the eight pinned Google 16k scan archives. Existing installations can
 rerun `robogogogo-demo --setup` or use **Download & load** in the Objects tab.
 Scene/state requests never initiate downloads. Explicit downloads require network
 access; installed objects work offline. Meshes, textures, and provenance manifests
 stay under the ignored `runs/demo/assets/objects/` cache, not in Git.
 
 Metric dimensions and UV textures are preserved. Processing centers each mesh,
-rotates the toy upright, and reduces its 4096 px texture to 1024 px. The browser
+rotates the toy and boxes upright, and reduces its 4096 px texture to 1024 px. The browser
 and native MuJoCo RGB renderer use the same mesh and texture. Browser OBJ export
 preserves texture seams and the compiled UV convention.
 
@@ -91,8 +96,69 @@ with PandaEnv(object_id="soup-can") as env:
 API routes: `GET /api/demo/objects`,
 `POST /api/demo/objects/{id}/download`, and
 `POST /api/demo/objects/select` with `{"identifier": "soup-can", "seed": 0}`.
-Changing objects is an explicit scene reset. This library supports one selected
-object at a time; room imports and arbitrary mesh uploads are outside this version.
+Changing objects is an explicit scene reset. Room imports and arbitrary mesh
+uploads are outside this version.
+
+### Cluttered-table collection
+
+Choose **Load cluttered table · 8 objects** to place all eight scans on the same
+table. Each has an independent free joint, collision geometry, and texture.
+The layout is reproducible by seed, with small bounded position jitter. Shallow
+collection cells occupy the other side of the table and contain rounded fruit.
+
+Choose a target by its name in **Objects**, then **Collect target**. The selected
+object has its own marked collection cell. After completion, choose another
+object to continue from the existing physical scene. Changing targets resets task
+bookkeeping and the episode identity; it does not reposition the robot or objects.
+Reset restores the complete seeded table. Active recordings must be saved or
+discarded before changing targets.
+
+**Current controller:** scripted motion using known scene identities and poses.
+Searching the object list is a user interface operation. Camera-based object
+recognition is not implemented. The controller compensates for small object nudges
+before grasping and for the measured object-to-tool offset before placement.
+Other objects remain physical obstacles; this is a bounded tabletop arrangement,
+not a general collision-free planner or arbitrary clutter-solving policy.
+
+Clutter success requires the selected object center inside its 13 cm collection
+cell (within 6 cm on both horizontal axes), near its resting height, at low speed,
+released with an open gripper, previously lifted by at least 95 mm, and clear of
+the withdrawn tool. The condition must hold for six control steps. The remaining
+success checks match the single-object task below.
+
+`POST /api/demo/objects/select` accepts `clutter: true` with any target identifier.
+`POST /api/demo/target` with `{"identifier": "lemon"}` chooses another object in
+the current scene. A target change leaves all physical state intact. The scene
+state reports every object instance and whether it is at its collection cell.
+
+Clutter recordings use `panda-episode-v2`: they include the scene object list,
+active target index, full physical state of all eight objects, actions, and
+optional aligned RGB. Replay reconstructs the recorded scene and target, and
+returning to live control restores the previous live scene. Single-object v1
+archives remain supported.
+
+### Policy / future VLA interface
+
+`PandaPolicy.act(observation, *, instruction)` returns an action with the existing
+seven joint targets (radians) and total finger opening (meters). The synchronous
+`step_policy(env, policy)` helper executes one policy action through `env.step`,
+including its bounds checks. Use `observation_mode="rgb"` for a camera-based
+policy. Observations contain proprioception, prior action, time, and optional
+RGB arrays; object identities/poses and success diagnostics stay in `info`.
+The instruction names the target. Stateful policies should be reset by their
+owner when the episode identity changes.
+
+For a separate model process, `GET /api/demo/observation?images=true` returns the
+`panda-policy-v1` packet: instruction, episode/session identity, revision,
+proprioceptive observation, two PNG images encoded as base64, camera poses/FOV,
+action bounds/units/control interval, and a `read_only` flag. It excludes object
+positions. Use `images=false` for state-only clients. RGB needs native offscreen
+rendering. No clock advances merely by reading an observation.
+
+Send the policy action to `POST /api/demo/step` with the packet's
+`expected_revision`; stale actions and actions during replay/reference playback
+are rejected. This leaves the environment ready for an external VLA adapter;
+no learned model, training implementation, or recognition result is included.
 
 **Asset attribution:** YCB Object and Model Set, Calli et al., Google 16k scans.
 The scanned assets are [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
@@ -184,13 +250,14 @@ Each `panda-episode-v1` ZIP contains:
   frames per camera, captured at the same boundaries as the observations.
 
 Recordings can start partway through a live run. The first observation is the
-state at recording start; times retain their offset from environment reset.
+state at recording start; times retain their offset from the current task episode. Selecting a new target
+starts a new task episode without changing physical state.
 Manual sources are labeled `manual`, the reference `scripted`, and direct step
 requests `api`. Partial and unsuccessful runs are retained when saved. Replay
 requires a matching model hash and MuJoCo version. It is state playback, not a
 claim of cross-version deterministic re-simulation.
 
-## What completion means
+## Single-object completion
 
 Success requires all of the following for six consecutive control steps:
 

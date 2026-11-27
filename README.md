@@ -1,18 +1,22 @@
 # robogogogo
 
 A robotics workbench with one **Panda grasp-and-place environment** and a small
-**textured object library**: a scanned tomato soup can and Rubik’s Cube from YCB. The robot
-grasps the selected object through simulated finger contact, lifts it, carries it to a marked
+**textured object library** of eight YCB scans: household packages, fruit, and a
+Rubik’s Cube. Load one object or a cluttered table, choose a named target, and
+collect it into its marked cell. The robot grasps through simulated finger
+contact, lifts the selected object, and carries it to a marked
 destination, releases it, and withdraws. MuJoCo provides rigid-body dynamics;
 Three.js renders the official Panda meshes and live overhead/wrist views.
 Seeded reset, explicit 20 Hz stepping, manual control, native RGB recording,
 and read-only episode replay are available through the browser and Python API.
+A policy interface accepts task instructions, camera images, and proprioception
+for future VLA integration. The current collector uses known scene poses.
 
 The controller is scripted. This is a working simulation demonstration, with
 no learned-policy or real-robot performance claim. Start with the
 [demo guide](docs/demo.md).
 
-![Panda episode replay with stored physical state and overhead/wrist RGB](docs/images/panda-grasp-place.jpg)
+![Panda collecting a lemon from an eight-object tabletop, with recorded RGB](docs/images/panda-grasp-place.jpg)
 
 The original browser Studio provides a local workbench for **RG Mobile Duo**:
 a wheeled robot concept with a folding torso, two seven-joint arms, head stereo

@@ -82,6 +82,31 @@ export default function PickPlaceDemo() {
       setBusy(false);
     }
   }
+  async function loadClutter() {
+    setBusy(true);
+    setError("");
+    try {
+      for (const object of scene?.objects ?? []) {
+        if (object.source && !object.ready)
+          await request(`/demo/objects/${object.id}/download`, {});
+      }
+      await synchronize(
+        await request<TaskState>("/demo/objects/select", {
+          identifier: "soup-can",
+          clutter: true,
+          seed,
+        }),
+      );
+    } catch (failure) {
+      setError(
+        failure instanceof Error
+          ? failure.message
+          : "Table could not be loaded",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
   useEffect(() => {
     let active = true,
       timer: ReturnType<typeof setTimeout>;
@@ -212,7 +237,9 @@ export default function PickPlaceDemo() {
             {state?.replay
               ? "Replay · read only"
               : state?.status === "complete"
-                ? "Placement complete"
+                ? state.layout === "clutter"
+                  ? "Target collected"
+                  : "Placement complete"
                 : state?.status === "failed"
                   ? "Task stopped"
                   : state?.status === "running"
@@ -258,7 +285,9 @@ export default function PickPlaceDemo() {
                       ? "Reset task"
                       : state?.status === "paused" && state.mode === "script"
                         ? "Resume reference"
-                        : "Run reference task"}
+                        : state?.layout === "clutter"
+                          ? "Collect target"
+                          : "Run reference task"}
             </button>
             <button
               className={styles.resetButton}
@@ -347,6 +376,8 @@ export default function PickPlaceDemo() {
                   state={state}
                   busy={busy || !connected}
                   load={loadObject}
+                  loadClutter={loadClutter}
+                  selectTarget={(identifier) => act("/target", { identifier })}
                 />
               )}
               {tab === "manual" && (

@@ -33,6 +33,7 @@ class PandaEnv(gym.Env):
         assets=None,
         *,
         object_id="block",
+        object_ids=None,
         observation_mode="state",
         render_mode=None,
         max_steps=800,
@@ -45,21 +46,46 @@ class PandaEnv(gym.Env):
             raise ValueError("max_steps must be a positive integer")
         cache = Path(assets or Path.cwd() / "runs/demo/assets").resolve()
         asset_path = require_model(cache)
-        self.object = require_object(cache, object_id)
-        self.half_height = self.object["dimensions"][2] / 2
-        self.target = np.array([*TARGET[:2], TABLE_Z + self.half_height])
-        object_dir = directory(cache, object_id) if object_id != "block" else None
-        xml = scene_xml(asset_path, object_spec=self.object, object_dir=object_dir)
-        canonical = xml.replace(str(asset_path.parent / "assets"), "@panda/assets")
-        if object_dir is not None:
-            canonical = canonical.replace(str(object_dir), "@object/assets") + str(
-                self.object["sha256"]
+        ids = list(object_ids) if object_ids is not None else [object_id]
+        if (
+            not 1 <= len(ids) <= 8
+            or len(set(ids)) != len(ids)
+            or object_id not in ids
+            or (len(ids) > 1 and "block" in ids)
+        ):
+            raise ValueError(
+                "Scene requires up to eight distinct scanned objects including the target"
             )
+        self.objects = [require_object(cache, identifier) for identifier in ids]
+        self.layout = "clutter" if len(ids) > 1 else "single"
+        folders = [
+            directory(cache, identifier) if identifier != "block" else None for identifier in ids
+        ]
+        xml = scene_xml(
+            asset_path,
+            object_spec=self.objects[0],
+            object_dir=folders[0],
+            other_objects=list(zip(self.objects[1:], folders[1:])),
+        )
+        canonical = xml.replace(str(asset_path.parent / "assets"), "@panda/assets")
+        for index, (spec, folder) in enumerate(zip(self.objects, folders)):
+            if folder is not None:
+                alias = "@object/assets" if index == 0 else f"@object_{index}/assets"
+                canonical = canonical.replace(str(folder), alias) + str(spec["sha256"])
         self.model_hash = hashlib.sha256(canonical.encode()).hexdigest()
         self.model = mujoco.MjModel.from_xml_string(xml)
         self.data, self.scratch = mujoco.MjData(self.model), mujoco.MjData(self.model)
         self.site = self.model.site("grasp_center").id
-        self.block, self.hand = self.model.body("block").id, self.model.body("hand").id
+        self.hand = self.model.body("hand").id
+        self.bodies = [
+            self.model.body("block" if index == 0 else f"clutter_{index}").id
+            for index in range(len(ids))
+        ]
+        self.joints = [
+            self.model.joint("block_free" if index == 0 else f"clutter_{index}_free")
+            for index in range(len(ids))
+        ]
+        self._activate(ids.index(object_id))
         self.fingers = {self.model.body(name).id for name in ("left_finger", "right_finger")}
         self.visual_ids = [i for i in range(self.model.ngeom) if self.model.geom_group[i] != 3]
         self.control_steps, self.dt = 25, float(self.model.opt.timestep) * 25
@@ -87,11 +113,46 @@ class PandaEnv(gym.Env):
         self.observation_space = spaces.Dict(fields)
         self.reset(seed=0)
 
+    def collection_xy(self, index):
+        if self.layout == "single":
+            return TARGET[:2].copy()
+        return np.array([0.28 + (index % 4) * 0.15, 0.16 + (index // 4) * 0.14])
+
+    @property
+    def instruction(self):
+        return (
+            f"Collect the {self.object['name']} into the marked collection cell."
+            if self.layout == "clutter"
+            else f"Grasp the {self.object['name']}, place it on the marked target, and withdraw."
+        )
+
+    def _activate(self, index):
+        if type(index) is not int or not 0 <= index < len(self.objects):
+            raise ValueError("Unknown target in this scene")
+        self.target_index = index
+        self.object, self.block = self.objects[index], self.bodies[index]
+        self.block_dof = int(self.joints[index].dofadr[0])
+        self.half_height = self.object["dimensions"][2] / 2
+        self.target = np.r_[self.collection_xy(index), TABLE_Z + self.half_height]
+        self.model.geom_pos[self.model.geom("target_marker").id, :2] = self.target[:2]
+
+    def select_target(self, identifier):
+        index = next((i for i, item in enumerate(self.objects) if item["id"] == identifier), None)
+        if index is None:
+            raise ValueError("Target is not on this table")
+        self._activate(index)
+        mujoco.mj_forward(self.model, self.data)
+        self.pick = self.data.xpos[self.block].copy()
+        self.max_height, self.settled_steps, self.steps = float(self.pick[2]), 0, 0
+        self.terminated = self.truncated = False
+
     def reset(self, *, seed=None, options=None):
         super().reset(seed=seed)
         options = options or {}
         if set(options) - {"block_xy"}:
             raise ValueError("Only block_xy is supported in reset options")
+        if self.layout == "clutter" and options:
+            raise ValueError("Cluttered-table positions are set by the seeded layout")
         xy = np.asarray(
             options.get(
                 "block_xy",
@@ -108,10 +169,23 @@ class PandaEnv(gym.Env):
             raise ValueError("block_xy must be within x=[0.40,0.54], y=[-0.24,-0.10] m")
         mujoco.mj_resetData(self.model, self.data)
         self.data.qpos[:7], self.data.qpos[7:9] = HOME, 0.04
-        self.data.qpos[9:12], self.data.qpos[12:16] = (
-            [*xy, TABLE_Z + self.half_height + 0.002],
-            [1, 0, 0, 0],
-        )
+        for index, (spec, joint) in enumerate(zip(self.objects, self.joints)):
+            address = int(joint.qposadr[0])
+            position = (
+                xy
+                if self.layout == "single"
+                else np.array(
+                    [0.47, -0.20]
+                    if index == 0
+                    else [0.28 + (index % 4) * 0.15, -0.28 + (index // 4) * 0.19]
+                )
+                + self.np_random.uniform(-0.005, 0.005, 2)
+            )
+            self.data.qpos[address : address + 3] = [
+                *position,
+                TABLE_Z + spec["dimensions"][2] / 2 + 0.002,
+            ]
+            self.data.qpos[address + 3 : address + 7] = [1, 0, 0, 0]
         self.data.ctrl[:7], self.data.ctrl[7] = HOME, 255
         for _ in range(250):
             mujoco.mj_step(self.model, self.data)
@@ -155,9 +229,13 @@ class PandaEnv(gym.Env):
     def _placed(self):
         position = self.data.xpos[self.block]
         return bool(
-            np.linalg.norm(position[:2] - self.target[:2]) < 0.035
+            (
+                np.max(np.abs(position[:2] - self.target[:2])) < 0.060
+                if self.layout == "clutter"
+                else np.linalg.norm(position[:2] - self.target[:2]) < 0.035
+            )
             and abs(position[2] - self.target[2]) < 0.008
-            and np.linalg.norm(self.data.qvel[9:12]) < 0.02
+            and np.linalg.norm(self.data.qvel[self.block_dof : self.block_dof + 3]) < 0.02
             and sum(self.data.qpos[7:9]) > 0.065
             and not self.contacts()
             and self.max_height > self.pick[2] + 0.095
@@ -225,7 +303,7 @@ class PandaEnv(gym.Env):
     def capture_state(self):
         state = np.zeros(mujoco.mj_stateSize(self.model, STATE_SPEC))
         mujoco.mj_getState(self.model, self.data, state, STATE_SPEC)
-        return {
+        state = {
             "integration": state,
             "aux": np.array([self.steps, self.max_height, self.settled_steps]),
             "pick": self.pick.copy(),
@@ -233,6 +311,9 @@ class PandaEnv(gym.Env):
             "previous_action": self.previous_action.copy(),
             "ended": np.array([self.terminated, self.truncated], dtype=bool),
         }
+        if self.layout == "clutter":
+            state["target_index"] = np.array(self.target_index)
+        return state
 
     def restore_state(self, state):
         integration = np.asarray(state["integration"], dtype=np.float64)
@@ -241,6 +322,8 @@ class PandaEnv(gym.Env):
         ):
             raise ValueError("Invalid integration state")
         mujoco.mj_setState(self.model, self.data, integration, STATE_SPEC)
+        if self.layout == "clutter":
+            self._activate(int(state["target_index"]))
         self.steps, self.max_height, self.settled_steps = state["aux"]
         self.steps, self.settled_steps = int(self.steps), int(self.settled_steps)
         self.pick, self.orientation = state["pick"].copy(), state["orientation"].copy()
@@ -298,6 +381,30 @@ class PandaEnv(gym.Env):
         return {
             "poses": poses,
             "object": self.object,
+            "instruction": self.instruction,
+            "layout": self.layout,
+            "instances": [
+                {
+                    "id": spec["id"],
+                    "name": spec["name"],
+                    "position": self.data.xpos[body].tolist(),
+                    "selected": index == self.target_index,
+                    "at_collection": bool(
+                        (
+                            np.max(np.abs(self.data.xpos[body, :2] - self.collection_xy(index)))
+                            < 0.060
+                            if self.layout == "clutter"
+                            else np.linalg.norm(
+                                self.data.xpos[body, :2] - self.collection_xy(index)
+                            )
+                            < 0.035
+                        )
+                        and abs(self.data.xpos[body, 2] - TABLE_Z - spec["dimensions"][2] / 2)
+                        < 0.008
+                    ),
+                }
+                for index, (spec, body) in enumerate(zip(self.objects, self.bodies))
+            ],
             "scene_id": self.model_hash,
             "cameras": cameras,
             "time": self.steps * self.dt,
@@ -361,8 +468,10 @@ class PandaEnv(gym.Env):
                         model.mat_rgba[material] if material >= 0 else model.geom_rgba[geom]
                     ).tolist(),
                     "name": mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_GEOM, geom),
-                    "texture": f"/api/demo/objects/{self.object['id']}/texture"
-                    if mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_GEOM, geom) == "object_visual"
+                    "texture": f"/api/demo/objects/{self.objects[self.bodies.index(int(model.geom_bodyid[geom]))]['id']}/texture"
+                    if (mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_GEOM, geom) or "").startswith(
+                        "object_visual"
+                    )
                     else None,
                 }
             )

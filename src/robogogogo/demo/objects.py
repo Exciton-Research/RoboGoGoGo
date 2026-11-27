@@ -1,4 +1,4 @@
-"""Two curated YCB scans. Downloads and derived assets stay in the local cache."""
+"""Curated YCB tabletop scans. Downloads and derived assets stay in the local cache."""
 
 import hashlib
 import io
@@ -36,6 +36,67 @@ CATALOG = {
         "yaw": 1.0995574287564276,
     },
 }
+CATALOG.update(
+    {
+        "pudding-box": {
+            "name": "Chocolate pudding box",
+            "category": "Household",
+            "ycb": "008_pudding_box",
+            "archive_sha256": "3c7ea25076552304a570abef26146ee5621e0a7b432ec435b42d0aabe8273440",
+            "mass": 0.19,
+            "collision": "box",
+            "yaw": 1.0890854532444616,
+            "pitch": 1.5707963267948966,
+        },
+        "gelatin-box": {
+            "name": "Strawberry gelatin box",
+            "category": "Household",
+            "ycb": "009_gelatin_box",
+            "archive_sha256": "426b76c4a63c7ec719d0c78a9570871c2cdad7671a47b3a831b303740083c5b5",
+            "mass": 0.09,
+            "collision": "box",
+            "yaw": 1.3421581947836394,
+            "pitch": 1.5707963267948966,
+        },
+        "meat-can": {
+            "name": "Potted meat can",
+            "category": "Household",
+            "ycb": "010_potted_meat_can",
+            "archive_sha256": "197f0741d40c740e94bccb11dec6be7a4d6473dd3d140f500a0b4357efcab604",
+            "mass": 0.17,
+            "collision": "mesh",
+            "yaw": 1.5236724369910497,
+        },
+        "strawberry": {
+            "name": "Strawberry",
+            "category": "Fruit",
+            "ycb": "012_strawberry",
+            "archive_sha256": "377955b6d931541fd5dc082eefbdd686ea835cbea7f5e3ab6c1bfb8c60499012",
+            "mass": 0.02,
+            "collision": "mesh",
+            "yaw": 1.4468779499032993,
+        },
+        "lemon": {
+            "name": "Lemon",
+            "category": "Fruit",
+            "ycb": "014_lemon",
+            "archive_sha256": "5b18a5c7b097893cbd1a5c12ef8ee03aa0b62d300a9610377f1b131575da5a45",
+            "mass": 0.06,
+            "collision": "mesh",
+            "yaw": 1.4416419621473162,
+        },
+        "orange": {
+            "name": "Orange",
+            "category": "Fruit",
+            "ycb": "017_orange",
+            "archive_sha256": "74d70a3d338d03f9c6afd4a8e1d3f8ec7a6f0e52fd0771c33c497e05920b4631",
+            "mass": 0.14,
+            "collision": "mesh",
+            "yaw": 1.1100294042683936,
+        },
+    }
+)
+
 BLOCK = {
     "id": "block",
     "name": "Original block",
@@ -141,6 +202,13 @@ def download_object(cache, identifier):
                 [0, 0, 1],
             ]
         )
+        pitch = item.get("pitch", 0.0)
+        rotation = (
+            np.array(
+                [[np.cos(pitch), 0, np.sin(pitch)], [0, 1, 0], [-np.sin(pitch), 0, np.cos(pitch)]]
+            )
+            @ rotation
+        )
         vertices = vertices @ rotation.T
         center = (vertices.min(0) + vertices.max(0)) / 2
         dimensions = np.ptp(vertices, axis=0)
@@ -172,6 +240,7 @@ def download_object(cache, identifier):
             "archive_sha256": item["archive_sha256"],
             "processing": "Metric scale preserved; centered and rotated upright; texture reduced to 1024 px",
             "yaw": angle,
+            "pitch": pitch,
         }
         with tempfile.TemporaryDirectory(prefix=".prepare-", dir=folder.parent) as temporary:
             root = Path(temporary)

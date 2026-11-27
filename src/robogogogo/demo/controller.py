@@ -35,6 +35,16 @@ class ReferenceController:
 
     def begin(self, env):
         self.start = env.data.qpos[:7].copy()
+        if self.phase == 2:
+            duration, _, opening = self.phases[2]
+            self.phases[2] = (duration, env.data.xpos[env.block] + [0, 0, 0.003], opening)
+        if self.phase == 5:
+            # Lower the object's measured center, accounting for grasp slip.
+            offset = env.data.xpos[env.block] - env.data.site_xpos[env.site]
+            place_tool = env.target + [0, 0, 0.003] - offset
+            for index in (5, 6):
+                duration, _, opening = self.phases[index]
+                self.phases[index] = (duration, place_tool.copy(), opening)
         self.goal = env.solve(self.phases[self.phase][1], self.start)
         self.elapsed = 0.0
 

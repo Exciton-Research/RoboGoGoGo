@@ -219,6 +219,7 @@ export default function TaskScene({
     const wristCamera = new THREE.PerspectiveCamera(65, 360 / 216, 0.005, 4);
     const update = () => {
       const current = latest.current;
+      target.position.set(current.target[0], current.target[1], 0.741);
       current.poses.forEach((pose, index) => {
         if (!objects[index]) return;
         objects[index].position.set(pose[0], pose[1], pose[2]);

@@ -1,6 +1,14 @@
 export type TaskState = {
   object: LibraryObject;
   scene_id: string;
+  layout: "single" | "clutter";
+  instances: {
+    id: string;
+    name: string;
+    position: number[];
+    selected: boolean;
+    at_collection: boolean;
+  }[];
   status: "ready" | "running" | "paused" | "complete" | "failed";
   message: string;
   phase: number;

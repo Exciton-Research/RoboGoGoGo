@@ -55,7 +55,7 @@ def main():
     parser.add_argument(
         "--setup",
         action="store_true",
-        help="Download the Panda model and two YCB objects, then exit",
+        help="Download the Panda model and the curated YCB object library, then exit",
     )
     args = parser.parse_args()
     if args.setup:

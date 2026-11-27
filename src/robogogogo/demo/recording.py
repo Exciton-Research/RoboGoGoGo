@@ -32,16 +32,17 @@ class Recording:
         )
         self.frames = []
         self.manifest = {
-            "schema": "panda-episode-v1",
+            "schema": "panda-episode-v2" if env.layout == "clutter" else "panda-episode-v1",
             "id": self.id,
             "created": datetime.now(timezone.utc).isoformat(),
             "seed": seed,
             "environment": "PandaGraspPlace-v1",
             "origin": "simulation",
-            "instruction": f"Grasp the {env.object['name']}, place it on the marked target, and withdraw.",
+            "instruction": env.instruction,
             "model_sha256": env.model_hash,
             "panda_revision": REVISION,
             "object": env.object,
+            "scene": {"layout": env.layout, "objects": [item["id"] for item in env.objects]},
             "mujoco": mujoco.__version__,
             "control_dt": env.dt,
             "physics_dt": float(env.model.opt.timestep),
@@ -164,7 +165,7 @@ class Episode:
                 raise ValueError("Episode exceeds supported size")
             self.manifest = json.loads(archive.read("episode.json"))
             if (
-                self.manifest.get("schema") != "panda-episode-v1"
+                self.manifest.get("schema") not in {"panda-episode-v1", "panda-episode-v2"}
                 or self.manifest.get("model_sha256") != env.model_hash
             ):
                 raise ValueError("Episode does not match this Panda environment")
@@ -193,6 +194,8 @@ class Episode:
             "truncated",
             "sources",
         }
+        if env.layout == "clutter":
+            required.add("target_index")
         if set(self.data) != required:
             raise ValueError("Episode fields do not match the recording schema")
         for key, values in self.data.items():
@@ -226,7 +229,7 @@ class Episode:
     def state(self, index):
         if type(index) is not int or not 0 <= index <= self.count:
             raise ValueError("Replay frame is out of range")
-        return {
-            key: self.data[key][index]
-            for key in ("integration", "aux", "pick", "orientation", "previous_action", "ended")
-        }
+        keys = ("integration", "aux", "pick", "orientation", "previous_action", "ended")
+        if "target_index" in self.data:
+            keys += ("target_index",)
+        return {key: self.data[key][index] for key in keys}
