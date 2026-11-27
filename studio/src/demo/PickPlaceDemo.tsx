@@ -59,8 +59,8 @@ export default function PickPlaceDemo() {
     );
     return true;
   }
-  async function synchronize(next: TaskState) {
-    if (next.scene_id !== sceneKey.current) {
+  async function synchronize(next: TaskState, refreshLibrary = false) {
+    if (refreshLibrary || next.scene_id !== sceneKey.current) {
       const updated = await request<SceneData>("/demo/scene");
       if (accept(updated.state)) {
         sceneKey.current = updated.scene_id;
@@ -97,6 +97,34 @@ export default function PickPlaceDemo() {
       setBusy(false);
     }
   }
+  async function importObject(draft: string, clutter: boolean) {
+    setBusy(true);
+    setError("");
+    try {
+      if (clutter) {
+        for (const object of scene?.objects ?? []) {
+          if (object.source && !object.ready)
+            await request(`/demo/objects/${object.id}/download`, {});
+        }
+      }
+      const next = await request<TaskState>(
+        `/demo/objects/import/${draft}/load`,
+        { seed, clutter },
+      );
+      await synchronize(next, true);
+      setPerception(next.pretrained_ready ? "vlm" : "simulator");
+      return true;
+    } catch (failure) {
+      setError(
+        failure instanceof Error
+          ? failure.message
+          : "Object could not be imported",
+      );
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
   async function loadClutter(identifier = "soup-can") {
     setBusy(true);
     setError("");
@@ -115,7 +143,7 @@ export default function PickPlaceDemo() {
       setPerception(
         state?.pretrained_ready
           ? "vlm"
-          : identifier === "sugar-box"
+          : identifier === "sugar-box" || identifier.startsWith("import-")
             ? "simulator"
             : "camera",
       );
@@ -192,7 +220,8 @@ export default function PickPlaceDemo() {
         state.controller_perception ??
           (state.pretrained_ready
             ? "vlm"
-            : state.object.id === "block"
+            : state.object.id === "block" ||
+                state.object.reference_matching === false
               ? "simulator"
               : "camera"),
       );
@@ -453,6 +482,7 @@ export default function PickPlaceDemo() {
                   state={state}
                   busy={busy || !connected}
                   load={loadObject}
+                  importObject={importObject}
                   loadClutter={loadClutter}
                   selectTarget={(identifier) => act("/target", { identifier })}
                   collectRemaining={() => act("/collect", { images: true })}

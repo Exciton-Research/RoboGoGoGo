@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Box, Check, Download, Package } from "lucide-react";
 import type { LibraryObject, PerceptionMode, TaskState } from "./types";
+import ObjectImporter from "./ObjectImporter";
 import styles from "./demo.module.css";
 
 export default function ObjectLibrary({
@@ -11,6 +12,7 @@ export default function ObjectLibrary({
   busy,
   load,
   loadClutter,
+  importObject,
   selectTarget,
   collectRemaining,
   perception,
@@ -24,6 +26,7 @@ export default function ObjectLibrary({
   busy: boolean;
   load: (object: LibraryObject) => Promise<void>;
   loadClutter: (identifier?: string) => Promise<void>;
+  importObject: (draft: string, clutter: boolean) => Promise<boolean>;
   selectTarget: (identifier: string) => Promise<void>;
   collectRemaining: () => Promise<void>;
   perception: PerceptionMode;
@@ -43,6 +46,13 @@ export default function ObjectLibrary({
     state.status === "running";
   return (
     <section className={styles.objectLibrary} aria-label="Object library">
+      <ObjectImporter
+        objects={objects}
+        locked={locked}
+        load={load}
+        loadClutter={loadClutter}
+        importObject={importObject}
+      />
       <div className={styles.clutterControl}>
         <button disabled={locked} onClick={() => void loadClutter()}>
           {busy
@@ -213,8 +223,10 @@ export default function ObjectLibrary({
         </div>
       ) : (
         objects
-          .filter((object) =>
-            object.name.toLowerCase().includes(search.toLowerCase()),
+          .filter(
+            (object) =>
+              !object.imported &&
+              object.name.toLowerCase().includes(search.toLowerCase()),
           )
           .map((object) => (
             <article
@@ -279,13 +291,13 @@ export default function ObjectLibrary({
         </p>
       )}
       <p className={styles.objectPhysicsNote}>
-        Scans retain their textures and metric scale. Boxes/cylinders use fitted
-        collision shapes; fruit and the meat can use convex mesh collisions.
-        Mass and friction are assigned simulation values. The toy is one rigid
-        body.
+        Built-in scans retain their textures and metric scale. Boxes/cylinders
+        use fitted collision shapes; fruit and the meat can use convex mesh
+        collisions. Mass and friction are assigned simulation values. The toy is
+        one rigid body.
       </p>
       <p className={styles.objectCredit}>
-        Scans: YCB Object and Model Set, Calli et al. ·{" "}
+        Built-in scans: YCB Object and Model Set, Calli et al. ·{" "}
         <a
           href="https://creativecommons.org/licenses/by/4.0/"
           target="_blank"

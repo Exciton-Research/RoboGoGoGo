@@ -97,11 +97,28 @@ export type LibraryObject = {
   category: string;
   ready: boolean;
   reference_matching?: boolean;
+  imported?: boolean;
+  credit?: string;
   dimensions?: number[];
   mass?: number;
   collision?: string;
   source: string | null;
   license?: string;
+};
+
+export type ImportGeometry = {
+  vertices: string;
+  faces: string;
+  uv?: string;
+  normals?: string;
+};
+export type ObjectImportPreview = {
+  draft_id: string;
+  object: LibraryObject;
+  visual: ImportGeometry;
+  collision: ImportGeometry;
+  texture_url: string;
+  collectable: boolean;
 };
 
 export type SceneData = {

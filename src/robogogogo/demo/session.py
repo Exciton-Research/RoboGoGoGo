@@ -260,6 +260,14 @@ class PandaSession:
         self.revision += 1
         return self._snapshot()
 
+    def _import_object(self, draft, seed=0, clutter=False):
+        if self.replay is not None or self.recording is not None or self.playing:
+            raise ValueError("Pause and finish the active recording before loading an import")
+        from .importer import commit_import
+
+        spec = commit_import(self.assets, draft)
+        return self._select_object(spec["id"], seed=seed, clutter=clutter)
+
     def _select_target(self, identifier, continuing=False):
         if self.replay is not None or self.recording is not None or self.playing:
             raise ValueError("Pause and finish the active recording before selecting a new target")

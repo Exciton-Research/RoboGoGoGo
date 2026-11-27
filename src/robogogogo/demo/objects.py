@@ -113,12 +113,12 @@ CATALOG["sugar-box"] = {
 
 def clutter_objects(identifier="soup-can"):
     """Original eight-object scene, or a new object alongside all eight."""
-    if identifier not in CATALOG:
-        raise ValueError("Clutter requires a scanned object")
+    from .importer import is_import
+
+    if identifier not in CATALOG and not is_import(identifier):
+        raise ValueError("Clutter requires a scanned or imported object")
     return (
-        list(DEFAULT_CLUTTER)
-        if identifier in DEFAULT_CLUTTER
-        else [identifier, *DEFAULT_CLUTTER]
+        list(DEFAULT_CLUTTER) if identifier in DEFAULT_CLUTTER else [identifier, *DEFAULT_CLUTTER]
     )
 
 
@@ -137,6 +137,10 @@ _DOWNLOAD_LOCK = threading.Lock()
 
 
 def directory(cache, identifier):
+    from .importer import import_directory, is_import
+
+    if is_import(identifier):
+        return import_directory(cache, identifier)
     if identifier not in CATALOG:
         raise ValueError("Unknown object in the library")
     return Path(cache) / "objects" / identifier
@@ -148,18 +152,29 @@ def require_object(cache, identifier):
     folder = directory(cache, identifier)
     try:
         manifest = json.loads((folder / "object.json").read_text())
-        if manifest["archive_sha256"] != CATALOG[identifier]["archive_sha256"]:
+        imported = identifier not in CATALOG
+        if imported and (manifest.get("id") != identifier or not manifest.get("imported")):
+            raise ValueError("Invalid imported object")
+        if not imported and manifest["archive_sha256"] != CATALOG[identifier]["archive_sha256"]:
             raise ValueError("Object source changed")
-        for name in ("visual.obj", "texture.png"):
+        for name in (
+            ("visual.obj", "texture.png", "collision.obj")
+            if imported
+            else ("visual.obj", "texture.png")
+        ):
             if hashlib.sha256((folder / name).read_bytes()).hexdigest() != manifest["sha256"][name]:
                 raise ValueError("Cached object asset changed")
     except (OSError, KeyError, ValueError) as error:
         raise FileNotFoundError(
-            f"Download {CATALOG[identifier]['name']} from the object library first"
+            f"Restore or re-import {identifier}"
+            if identifier not in CATALOG
+            else f"Download {CATALOG[identifier]['name']} from the object library first"
         ) from error
     return {
         **manifest,
-        "reference_matching": CATALOG[identifier].get("reference_matching", True),
+        "reference_matching": CATALOG[identifier].get("reference_matching", True)
+        if identifier in CATALOG
+        else False,
         "ready": True,
     }
 
@@ -181,6 +196,13 @@ def catalog(cache):
                     "license": LICENSE,
                 }
             )
+    folder = Path(cache) / "imports"
+    if folder.is_dir():
+        for item in sorted(folder.glob("import-*")):
+            try:
+                result.append(require_object(cache, item.name))
+            except (FileNotFoundError, ValueError):
+                continue
     return result
 
 

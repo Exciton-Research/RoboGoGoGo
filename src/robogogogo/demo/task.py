@@ -234,8 +234,12 @@ def add_scan(root, body, spec, folder, suffix="", *, rolling=False):
         group="2",
     )
     half = np.asarray(spec["dimensions"]) / 2
+    collision_mesh = mesh
+    if spec.get("imported"):
+        collision_mesh = "collision_mesh" + suffix
+        ET.SubElement(asset, "mesh", name=collision_mesh, file=str(folder / "collision.obj"))
     attributes = (
-        {"mesh": mesh}
+        {"mesh": collision_mesh}
         if spec["collision"] == "mesh"
         else {
             "size": " ".join(

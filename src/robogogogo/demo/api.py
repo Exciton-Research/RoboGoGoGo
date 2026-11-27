@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Literal
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, PlainTextResponse, Response
 from pydantic import BaseModel, Field
 
@@ -56,6 +56,10 @@ class ReplayRequest(BaseModel):
 
 class ObjectRequest(ResetRequest):
     identifier: str
+    clutter: bool = False
+
+
+class ImportLoadRequest(ResetRequest):
     clutter: bool = False
 
 
@@ -108,6 +112,56 @@ def create_demo_router(cache, *, legacy_workspace=False, recordings=None):
 
         return await asyncio.to_thread(catalog, cache)
 
+    @router.post("/objects/import/preview")
+    async def preview_import(
+        file: UploadFile = File(...),
+        name: str = Form(...),
+        size_cm: float = Form(12),
+        up: str = Form("auto"),
+        turn: float = Form(0),
+        mass_g: float = Form(150),
+        credit: str = Form(""),
+    ):
+        from .importer import MAX_UPLOAD, prepare_import
+
+        try:
+            payload = await file.read(MAX_UPLOAD + 1)
+            if len(payload) > MAX_UPLOAD:
+                raise HTTPException(413, "Object files must be at most 32 MB")
+            return await asyncio.to_thread(
+                prepare_import,
+                cache,
+                payload,
+                file.filename or "object.glb",
+                name=name,
+                size_cm=size_cm,
+                up=up,
+                turn=turn,
+                mass_g=mass_g,
+                credit=credit,
+            )
+        except ImportError as error:
+            raise HTTPException(
+                503, "Install the updated .[studio,demo] dependencies to import objects"
+            ) from error
+        except (ValueError, KeyError, OSError, zipfile.BadZipFile) as error:
+            raise HTTPException(422, f"Object could not be imported: {error}") from error
+        finally:
+            await file.close()
+
+    @router.get("/objects/import/drafts/{draft}/texture")
+    async def draft_texture(draft: UUID):
+        from .importer import draft_directory
+
+        path = draft_directory(cache, draft) / "texture.png"
+        if not path.is_file():
+            raise HTTPException(404, "Import preview expired")
+        return FileResponse(path, media_type="image/png")
+
+    @router.post("/objects/import/{draft}/load")
+    async def load_import(draft: UUID, body: ImportLoadRequest):
+        return await call("import_object", draft=str(draft), **body.model_dump())
+
     @router.post("/objects/select")
     async def select_object(body: ObjectRequest):
         return await call("select_object", **body.model_dump())
@@ -130,9 +184,10 @@ def create_demo_router(cache, *, legacy_workspace=False, recordings=None):
 
     @router.get("/objects/{identifier}/texture")
     async def object_texture(identifier: str):
+        from .importer import is_import
         from .objects import CATALOG, directory, require_object
 
-        if identifier not in CATALOG:
+        if identifier not in CATALOG and not is_import(identifier):
             raise HTTPException(404, "Unknown library object")
 
         try:
