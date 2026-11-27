@@ -95,6 +95,7 @@ class PandaEnv(gym.Env):
             render_mode,
         )
         self.renderer = None
+        self.vision_renderer = None
         self._geometry = None
         self.action_space = spaces.Box(
             np.r_[self.model.jnt_range[:7, 0], 0.0],
@@ -300,6 +301,37 @@ class PandaEnv(gym.Env):
             frames[name] = self.renderer.render().copy()
         return frames
 
+    def capture_rgbd(self):
+        """A calibrated inspection sensor; excludes object labels and instance poses."""
+        from .vision import VISION_HEIGHT, VISION_WIDTH, inspection_camera
+
+        if self.vision_renderer is None:
+            self.vision_renderer = mujoco.Renderer(
+                self.model, height=VISION_HEIGHT, width=VISION_WIDTH
+            )
+        renderer = self.vision_renderer
+        options = mujoco.MjvOption()
+        options.geomgroup[3] = 0
+        renderer.update_scene(self.data, camera=inspection_camera(), scene_option=options)
+        rgb = renderer.render().copy()
+        renderer.enable_depth_rendering()
+        try:
+            depth = renderer.render().copy()
+        finally:
+            renderer.disable_depth_rendering()
+        cameras = renderer.scene.camera
+        forward = np.mean([camera.forward for camera in cameras], axis=0)
+        up = np.mean([camera.up for camera in cameras], axis=0)
+        forward /= np.linalg.norm(forward)
+        up /= np.linalg.norm(up)
+        return dict(
+            rgb=rgb,
+            depth=depth,
+            position=np.mean([camera.pos for camera in cameras], axis=0),
+            rotation=np.column_stack((np.cross(forward, up), up, -forward)),
+            fovy=float(self.model.vis.global_.fovy),
+        )
+
     def capture_state(self):
         state = np.zeros(mujoco.mj_stateSize(self.model, STATE_SPEC))
         mujoco.mj_getState(self.model, self.data, state, STATE_SPEC)
@@ -484,6 +516,9 @@ class PandaEnv(gym.Env):
         return self._geometry
 
     def close(self):
+        if self.vision_renderer is not None:
+            self.vision_renderer.close()
+            self.vision_renderer = None
         if self.renderer is not None:
             self.renderer.close()
             self.renderer = None

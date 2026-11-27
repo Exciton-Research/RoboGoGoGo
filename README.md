@@ -10,7 +10,9 @@ Three.js renders the official Panda meshes and live overhead/wrist views.
 Seeded reset, explicit 20 Hz stepping, manual control, native RGB recording,
 and read-only episode replay are available through the browser and Python API.
 A policy interface accepts task instructions, camera images, and proprioception
-for future VLA integration. The current collector uses known scene poses.
+for future VLA integration. Camera collection matches the named library object
+from inspection RGB, estimates its pickup point from calibrated depth, and
+shows the detected region. A simulator-pose reference remains available.
 
 The controller is scripted. This is a working simulation demonstration, with
 no learned-policy or real-robot performance claim. Start with the
@@ -60,7 +62,10 @@ bash scripts/setup.sh
 ```
 
 Open **[http://127.0.0.1:8765](http://127.0.0.1:8765)** and choose
-**Load cluttered table · 8 objects**, select a target, then **Collect target**.
+**Load cluttered table · 8 objects**, select a target, then **Find & collect target**.
+Camera matching is enabled by default for scans; clear its checkbox to compare
+with the simulator-pose reference. Matching is limited to the installed catalog,
+upright objects, and the calibrated pickup area. It is not open-vocabulary vision.
 Use **Record episode** before collection to save RGB and physical state. Stop the
 server with Ctrl+C.
 

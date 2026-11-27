@@ -46,6 +46,7 @@ class PandaSession:
                 "Ready for manual control or the reference task.",
             )
             self.seed, self.revision, self.controller = 0, 0, None
+            self.vision, self.detection = None, None
             self.recording, self.replay, self.backup = None, None, None
             self.frame, self.playing, self.next_tick = 0, False, time.perf_counter()
             self.last_saved = None
@@ -104,7 +105,18 @@ class PandaSession:
             "ended": bool(self.env.terminated or self.env.truncated),
             "status": self.status,
             "mode": self.mode,
+            "controller_perception": None
+            if controller is None or self.replay
+            else "camera"
+            if controller.camera_based
+            else "simulator",
             "message": self.message,
+            "vision": None
+            if self.detection is None or self.replay
+            else {
+                **{key: value for key, value in self.detection.items() if key != "image"},
+                "image_url": f"/api/demo/vision/image?episode_id={self.episode_id}",
+            },
             "phase": controller.phase if controller is not None else 0,
             "phases": list(ReferenceController.labels),
             "progress": (
@@ -177,6 +189,11 @@ class PandaSession:
             },
         }
 
+    def _vision_image(self, episode_id):
+        if self.detection is None or episode_id != self.episode_id or self.replay is not None:
+            raise ValueError("No camera detection for this episode")
+        return base64.b64decode(self.detection["image"].split(",", 1)[1])
+
     def _select_object(self, identifier, seed=0, clutter=False):
         if self.replay is not None or self.recording is not None or self.playing:
             raise ValueError(
@@ -192,6 +209,7 @@ class PandaSession:
             raise
         self.env.close()
         self.env = replacement
+        self.detection = None
         self.seed, self.controller, self.mode, self.status = seed, None, "manual", "ready"
         self.episode_id = str(uuid4())
         self.message = (
@@ -204,9 +222,10 @@ class PandaSession:
         if self.replay is not None or self.recording is not None or self.playing:
             raise ValueError("Pause and finish the active recording before selecting a new target")
         self.env.select_target(identifier)
+        self.detection = None
         self.controller, self.mode, self.status = None, "manual", "ready"
         self.episode_id = str(uuid4())
-        self.message = f"Collect the {self.env.object['name']}. Uses known scene identity and pose, not camera recognition."
+        self.message = f"Collect the {self.env.object['name']}. Choose camera matching or the simulator reference."
         self.revision += 1
         return self._snapshot()
 
@@ -243,6 +262,7 @@ class PandaSession:
         if not self.env.action_space.contains(action):
             raise ValueError("Action must contain seven joint targets in rad and opening in m")
         self.controller, self.mode, self.status = None, "manual", "paused"
+        self.detection = None
         self._advance(action, "api")
         return self._snapshot()
 
@@ -264,6 +284,7 @@ class PandaSession:
         start = self.env.data.qpos[:7].copy()
         goal = self.env.solve(target, start)
         self.controller, self.mode, self.status = None, "manual", "paused"
+        self.detection = None
         self.message = "Manual control · simulation advances only when you act."
         count = 10 if opening is not None else 6
         for index in range(1, count + 1):
@@ -281,13 +302,14 @@ class PandaSession:
             raise ValueError("Save or discard the current recording before resetting")
         self.playing = False
         self.env.reset(seed=seed)
+        self.detection = None
         self.seed, self.controller, self.mode, self.status = seed, None, "manual", "ready"
         self.episode_id = str(uuid4())
         self.message = "Reset complete. Ready for manual control or the reference task."
         self.revision += 1
         return self._snapshot()
 
-    def _command(self, command, seed=0):
+    def _command(self, command, seed=0, perception="simulator"):
         if command == "reset":
             return self._reset(seed)
         if command == "pause":
@@ -295,8 +317,35 @@ class PandaSession:
             self.status = "paused"
         elif command == "run":
             self._guard_live()
+            if perception not in ("camera", "simulator"):
+                raise ValueError("Unknown perception mode")
+            camera_based = perception == "camera"
+            if self.controller is not None and self.controller.camera_based != camera_based:
+                raise ValueError("Reset the task before changing the controller's perception mode")
             if self.controller is None:
-                self.controller = ReferenceController(self.env)
+                self.detection = None
+                if camera_based:
+                    from .vision import CatalogVision
+
+                    if self.vision is None:
+                        self.vision = CatalogVision(self.assets)
+                    # Only sensor data, the requested name, and the full catalog cross
+                    # this boundary. Live instance identities/poses are not inputs.
+                    detection = self.vision.find(
+                        self.env.object["id"],
+                        **self.env.capture_rgbd(),
+                        catalog_ids=[
+                            item["id"]
+                            for item in catalog(self.assets)
+                            if item["ready"] and item["id"] != "block"
+                        ],
+                    )
+                    self.controller = ReferenceController(
+                        self.env, camera_pick=detection["position"]
+                    )
+                    self.detection = detection
+                else:
+                    self.controller = ReferenceController(self.env)
             self.mode, self.status, self.playing = "script", "running", True
             self.next_tick = time.perf_counter()
         else:
@@ -312,7 +361,7 @@ class PandaSession:
                 self.playing, self.status = False, "paused"
             return
         action = self.controller.action(self.env)
-        self._advance(action, "scripted")
+        self._advance(action, "camera_scripted" if self.controller.camera_based else "scripted")
         if not self.env.terminated and not self.env.truncated:
             self.controller.advance(self.env)
             self.message = self.controller.labels[self.controller.phase]

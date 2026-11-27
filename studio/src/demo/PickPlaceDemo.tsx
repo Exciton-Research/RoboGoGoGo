@@ -29,6 +29,7 @@ export default function PickPlaceDemo() {
   const [busy, setBusy] = useState(false);
   const [view, setView] = useState(0);
   const [seed, setSeed] = useState(0);
+  const [cameraMatching, setCameraMatching] = useState(true);
   const [connected, setConnected] = useState(false);
   const [tab, setTab] = useState<"objects" | "task" | "manual" | "episodes">(
     "objects",
@@ -163,6 +164,14 @@ export default function PickPlaceDemo() {
       setBusy(false);
     }
   }
+  useEffect(() => {
+    if (
+      state?.mode === "script" &&
+      state.controller_perception &&
+      (state.status === "running" || state.status === "paused")
+    )
+      setCameraMatching(state.controller_perception === "camera");
+  }, [state?.mode, state?.controller_perception, state?.status]);
   const running = state?.status === "running";
   const finished = state?.status === "complete" || state?.status === "failed";
   const replaying = Boolean(state?.replay);
@@ -263,6 +272,10 @@ export default function PickPlaceDemo() {
                   : void act("/command", {
                       command: running ? "pause" : finished ? "reset" : "run",
                       seed,
+                      perception:
+                        cameraMatching && state?.object.id !== "block"
+                          ? "camera"
+                          : "simulator",
                     })
               }
             >
@@ -286,7 +299,9 @@ export default function PickPlaceDemo() {
                       : state?.status === "paused" && state.mode === "script"
                         ? "Resume reference"
                         : state?.layout === "clutter"
-                          ? "Collect target"
+                          ? cameraMatching
+                            ? "Find & collect target"
+                            : "Collect target"
                           : "Run reference task"}
             </button>
             <button
@@ -378,6 +393,8 @@ export default function PickPlaceDemo() {
                   load={loadObject}
                   loadClutter={loadClutter}
                   selectTarget={(identifier) => act("/target", { identifier })}
+                  cameraMatching={cameraMatching}
+                  setCameraMatching={setCameraMatching}
                 />
               )}
               {tab === "manual" && (

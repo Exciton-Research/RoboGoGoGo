@@ -11,6 +11,15 @@ export type TaskState = {
   }[];
   status: "ready" | "running" | "paused" | "complete" | "failed";
   message: string;
+  vision: {
+    name: string;
+    position: number[];
+    score: number;
+    margin: number;
+    box: number[];
+    image_url: string;
+    method: string;
+  } | null;
   phase: number;
   time: number;
   phases: string[];
@@ -33,6 +42,7 @@ export type TaskState = {
   step_index: number;
   seed: number;
   mode: "manual" | "script" | "replay";
+  controller_perception: "camera" | "simulator" | null;
   joint_target: number[];
   cameras: Record<
     string,

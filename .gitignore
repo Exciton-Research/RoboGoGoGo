@@ -224,6 +224,7 @@ node_modules/
 *.tsbuildinfo
 src/robogogogo/web/
 runs/
+/MUJOCO_LOG.TXT
 
 # Ruff stuff:
 .ruff_cache/

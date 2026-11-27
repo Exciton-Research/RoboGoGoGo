@@ -18,6 +18,7 @@ class ResetRequest(BaseModel):
 
 class CommandRequest(ResetRequest):
     command: Literal["run", "pause", "reset"]
+    perception: Literal["camera", "simulator"] = "simulator"
 
 
 class StepRequest(BaseModel):
@@ -137,6 +138,14 @@ def create_demo_router(cache, *, legacy_workspace=False, recordings=None):
     @router.get("/observation")
     async def policy_observation(images: bool = False):
         return await call("policy_observation", images=images)
+
+    @router.get("/vision/image")
+    async def vision_image(episode_id: str):
+        return Response(
+            await call("vision_image", episode_id=episode_id),
+            media_type="image/png",
+            headers={"Cache-Control": "no-store"},
+        )
 
     @router.post("/reset")
     async def reset(body: ResetRequest):

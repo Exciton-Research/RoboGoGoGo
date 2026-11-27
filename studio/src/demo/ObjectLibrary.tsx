@@ -12,6 +12,8 @@ export default function ObjectLibrary({
   load,
   loadClutter,
   selectTarget,
+  cameraMatching,
+  setCameraMatching,
 }: {
   objects: LibraryObject[];
   state: TaskState;
@@ -19,6 +21,8 @@ export default function ObjectLibrary({
   load: (object: LibraryObject) => Promise<void>;
   loadClutter: () => Promise<void>;
   selectTarget: (identifier: string) => Promise<void>;
+  cameraMatching: boolean;
+  setCameraMatching: (enabled: boolean) => void;
 }) {
   const [search, setSearch] = useState("");
   const clutter = state.layout === "clutter";
@@ -39,15 +43,47 @@ export default function ObjectLibrary({
         </button>
         <p>
           {clutter
-            ? "Choose a target below, then Collect target. Other objects remain on the table."
+            ? "Choose a named target below, then find and collect it. Other objects remain on the table."
             : "Load all eight scans together, or choose one object from the library."}
         </p>
       </div>
-      {clutter && (
-        <p className={styles.poseNotice}>
-          Known scene identities and poses · scripted collection · no camera
-          recognition
-        </p>
+      {state.object.id !== "block" && (
+        <>
+          <label className={styles.visionToggle}>
+            <input
+              type="checkbox"
+              checked={cameraMatching}
+              disabled={
+                locked || (state.mode === "script" && state.status === "paused")
+              }
+              onChange={(event) => setCameraMatching(event.target.checked)}
+            />
+            Find target from camera images
+          </label>
+          <p className={styles.poseNotice}>
+            {cameraMatching
+              ? "Inspection RGB + depth · library image matching · scripted grasp. Stops on uncertain matches."
+              : "Simulator reference · uses known object poses."}
+          </p>
+        </>
+      )}
+      {state.vision && (
+        <figure className={styles.visionResult}>
+          <img
+            src={state.vision.image_url}
+            width={640}
+            height={384}
+            alt={`Inspection camera detection: ${state.vision.name}`}
+          />
+          <figcaption>
+            Found {state.vision.name} · image match{" "}
+            {state.vision.score.toFixed(2)}
+            <small>
+              Catalog similarity score, not a probability. Pickup estimated from
+              depth and known upright dimensions.
+            </small>
+          </figcaption>
+        </figure>
       )}
       <input
         className={styles.objectSearch}

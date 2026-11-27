@@ -106,19 +106,46 @@ table. Each has an independent free joint, collision geometry, and texture.
 The layout is reproducible by seed, with small bounded position jitter. Shallow
 collection cells occupy the other side of the table and contain rounded fruit.
 
-Choose a target by its name in **Objects**, then **Collect target**. The selected
+Choose a target by its name in **Objects**, then **Find & collect target**. The selected
 object has its own marked collection cell. After completion, choose another
 object to continue from the existing physical scene. Changing targets resets task
 bookkeeping and the episode identity; it does not reposition the robot or objects.
 Reset restores the complete seeded table. Active recordings must be saved or
 discarded before changing targets.
 
-**Current controller:** scripted motion using known scene identities and poses.
-Searching the object list is a user interface operation. Camera-based object
-recognition is not implemented. The controller compensates for small object nudges
-before grasping and for the measured object-to-tool offset before placement.
+**Camera collection (default for scans):** the name selects a catalog reference,
+not a live object pose. A fixed front inspection camera captures 640 × 384 RGB
+and metric depth. The overhead view can be occluded by the arm, so inspection
+uses a separate calibrated view. Depth above the calibrated table produces candidate
+regions; depth discontinuities separate touching silhouettes. RGB hue/saturation
+histograms are matched against isolated rendered views of the installed scans,
+with a size consistency penalty. No live instance IDs, segmentation labels,
+object poses, or slot-to-name lookup enter the matcher.
+
+Depth and calibration recover horizontal pickup coordinates. Known upright catalog
+dimensions supply grasp height; an ellipsoid fit reduces visible-surface bias for
+fruit. The UI shows the actual inspection image, detection box, and similarity
+score. Scores are heuristic similarities, not calibrated probabilities. Weak or
+ambiguous matches stop the command; there is no simulator-pose fallback.
+
+The camera controller uses the estimated pickup point and robot proprioception,
+including gripper opening to check closure. Placement assumes a rigid grasp offset
+estimated at closure, without querying the object's pose or object-labeled contacts.
+Ground-truth simulator state still drives rendering and evaluates success; it is
+excluded from camera matching and camera-controlled motion. This is an initial
+image-based pickup followed by scripted motion, not continuous visual servoing.
+
+Clear **Find target from camera images** to use the original simulator-pose
+reference, which compensates for object nudges and measured grasp slip. Reset before
+switching modes during a paused reference run. The original block uses this reference.
 Other objects remain physical obstacles; this is a bounded tabletop arrangement,
 not a general collision-free planner or arbitrary clutter-solving policy.
+
+This baseline recognizes the installed catalog using its known 3D assets. It assumes
+upright objects in the calibrated pickup area, assigned sizes, and similar appearance
+and lighting to the references. Heavy occlusion, same-color lookalikes, duplicate
+instances, arbitrary rotations, and unseen objects are not solved. It is not a learned
+detector, VLA model, open-vocabulary system, or real-camera validation result.
 
 Clutter success requires the selected object center inside its 13 cm collection
 cell (within 6 cm on both horizontal axes), near its resting height, at low speed,
@@ -136,6 +163,13 @@ active target index, full physical state of all eight objects, actions, and
 optional aligned RGB. Replay reconstructs the recorded scene and target, and
 returning to live control restores the previous live scene. Single-object v1
 archives remain supported.
+
+`POST /api/demo/command` with `{"command": "run", "perception": "camera"}`
+finds the selected named object and starts camera-based collection. Omit `perception`
+or choose `simulator` for the original API behavior. The state packet's `vision`
+field reports the most recent detection and its inspection image URL. It is cleared
+on reset, target changes, and manual takeover, and hidden during replay. References
+are generated locally from cached assets; there is no model service or image upload.
 
 ### Policy / future VLA interface
 
@@ -158,7 +192,8 @@ rendering. No clock advances merely by reading an observation.
 Send the policy action to `POST /api/demo/step` with the packet's
 `expected_revision`; stale actions and actions during replay/reference playback
 are rejected. This leaves the environment ready for an external VLA adapter;
-no learned model, training implementation, or recognition result is included.
+no learned model or training implementation is included. The catalog camera matcher
+is a separate local baseline, not a VLA implementation.
 
 **Asset attribution:** YCB Object and Model Set, Calli et al., Google 16k scans.
 The scanned assets are [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
@@ -252,7 +287,8 @@ Each `panda-episode-v1` ZIP contains:
 Recordings can start partway through a live run. The first observation is the
 state at recording start; times retain their offset from the current task episode. Selecting a new target
 starts a new task episode without changing physical state.
-Manual sources are labeled `manual`, the reference `scripted`, and direct step
+Manual sources are labeled `manual`, the simulator-pose reference `scripted`,
+camera-based scripted motion `camera_scripted`, and direct step
 requests `api`. Partial and unsuccessful runs are retained when saved. Replay
 requires a matching model hash and MuJoCo version. It is state playback, not a
 claim of cross-version deterministic re-simulation.
@@ -270,13 +306,23 @@ Success requires all of the following for six consecutive control steps:
 
 Reward is 1 on success and 0 otherwise. Success or a block falling below the
 workspace terminates the episode; reaching the time limit truncates it. The
-reference controller also checks bilateral contact before lift and elevation
-after lift/carry. A reference failure pauses its motion and displays the reason;
+simulator-pose reference also checks bilateral contact before lift and elevation
+after lift/carry; camera collection checks gripper opening instead. A reference failure pauses its motion and displays the reason;
 manual recovery remains possible if the environment has not ended.
 
 The UI reports measured lift, finger opening, and target distance. The motion
 uses fixed waypoints: this is one bounded task, without general collision-free
 planning, arbitrary object grasping, or a trained recovery policy.
+
+To run the camera integration checks with already-cached assets and native rendering:
+
+```sh
+ROBOGOGOGO_VISION_ASSETS=runs/demo/assets .venv/bin/python -m pytest -q tests/test_panda_vision.py
+```
+
+These checks move objects to shuffled positions, reject absent/occluded targets,
+and block object-pose and labeled-contact access while the camera controller runs.
+They do not download assets. Install the `dev` extra for pytest.
 
 ## Model provenance
 
