@@ -1,0 +1,52 @@
+{
+  "revision": "engineering-11",
+  "status": "sampled_clear",
+  "electrical_detail": "not modeled",
+  "motor_cover_mass_kg": 0.5584309118736129,
+  "seed": 42,
+  "ranges_rad": {
+    "waist": [
+      0.25,
+      1.2
+    ],
+    "upper_roll": [
+      -0.35,
+      0.35
+    ],
+    "shoulder": [
+      -0.4,
+      0.4
+    ],
+    "elbow": [
+      -1.6,
+      -0.3
+    ],
+    "wrist_roll": [
+      -0.25,
+      0.25
+    ],
+    "wrist_pitch": [
+      -0.25,
+      0.25
+    ],
+    "tool_roll": [
+      -0.25,
+      0.25
+    ]
+  },
+  "roll_convention": "Y-Z-X: waist lift, upper_roll swing, shoulder axial roll; radians",
+  "counts": {
+    "shoulder_pairs_clear": 106,
+    "samples": 106,
+    "rigid_clear": 106
+  },
+  "margin_m": 0.012,
+  "minimum_guard_equivalent_clearance_m": 0.01406743084276997,
+  "minimum_shoulder_pair_clearance_m": 0.01406743084276997,
+  "failures": [],
+  "limitations": [
+    "Finite samples, not continuous-space certification or full nominal joint range",
+    "Electrical routing and connectors are deferred, not validated",
+    "Motor covers are custom mechanical concepts; fasteners and manufacturing tolerances unqualified"
+  ]
+}

@@ -1,0 +1,367 @@
+{
+  "generated_utc": "2026-11-27T00:48:27.815675+00:00",
+  "source_commit": "a886d2a9d3a27c87a9e90a21ecfbc3259657b943",
+  "source_dirty": false,
+  "robot": {
+    "id": "rg_mobile_duo",
+    "revision": "engineering-11"
+  },
+  "python": "3.14.4",
+  "platform": "Linux-7.0.0-42-generic-x86_64-with-glibc2.43",
+  "dependencies": {
+    "jax": "0.12.1",
+    "jaxlib": "0.12.1",
+    "numpy": "2.5.5",
+    "pytest": "9.2.0",
+    "fastapi": "0.165.0",
+    "httpx": "0.28.1"
+  },
+  "jax_backend": "cpu",
+  "jax_x64": true,
+  "regressions": {
+    "tests": 31,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "files": [
+      "tests/test_robot_product.py",
+      "tests/test_workflow_layers.py",
+      "tests/test_execution.py"
+    ],
+    "cases": [
+      {
+        "file": "tests.test_robot_product",
+        "name": "test_unsupported_product_routes_are_absent"
+      },
+      {
+        "file": "tests.test_robot_product",
+        "name": "test_learning_rejects_other_or_unversioned_robot[None]"
+      },
+      {
+        "file": "tests.test_robot_product",
+        "name": "test_learning_rejects_other_or_unversioned_robot[robot1]"
+      },
+      {
+        "file": "tests.test_robot_product",
+        "name": "test_canonical_joint_order_matches_model"
+      },
+      {
+        "file": "tests.test_robot_product",
+        "name": "test_learning_rejects_reordered_robot_joints"
+      },
+      {
+        "file": "tests.test_robot_product",
+        "name": "test_mobile_trajectory_preserves_robot_identity"
+      },
+      {
+        "file": "tests.test_workflow_layers",
+        "name": "test_legacy_imports_preserve_contract_identity"
+      },
+      {
+        "file": "tests.test_workflow_layers",
+        "name": "test_robot_and_dataset_layers_do_not_initialize_simulation"
+      },
+      {
+        "file": "tests.test_workflow_layers",
+        "name": "test_profile_requires_one_distinct_dual_arm_mapping"
+      },
+      {
+        "file": "tests.test_workflow_layers",
+        "name": "test_read_only_calibrated_telemetry_cannot_enable_physical_execution"
+      },
+      {
+        "file": "tests.test_workflow_layers",
+        "name": "test_dual_arm_capture_save_validate_and_reload_workflow"
+      },
+      {
+        "file": "tests.test_workflow_layers",
+        "name": "test_malformed_dataset_is_reported_as_validation_error"
+      },
+      {
+        "file": "tests.test_execution",
+        "name": "test_atomic_dual_arm_gripper_progress_completion_and_force_caps"
+      },
+      {
+        "file": "tests.test_execution",
+        "name": "test_invalid_group_never_partially_executes[bad0]"
+      },
+      {
+        "file": "tests.test_execution",
+        "name": "test_invalid_group_never_partially_executes[bad1]"
+      },
+      {
+        "file": "tests.test_execution",
+        "name": "test_invalid_group_never_partially_executes[bad2]"
+      },
+      {
+        "file": "tests.test_execution",
+        "name": "test_invalid_group_never_partially_executes[bad3]"
+      },
+      {
+        "file": "tests.test_execution",
+        "name": "test_invalid_group_never_partially_executes[bad4]"
+      },
+      {
+        "file": "tests.test_execution",
+        "name": "test_invalid_group_never_partially_executes[bad5]"
+      },
+      {
+        "file": "tests.test_execution",
+        "name": "test_ownership_busy_replay_and_stale_observations"
+      },
+      {
+        "file": "tests.test_execution",
+        "name": "test_takeover_stops_both_arms_preserves_grip_and_revokes_policy"
+      },
+      {
+        "file": "tests.test_execution",
+        "name": "test_owner_watchdog_requires_explicit_fault_reset_and_cannot_be_revived"
+      },
+      {
+        "file": "tests.test_execution",
+        "name": "test_backend_lease_clamps_motion_without_supervisor_tick"
+      },
+      {
+        "file": "tests.test_execution",
+        "name": "test_stale_feedback_fault_and_unconfirmed_stop_cannot_rearm"
+      },
+      {
+        "file": "tests.test_execution",
+        "name": "test_rejection_and_stalled_command_stop_whole_group"
+      },
+      {
+        "file": "tests.test_execution",
+        "name": "test_concurrent_takeover_and_old_owner_submission_linearize"
+      },
+      {
+        "file": "tests.test_execution",
+        "name": "test_background_watchdog_runs_without_status_polling_and_shutdown_stops"
+      },
+      {
+        "file": "tests.test_execution",
+        "name": "test_invalid_gripper_feedback_and_uncommissioned_adapters_are_rejected"
+      },
+      {
+        "file": "tests.test_execution",
+        "name": "test_delayed_arming_and_takeover_cannot_override_a_newer_stop"
+      },
+      {
+        "file": "tests.test_execution",
+        "name": "test_stop_does_not_confirm_a_moving_gripper"
+      },
+      {
+        "file": "tests.test_execution",
+        "name": "test_wrong_command_acknowledgement_faults_the_entire_group"
+      }
+    ]
+  },
+  "practical_geometry": {
+    "seed": 42,
+    "counts": {
+      "shoulder_pairs_clear": 106,
+      "samples": 106,
+      "rigid_clear": 106
+    },
+    "margin_m": 0.012,
+    "status": "sampled_clear"
+  },
+  "capture_smoke": {
+    "input_images": "Synthetic solid-color PNGs, not rendered robot observations",
+    "action": "One zero-delta 31-coordinate manual action, control_ticks=1",
+    "observation_indices": [
+      0,
+      1
+    ],
+    "time_before_s": 0.0,
+    "time_after_s": 0.01,
+    "validation": {
+      "id": "f330c12a-660b-465b-979a-c42e367516e8",
+      "sha256": "94609bd0265751380f7d7917b67d95a36cb0c4f26c89f6edb377664a5ed3bede",
+      "transitions": 1,
+      "robot": {
+        "id": "rg_mobile_duo",
+        "revision": "engineering-11"
+      },
+      "environment": "simulation",
+      "action_spec": {
+        "representation": "joint_position_delta",
+        "dimensions": 31,
+        "arms": [
+          {
+            "name": "left_arm",
+            "tool": "left_tool",
+            "body": 24,
+            "joint_indices": [
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21
+            ],
+            "joint_names": [
+              "left_waist",
+              "left_upper_roll",
+              "left_shoulder",
+              "left_elbow",
+              "left_wrist_roll",
+              "left_wrist_pitch",
+              "left_tool_roll"
+            ],
+            "root": "left_pedestal"
+          },
+          {
+            "name": "right_arm",
+            "tool": "right_tool",
+            "body": 40,
+            "joint_indices": [
+              22,
+              23,
+              24,
+              25,
+              26,
+              27,
+              28
+            ],
+            "joint_names": [
+              "right_waist",
+              "right_upper_roll",
+              "right_shoulder",
+              "right_elbow",
+              "right_wrist_roll",
+              "right_wrist_pitch",
+              "right_tool_roll"
+            ],
+            "root": "right_pedestal"
+          }
+        ],
+        "names": [
+          "base_x",
+          "base_y",
+          "base_link",
+          "front_left_steer",
+          "front_left_wheel",
+          "front_right_steer",
+          "front_right_wheel",
+          "rear_left_steer",
+          "rear_left_wheel",
+          "rear_right_steer",
+          "rear_right_wheel",
+          "torso_yaw",
+          "torso_lower",
+          "torso_upper",
+          "torso",
+          "left_waist",
+          "left_upper_roll",
+          "left_shoulder",
+          "left_elbow",
+          "left_wrist_roll",
+          "left_wrist_pitch",
+          "left_tool_roll",
+          "right_waist",
+          "right_upper_roll",
+          "right_shoulder",
+          "right_elbow",
+          "right_wrist_roll",
+          "right_wrist_pitch",
+          "right_tool_roll",
+          "head_pan",
+          "head"
+        ],
+        "units": [
+          "m",
+          "m",
+          "rad",
+          "rad",
+          "rad",
+          "rad",
+          "rad",
+          "rad",
+          "rad",
+          "rad",
+          "rad",
+          "rad",
+          "rad",
+          "rad",
+          "rad",
+          "rad",
+          "rad",
+          "rad",
+          "rad",
+          "rad",
+          "rad",
+          "rad",
+          "rad",
+          "rad",
+          "rad",
+          "rad",
+          "rad",
+          "rad",
+          "rad",
+          "rad",
+          "rad"
+        ],
+        "max_delta": [
+          0.02,
+          0.02,
+          0.12,
+          0.12,
+          0.12,
+          0.12,
+          0.12,
+          0.12,
+          0.12,
+          0.12,
+          0.12,
+          0.12,
+          0.12,
+          0.12,
+          0.12,
+          0.12,
+          0.12,
+          0.12,
+          0.12,
+          0.12,
+          0.12,
+          0.12,
+          0.12,
+          0.12,
+          0.12,
+          0.12,
+          0.12,
+          0.12,
+          0.12,
+          0.12,
+          0.12
+        ],
+        "default_control_ticks": 10,
+        "physics_dt": 0.002,
+        "physics_substeps": 5,
+        "gripper": false,
+        "gripper_control": null,
+        "frame": "joint_coordinates",
+        "normalization": "none"
+      },
+      "cameras": [
+        "head_left",
+        "head_right",
+        "wrist_1",
+        "wrist_2"
+      ],
+      "sources": [
+        "manual"
+      ],
+      "validation": "aligned_transitions",
+      "physical_deployment_ready": false
+    },
+    "physical_execution_enabled": false,
+    "archive_retained": false
+  },
+  "historical_audit_sha256": "4ccd96c5cbcc58ca1cea745a3075d42054043f2fd2536c86f631e58f5ff7f27c",
+  "limits": [
+    "Targeted software regressions only; not the full project suite",
+    "Synthetic capture frames do not test WebGL appearance",
+    "No policy training, physical hardware, or cross-simulator benchmark"
+  ]
+}

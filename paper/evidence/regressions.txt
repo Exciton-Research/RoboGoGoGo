@@ -1,0 +1,48 @@
+============================= test session starts ==============================
+platform linux -- Python 3.14.4, pytest-9.2.0, pluggy-1.7.0 -- /usr/bin/python3
+cachedir: .pytest_cache
+rootdir: <workspace>/modules/robogogogo
+configfile: pyproject.toml
+plugins: anyio-4.16.0, typeguard-4.4.4
+collecting ... collected 31 items
+
+tests/test_robot_product.py::test_unsupported_product_routes_are_absent PASSED [  3%]
+tests/test_robot_product.py::test_learning_rejects_other_or_unversioned_robot[None] PASSED [  6%]
+tests/test_robot_product.py::test_learning_rejects_other_or_unversioned_robot[robot1] PASSED [  9%]
+tests/test_robot_product.py::test_canonical_joint_order_matches_model PASSED [ 12%]
+tests/test_robot_product.py::test_learning_rejects_reordered_robot_joints PASSED [ 16%]
+tests/test_robot_product.py::test_mobile_trajectory_preserves_robot_identity PASSED [ 19%]
+tests/test_workflow_layers.py::test_legacy_imports_preserve_contract_identity PASSED [ 22%]
+tests/test_workflow_layers.py::test_robot_and_dataset_layers_do_not_initialize_simulation PASSED [ 25%]
+tests/test_workflow_layers.py::test_profile_requires_one_distinct_dual_arm_mapping PASSED [ 29%]
+tests/test_workflow_layers.py::test_read_only_calibrated_telemetry_cannot_enable_physical_execution PASSED [ 32%]
+tests/test_workflow_layers.py::test_dual_arm_capture_save_validate_and_reload_workflow PASSED [ 35%]
+tests/test_workflow_layers.py::test_malformed_dataset_is_reported_as_validation_error PASSED [ 38%]
+tests/test_execution.py::test_atomic_dual_arm_gripper_progress_completion_and_force_caps PASSED [ 41%]
+tests/test_execution.py::test_invalid_group_never_partially_executes[bad0] PASSED [ 45%]
+tests/test_execution.py::test_invalid_group_never_partially_executes[bad1] PASSED [ 48%]
+tests/test_execution.py::test_invalid_group_never_partially_executes[bad2] PASSED [ 51%]
+tests/test_execution.py::test_invalid_group_never_partially_executes[bad3] PASSED [ 54%]
+tests/test_execution.py::test_invalid_group_never_partially_executes[bad4] PASSED [ 58%]
+tests/test_execution.py::test_invalid_group_never_partially_executes[bad5] PASSED [ 61%]
+tests/test_execution.py::test_ownership_busy_replay_and_stale_observations PASSED [ 64%]
+tests/test_execution.py::test_takeover_stops_both_arms_preserves_grip_and_revokes_policy PASSED [ 67%]
+tests/test_execution.py::test_owner_watchdog_requires_explicit_fault_reset_and_cannot_be_revived PASSED [ 70%]
+tests/test_execution.py::test_backend_lease_clamps_motion_without_supervisor_tick PASSED [ 74%]
+tests/test_execution.py::test_stale_feedback_fault_and_unconfirmed_stop_cannot_rearm PASSED [ 77%]
+tests/test_execution.py::test_rejection_and_stalled_command_stop_whole_group PASSED [ 80%]
+tests/test_execution.py::test_concurrent_takeover_and_old_owner_submission_linearize PASSED [ 83%]
+tests/test_execution.py::test_background_watchdog_runs_without_status_polling_and_shutdown_stops PASSED [ 87%]
+tests/test_execution.py::test_invalid_gripper_feedback_and_uncommissioned_adapters_are_rejected PASSED [ 90%]
+tests/test_execution.py::test_delayed_arming_and_takeover_cannot_override_a_newer_stop PASSED [ 93%]
+tests/test_execution.py::test_stop_does_not_confirm_a_moving_gripper PASSED [ 96%]
+tests/test_execution.py::test_wrong_command_acknowledgement_faults_the_entire_group PASSED [100%]
+
+=============================== warnings summary ===============================
+../../../../../tmp/robogogogo-pydeps/fastapi/testclient.py:1
+  /tmp/robogogogo-pydeps/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+- generated xml file: <workspace>/modules/excitonresearch-papers/robogogogo/evidence/regressions.xml -
+======================== 31 passed, 1 warning in 33.99s ========================

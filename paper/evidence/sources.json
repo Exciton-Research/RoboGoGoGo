@@ -1,0 +1,85 @@
+{
+  "source_commit": "a886d2a9d3a27c87a9e90a21ecfbc3259657b943",
+  "source_files": [
+    {
+      "path": "README.md",
+      "sha256": "0e318a788a3a8499e658cfa61f65e637f01671dbfa825e46f44153c3e8442450"
+    },
+    {
+      "path": "pyproject.toml",
+      "sha256": "21861cf5655b01aac9481c4caa42c3c53a22e6da55956214c80690cddb13fe9a"
+    },
+    {
+      "path": "docs/platform.md",
+      "sha256": "35d76c4d59c667b4e913d1571b1b7daa69e8aa65416320fd50140a3436323a6a"
+    },
+    {
+      "path": "docs/physics.md",
+      "sha256": "5b7285f6902aab03e60ec8ddfc43a042430a90907746baf608be75ddf56f7dfe"
+    },
+    {
+      "path": "docs/command-execution.md",
+      "sha256": "842bfa54d72cc5e86735ce8b75545e14d927cbf083d94b40b3e7b212f1a67d3f"
+    },
+    {
+      "path": "docs/validation/arm-audit-engineering-11.md",
+      "sha256": "4ee9779846a942046c0b42a6180e123c4564ec95d06b1b42b5a7d3903f2ea10b"
+    },
+    {
+      "path": "docs/validation/working-range-engineering-11.json",
+      "sha256": "4ccd96c5cbcc58ca1cea745a3075d42054043f2fd2536c86f631e58f5ff7f27c"
+    },
+    {
+      "path": "docs/images/simulation.png",
+      "sha256": "75c41c1f3aad37b06d73bb373ea8655f46a1d95ebb6266740a69c447c9eb13b5"
+    },
+    {
+      "path": "docs/images/workflow.png",
+      "sha256": "d25290239d1f52976ad24b895c73aef69d32abd9dddf61824abad583d054ea0e"
+    },
+    {
+      "path": "src/robogogogo/robot/definition.py",
+      "sha256": "015f64b54730c74f5a8a753fe93297db6b4f7d323111692be2d1d367888dfa73"
+    },
+    {
+      "path": "src/robogogogo/robot/validate_working_range.py",
+      "sha256": "0cbdd9edefd8cddc3c03b72c16e6c4cd274d3a60bb9d7f9de68c22eab5589258"
+    },
+    {
+      "path": "src/robogogogo/simulation/mobile.py",
+      "sha256": "45a72d8cf8bf7dcba05bdba03d74b0f7cf0d7b0c801ec1ea1d1bd13771065962"
+    },
+    {
+      "path": "src/robogogogo/studio/episodes.py",
+      "sha256": "732e681a02cd2db2e0771b08ab9c171cc8b486c686e28fbcef52bacd847a9d2d"
+    },
+    {
+      "path": "src/robogogogo/data/datasets.py",
+      "sha256": "d56a1425a7530b9e0c86e604fb6e9a7d9e2eb93ee2effa4b8686f4661537e437"
+    },
+    {
+      "path": "src/robogogogo/learning/datasets.py",
+      "sha256": "5dd60f63ab03137402d8d34fd0d91aff5116196166a9a21cf7b61e85483d0d90"
+    }
+  ],
+  "external_sources_verified_utc_date": "2026-11-27",
+  "external_sources": [
+    {
+      "purpose": "JAX software citation and program transformations",
+      "url": "https://github.com/jax-ml/jax",
+      "citation": "https://raw.githubusercontent.com/jax-ml/jax/main/CITATION.bib"
+    },
+    {
+      "purpose": "RRT-Connect algorithm attribution",
+      "url": "https://doi.org/10.1109/ROBOT.2000.844730"
+    },
+    {
+      "purpose": "General-purpose simulation context; original paper citation also appears in the official repository",
+      "url": "https://github.com/google-deepmind/mujoco"
+    },
+    {
+      "purpose": "Demonstration-learning context and bibliography",
+      "url": "https://arxiv.org/abs/2108.03298v2"
+    }
+  ]
+}

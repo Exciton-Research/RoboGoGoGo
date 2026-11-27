@@ -17,6 +17,17 @@ baseline is rule-based. Training, learned checkpoint inference, physical command
 execution, and real-robot evaluation still require integration. The mechanical
 design is illustrative; physical hardware has not been commissioned.
 
+## Research paper
+
+**[Read the paper (PDF)](paper/robogogogo.pdf)**:
+*Robogogogo: An Early Robot Simulation Environment for Demonstration Data
+Collection*, by Tian Shi, Exciton Research LLC.
+
+The paper describes the environment, data representation, preliminary geometric
+analysis, and research directions for VLA policies and learned world models.
+[LaTeX sources, references, supporting evidence, and build instructions](paper/)
+are included in this repository.
+
 ## Install and run
 
 The standard CPU setup targets **Apple Silicon macOS** and **Linux x86_64/ARM64**.
