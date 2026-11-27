@@ -192,8 +192,6 @@ export default function TaskScene({
     topCamera.position.set(0.47, 0, 1.75);
     topCamera.lookAt(0.47, 0, 0.74);
     const wristCamera = new THREE.PerspectiveCamera(65, 360 / 216, 0.005, 4);
-    const handMatrix = new THREE.Matrix4();
-    const handQuaternion = new THREE.Quaternion();
     const update = () => {
       const current = latest.current;
       current.poses.forEach((pose, index) => {
@@ -201,41 +199,16 @@ export default function TaskScene({
         objects[index].position.set(pose[0], pose[1], pose[2]);
         objects[index].quaternion.set(pose[3], pose[4], pose[5], pose[6]);
       });
-      const r = current.hand_rotation;
-      handMatrix.set(
-        r[0],
-        r[1],
-        r[2],
-        0,
-        r[3],
-        r[4],
-        r[5],
-        0,
-        r[6],
-        r[7],
-        r[8],
-        0,
-        0,
-        0,
-        0,
-        1,
-      );
-      handQuaternion.setFromRotationMatrix(handMatrix);
-      const position = new THREE.Vector3(
-        ...(current.hand_position as [number, number, number]),
-      );
-      const offset = new THREE.Vector3(0.06, 0, 0.045).applyQuaternion(
-        handQuaternion,
-      );
-      wristCamera.position.copy(position).add(offset);
-      wristCamera.up.copy(
-        new THREE.Vector3(0, 1, 0).applyQuaternion(handQuaternion),
-      );
-      wristCamera.lookAt(
-        position.add(
-          new THREE.Vector3(0, 0, 0.3).applyQuaternion(handQuaternion),
-        ),
-      );
+      for (const [name, camera] of [
+        ["overhead", topCamera],
+        ["wrist", wristCamera],
+      ] as const) {
+        const pose = current.cameras[name];
+        camera.position.fromArray(pose.position);
+        camera.quaternion.fromArray(pose.quaternion);
+        camera.fov = pose.fovy;
+        camera.updateProjectionMatrix();
+      }
     };
     const resize = new ResizeObserver(() => {
       renderer.setSize(mount.clientWidth, mount.clientHeight);
@@ -293,18 +266,41 @@ export default function TaskScene({
       )}
       <div className={styles.cameraStrip}>
         <div className={styles.cameraHeading}>
-          <span className={styles.liveDot} /> LIVE VIEWS{" "}
-          <span>Same simulated scene</span>
+          <span className={styles.liveDot} />{" "}
+          {state.replay?.rgb ? "RECORDED RGB" : "CAMERA PREVIEWS"}{" "}
+          <span>
+            {state.replay
+              ? `Frame ${state.replay.frame}`
+              : "Synchronized camera poses"}
+          </span>
         </div>
         <div className={styles.feeds}>
           <figure>
-            <canvas ref={overhead} width={360} height={216} />
+            {state.replay?.rgb ? (
+              <img
+                src={`/api/demo/episodes/${state.replay.id}/frames/overhead/${state.replay.frame}`}
+                alt="Recorded overhead RGB"
+                width={360}
+                height={216}
+              />
+            ) : (
+              <canvas ref={overhead} width={360} height={216} />
+            )}
             <figcaption>
               <span>01</span> Overhead
             </figcaption>
           </figure>
           <figure>
-            <canvas ref={wrist} width={360} height={216} />
+            {state.replay?.rgb ? (
+              <img
+                src={`/api/demo/episodes/${state.replay.id}/frames/wrist/${state.replay.frame}`}
+                alt="Recorded wrist RGB"
+                width={360}
+                height={216}
+              />
+            ) : (
+              <canvas ref={wrist} width={360} height={216} />
+            )}
             <figcaption>
               <span>02</span> Wrist · virtual camera
             </figcaption>

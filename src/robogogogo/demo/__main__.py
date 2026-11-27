@@ -4,7 +4,7 @@ import argparse
 from pathlib import Path
 
 
-def create_app(cache, static_dir=None):
+def create_app(cache, static_dir=None, recordings=None):
     from fastapi import FastAPI, Request
     from fastapi.responses import JSONResponse
     from fastapi.staticfiles import StaticFiles
@@ -16,7 +16,7 @@ def create_app(cache, static_dir=None):
     app = FastAPI(title="Panda grasp and place")
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost", "[::1]"])
     app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=3)
-    app.include_router(create_demo_router(cache))
+    app.include_router(create_demo_router(cache, recordings=recordings))
 
     @app.middleware("http")
     async def local_origin(request: Request, call_next):
@@ -50,6 +50,9 @@ def main():
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--assets", type=Path, default=Path.cwd() / "runs" / "demo" / "assets")
     parser.add_argument(
+        "--recordings", type=Path, default=Path.cwd() / "runs" / "demo" / "episodes"
+    )
+    parser.add_argument(
         "--setup", action="store_true", help="Download official Panda assets and exit"
     )
     args = parser.parse_args()
@@ -62,7 +65,12 @@ def main():
         parser.error("port must be between 1024 and 65535")
     import uvicorn
 
-    uvicorn.run(create_app(args.assets), host="127.0.0.1", port=args.port, access_log=False)
+    uvicorn.run(
+        create_app(args.assets, recordings=args.recordings),
+        host="127.0.0.1",
+        port=args.port,
+        access_log=False,
+    )
 
 
 if __name__ == "__main__":

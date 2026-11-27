@@ -1,15 +1,17 @@
 # robogogogo
 
-A robotics workbench with a focused **Panda grasp-and-place demo**. The robot
+A robotics workbench with one **Panda grasp-and-place environment**. The robot
 grasps a block through simulated finger contact, lifts it, carries it to a marked
 destination, releases it, and withdraws. MuJoCo provides rigid-body dynamics;
 Three.js renders the official Panda meshes and live overhead/wrist views.
+Seeded reset, explicit 20 Hz stepping, manual control, native RGB recording,
+and read-only episode replay are available through the browser and Python API.
 
 The controller is scripted. This is a working simulation demonstration, with
 no learned-policy or real-robot performance claim. Start with the
 [demo guide](docs/demo.md).
 
-![Panda holding the block through simulated finger contact above the workbench](docs/images/panda-grasp-place.jpg)
+![Panda episode replay with stored physical state and overhead/wrist RGB](docs/images/panda-grasp-place.jpg)
 
 The original browser Studio provides a local workbench for **RG Mobile Duo**:
 a wheeled robot concept with a folding torso, two seven-joint arms, head stereo
@@ -53,8 +55,8 @@ bash scripts/setup.sh
 .venv/bin/robogogogo-demo
 ```
 
-Open **[http://127.0.0.1:8765](http://127.0.0.1:8765)** and choose **Run grasp &
-place**. Stop the server with Ctrl+C.
+Open **[http://127.0.0.1:8765](http://127.0.0.1:8765)** and choose
+**Run reference task**. Stop the server with Ctrl+C.
 
 The setup script creates a local `.venv`, installs Python dependencies, builds
 Studio from the npm lockfile, and caches the pinned official Panda model. Rerun it
