@@ -2,11 +2,12 @@
 
 This guide takes you from a paused robot to an exported, validated demonstration.
 Complete [installation](installation.md), then start `.venv/bin/robogogogo-studio`
-from the repo root and open [localhost Studio](http://127.0.0.1:8765).
+from the repo root and open [the workflow overview](http://127.0.0.1:8765/workflow/).
+The home page now shows the separate [Panda grasp-and-place demo](demo.md).
 
 ## 1. Understand the workspace
 
-The landing page is a workflow overview. It reports what is implemented and what
+The workflow overview reports what is implemented and what
 still needs integration. An unconfigured hardware identity is expected; it does
 not block simulation.
 

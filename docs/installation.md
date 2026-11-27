@@ -76,9 +76,9 @@ On macOS, select the Homebrew Python explicitly if needed:
 PYTHON=python3.12 bash scripts/setup.sh
 ```
 
-The script checks the platform and tools, creates `.venv`, installs the `studio`
-and `perception` extras, installs locked npm dependencies, builds/packages the
-static UI, and runs a one-step simulation smoke check. It stops on errors rather
+The script checks the platform and tools, creates `.venv`, installs the `studio`,
+`perception`, and `demo` extras, caches the pinned Panda model, installs locked npm
+dependencies, and builds/packages the static UI. It stops on errors rather
 than reporting a partial installation as complete. It can be run from any working
 directory using the script's full path.
 
@@ -87,6 +87,10 @@ outside the checkout, set `ROBOGOGOGO_VENV=/absolute/path/to/venv`. Subsequent
 commands must use that environment's executables instead of `.venv/bin/…`.
 
 ## 3. Start Studio
+
+For the focused grasp-and-place task, run `.venv/bin/robogogogo-demo` and open
+[the demo](http://127.0.0.1:8765). See [the demo guide](demo.md).
+The original RG Mobile Duo workflow uses the server below and `/workflow/`.
 
 From the repo root:
 

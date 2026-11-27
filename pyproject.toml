@@ -16,10 +16,12 @@ dependencies = ["jax>=0.4.35", "numpy>=1.26"]
 dev = ["pytest>=8", "httpx>=0.28,<1", "ruff>=0.11,<1", "build>=1.2,<2"]
 perception = ["opencv-python-headless>=4.10,<5"]
 studio = ["fastapi>=0.115,<1", "uvicorn[standard]>=0.34,<1"]
+demo = ["mujoco==3.3.7", "certifi>=2024.8.30"]
 
 [project.scripts]
 robogogogo = "robogogogo.__main__:main"
 robogogogo-studio = "robogogogo.server:main"
+robogogogo-demo = "robogogogo.demo.__main__:main"
 
 [project.urls]
 Homepage = "https://github.com/Exciton-Research/robogogogo"

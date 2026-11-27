@@ -7,6 +7,10 @@ boundaries.
 
 ## Start here
 
+Start with the **[Panda grasp-and-place demo](demo.md)** for one focused task using
+MuJoCo dynamics and the official robot meshes. The guides below cover the original
+RG Mobile Duo Studio, available through `robogogogo-studio`.
+
 1. **[Installation](installation.md):** macOS/Linux prerequisites, scripted and
    manual setup, headless operation, updates, and troubleshooting.
 2. **[Studio walkthrough](getting-started.md):** navigate the UI, move the robot,

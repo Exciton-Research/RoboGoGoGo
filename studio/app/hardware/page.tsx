@@ -176,7 +176,7 @@ export default function HardwarePage() {
   return (
     <main className={styles.page}>
       <header>
-        <a href="/">← robogogogo Studio</a>
+        <a href="/workflow/">← robogogogo Studio</a>
         <span className={styles.badge}>READ-ONLY HARDWARE</span>
       </header>
       <h1>Robot telemetry</h1>

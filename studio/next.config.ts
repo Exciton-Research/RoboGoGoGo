@@ -7,6 +7,7 @@ export default function config(phase: string): NextConfig {
   return {
     output: development ? undefined : "export",
     reactStrictMode: true,
+    agentRules: false,
     trailingSlash: true,
     ...(development
       ? {

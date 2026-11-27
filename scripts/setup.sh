@@ -64,22 +64,24 @@ fi
 [[ -x "$venv_dir/bin/python" ]] || fail "$venv_dir exists but is not a Python virtualenv. Choose ROBOGOGOGO_VENV."
 "$venv_dir/bin/python" -m pip install --upgrade pip
 extras=""
-if ! "$headless"; then extras="studio,perception"; fi
+if ! "$headless"; then extras="studio,perception,demo"; fi
 if "$dev"; then extras="${extras:+$extras,}dev"; fi
 requirement="."
 if [[ -n "$extras" ]]; then requirement=".[$extras]"; fi
 "$venv_dir/bin/python" -m pip install -e "$requirement"
 
 if ! "$headless"; then
+  "$venv_dir/bin/python" -m robogogogo.demo --setup
   npm ci --prefix studio
   npm run build --prefix studio
 fi
 
-echo "Checking one guarded simulation step (first JAX compilation can take a while)…"
-"$venv_dir/bin/python" -m robogogogo --headless --steps 1
 if "$headless"; then
+  echo "Checking one guarded simulation step (first JAX compilation can take a while)…"
+  "$venv_dir/bin/python" -m robogogogo --headless --steps 1
   echo "Installed. Run: $venv_dir/bin/python -m robogogogo --headless --steps 100"
 else
-  echo "Installed. Run: $venv_dir/bin/robogogogo-studio"
-  echo "Then open http://127.0.0.1:8765. See docs/getting-started.md."
+  echo "Installed. Run: $venv_dir/bin/robogogogo-demo"
+  echo "Then open http://127.0.0.1:8765. See docs/demo.md."
+  echo "For the original robot workspace, run: $venv_dir/bin/robogogogo-studio"
 fi

@@ -46,7 +46,7 @@ export function StudioHeader() {
           <span className="local-tag">LOCAL</span>
         </div>
         <div className="header-actions">
-          <a href="/">Workflow</a>
+          <a href="/workflow/">Workflow</a>
           <a href="/hardware/">Hardware</a>
           <button
             className="icon-button help-button"

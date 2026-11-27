@@ -177,7 +177,7 @@ export default function ExecutionPage() {
           robogogogo<span>.</span>
         </a>
         <nav>
-          <a href="/">Workflow</a>
+          <a href="/workflow/">Workflow</a>
           <a href="/hardware/">Hardware telemetry</a>
         </nav>
       </header>

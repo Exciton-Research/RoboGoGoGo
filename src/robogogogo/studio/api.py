@@ -12,10 +12,12 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from starlette.background import BackgroundTask
+from starlette.middleware.gzip import GZipMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from robogogogo.robot import HardwareService
 
+from ..demo.api import create_demo_router
 from ..runtime.workflow import RobotWorkflow
 from .execution import router as execution_router
 from .schemas import (
@@ -95,6 +97,10 @@ def create_app(
 
     app = FastAPI(title="robogogogo Studio API", version="0.1.0", lifespan=lifespan)
     app.include_router(execution_router)
+    app.include_router(
+        create_demo_router(Path.cwd() / "runs" / "demo" / "assets", legacy_workspace=True)
+    )
+    app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=3)
     app.add_middleware(
         TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost", "[::1]", "testserver"]
     )

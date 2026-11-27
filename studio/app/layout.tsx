@@ -8,9 +8,9 @@ import "@fontsource/ibm-plex-mono/latin-500.css";
 import "../src/styles.css";
 
 export const metadata: Metadata = {
-  title: "robogogogo · Robotics Studio",
+  title: "robogogogo · Robot workbench",
   description:
-    "A local robotics control workspace for language-conditioned tasks, visual observations, policy actions, and aligned episode data.",
+    "A contact-driven Panda grasp-and-place simulation with live camera views and a local robotics workspace.",
   icons: { icon: "/favicon.svg" },
 };
 export default function RootLayout({

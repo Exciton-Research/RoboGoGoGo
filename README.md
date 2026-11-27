@@ -1,21 +1,21 @@
 # robogogogo
 
-An experimental robotics workbench investigating **which simulation errors matter
-when collecting demonstrations for robot learning**. The initial research
-framework compares controlled camera, lighting, contact-friction, and command-delay
-errors using Panda Lift in robosuite/MuJoCo, with matched interaction budgets and
-separate selection and held-out evaluation. It includes a visual imitation
-baseline and a trainer interface. **This research implementation has not yet been
-validated or evaluated; it establishes no VLA or real-robot transfer result.**
-See the [research question, protocol, and usage](docs/research.md).
+A robotics workbench with a focused **Panda grasp-and-place demo**. The robot
+grasps a block through simulated finger contact, lifts it, carries it to a marked
+destination, releases it, and withdraws. MuJoCo provides rigid-body dynamics;
+Three.js renders the official Panda meshes and live overhead/wrist views.
+
+The controller is scripted. This is a working simulation demonstration, with
+no learned-policy or real-robot performance claim. Start with the
+[demo guide](docs/demo.md).
+
+![Panda holding the block through simulated finger contact above the workbench](docs/images/panda-grasp-place.jpg)
 
 The original browser Studio provides a local workbench for **RG Mobile Duo**:
 a wheeled robot concept with a folding torso, two seven-joint arms, head stereo
 cameras, and a camera on each wrist. Python/JAX simulates the robot; a
 Next.js/Three.js Studio lets you inspect
 its mechanism, plan movement, and record aligned visual demonstrations.
-
-![RG Mobile Duo in Studio, with the robot controller and four camera views](docs/images/simulation.png)
 
 Use it to explore the robot's geometry and dynamics, rehearse guarded motions,
 collect RGB/depth and joint-state transitions, or develop integrations against
@@ -50,15 +50,14 @@ Git, then:
 git clone https://github.com/Exciton-Research/robogogogo.git
 cd robogogogo
 bash scripts/setup.sh
-.venv/bin/robogogogo-studio
+.venv/bin/robogogogo-demo
 ```
 
-Open **[http://127.0.0.1:8765](http://127.0.0.1:8765)**. The first startup compiles
-JAX kernels and can take a while. Wait for application startup to complete. Stop
-the server with Ctrl+C.
+Open **[http://127.0.0.1:8765](http://127.0.0.1:8765)** and choose **Run grasp &
+place**. Stop the server with Ctrl+C.
 
 The setup script creates a local `.venv`, installs Python dependencies, builds
-Studio from the npm lockfile, and checks one guarded simulation step. Rerun it
+Studio from the npm lockfile, and caches the pinned official Panda model. Rerun it
 with the same options after updating the checkout. It does not install system
 packages or change global Python/npm configuration.
 
@@ -67,6 +66,10 @@ manual installation, headless use, upgrades, and troubleshooting. Intel macOS is
 outside the standard setup because current JAX CPU wheels target Apple Silicon.
 
 ## Your first session
+
+For the focused demo, follow [grasp and place](docs/demo.md). To use the original
+RG Mobile Duo features below, launch `.venv/bin/robogogogo-studio` and open
+`/workflow/` or `/simulation/`.
 
 1. Open **Simulation** from the workflow overview. The robot starts paused.
 2. Orbit and zoom the 3D view. Choose **Engineering** to inspect the internal
@@ -158,6 +161,7 @@ development loop, package ownership, targeted tests, and screenshot regeneration
 ## Guides
 
 - [Documentation index](docs/README.md)
+- [Panda grasp-and-place demo](docs/demo.md)
 - [Controlled simulation-error research](docs/research.md)
 - [Install on macOS or Linux](docs/installation.md)
 - [Studio walkthrough](docs/getting-started.md)
