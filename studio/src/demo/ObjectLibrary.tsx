@@ -39,6 +39,8 @@ export default function ObjectLibrary({
   const clutter = state.layout === "clutter";
   const newObjectScene =
     clutter && state.instances.some((item) => item.id === "sugar-box");
+  const importedScene =
+    clutter && state.instances.some((item) => item.id.startsWith("import-"));
   const locked =
     busy ||
     Boolean(state.recording) ||
@@ -60,7 +62,7 @@ export default function ObjectLibrary({
             : newObjectScene
               ? "Load original table · 8 objects"
               : clutter
-                ? "Reset cluttered table"
+                ? "Load original table · 8 objects"
                 : "Load cluttered table · 8 objects"}
         </button>
         <button disabled={locked} onClick={() => void loadClutter("sugar-box")}>
@@ -70,9 +72,11 @@ export default function ObjectLibrary({
         </button>
         <p>
           {clutter
-            ? newObjectScene
-              ? "Sugar carton alongside all eight original objects. Shuffle the table, then try ‘tall yellow box’."
-              : "Choose a named target below, then find and collect it. Other objects remain on the table."
+            ? importedScene
+              ? "Your imported object alongside eight built-in objects. Shuffle the table, then describe the target for OWLv2."
+              : newObjectScene
+                ? "Sugar carton alongside all eight original objects. Shuffle the table, then try ‘tall yellow box’."
+                : "Choose a named target below, then find and collect it. Other objects remain on the table."
             : "Load the original eight-object table, the new sugar carton scene, or one object."}
         </p>
       </div>

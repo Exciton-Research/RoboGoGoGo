@@ -55,6 +55,8 @@ def _glb(payload):
     if kind != 0x4E4F534A or 20 + length > len(payload):
         raise ValueError("GLB has an invalid JSON chunk")
     document = json.loads(payload[20 : 20 + length])
+    if not isinstance(document, dict):
+        raise ValueError("GLB JSON must contain an object")
     if document.get("skins") or document.get("animations"):
         raise ValueError("Export a static rigid object without animation or skinning")
     if {"KHR_draco_mesh_compression", "EXT_meshopt_compression"} & set(
@@ -343,7 +345,13 @@ def commit_import(cache, draft):
     if target.exists():
         from .objects import require_object
 
-        existing = require_object(cache, spec["id"])
+        try:
+            existing = require_object(cache, spec["id"])
+        except FileNotFoundError:
+            # A freshly compiled preview can repair a damaged local cache entry.
+            for name in ("visual.obj", "texture.png", "collision.obj", "object.json"):
+                shutil.copyfile(folder / name, target / name)
+            existing = require_object(cache, spec["id"])
         shutil.rmtree(folder)
         return existing
     folder.rename(target)

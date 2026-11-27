@@ -101,8 +101,60 @@ with PandaEnv(object_id="soup-can") as env:
 API routes: `GET /api/demo/objects`,
 `POST /api/demo/objects/{id}/download`, and
 `POST /api/demo/objects/select` with `{"identifier": "soup-can", "seed": 0}`.
-Changing objects is an explicit scene reset. Room imports and arbitrary mesh
-uploads are outside this version.
+Changing objects is an explicit scene reset.
+
+### Import your own textured object
+
+In **Objects → Import a textured object**:
+
+1. Choose a **GLB 2.0** with embedded textures, or a **ZIP** containing exactly
+   one OBJ, its MTL, and PNG/JPEG/WebP textures. No code or catalog edits are needed.
+2. Enter a descriptive name such as **Cracker box** and its longest dimension
+   in centimetres. The default is 12 cm; source units are rescaled explicitly.
+3. Use **Preview object** to inspect the texture and green convex collision hull.
+   Adjust the source up axis or turn if needed. Auto assumes GLB +Y up and OBJ
+   +Z up, then aligns the narrow horizontal side to the gripper. The turn applies
+   after this alignment. Assigned mass and optional source/license credit are editable.
+4. Choose **Load imported object** or **Load with 8 distractors**. Loading resets
+   the scene. The object then appears under **Your imported objects**, including
+   after a server restart using the same asset cache.
+5. Select **Pretrained OWLv2**, enter the object's name or a visual description,
+   and use **Find & collect target**. Shuffle, manual control, recording, and replay
+   work as they do for built-in objects. OWLv2 setup is still required.
+
+Imported objects are excluded from catalog image matching. Their meshes and
+dimensions are used to simulate the object, not supplied to OWLv2 or its
+depth-based pickup estimator. No per-object detector registration or reference
+images are added. A cracker-box scan outside the built-in catalog was imported
+through this UI, found as **Cracker box** on a shuffled nine-object table, and
+physically collected and recorded with the existing controller.
+
+This importer supports **one static, opaque rigid object** per upload. It bakes
+mesh transforms and base-color textures into a visual mesh and creates a separate
+convex collision hull; holes and concavities are filled. It does not estimate real
+mass, friction, articulation, or material properties. Automatic pickup still assumes
+an upright object with a usable top-down grasp; narrow width must fit the 8 cm
+gripper. Transparent, animated, skinned, compressed-mesh, and external-resource
+GLBs are rejected. Room imports and general grasp planning remain outside scope.
+
+Limits: 32 MB uploaded, 96 MB unpacked ZIP, 256 files, 64 mesh parts, 200,000
+vertices and 100,000 triangles; textures are packed into a base-color atlas up to
+2048 pixels. The longest dimension can be 2–22 cm and assigned mass 5–500 g.
+The preview warns about orientations outside the current pickup range; loading
+an object does not guarantee a confident detection or a successful grasp.
+
+Imports stay under `runs/demo/assets/imports/` by default, outside Git. Keep this
+cache with recordings: replay needs the matching object assets. Uploaded originals
+are not retained; the normalized mesh, texture, collision hull, settings, source
+hash and optional credit are saved. Draft previews older than 24 hours are
+cleaned up during the next import.
+
+API: `POST /api/demo/objects/import/preview` accepts multipart fields `file`,
+`name`, `size_cm`, `up`, `turn`, `mass_g`, and `credit`. It returns a draft ID,
+object metadata, preview geometry and texture URL.
+`POST /api/demo/objects/import/{draft_id}/load` accepts `{"seed": 0, "clutter": true}`
+and loads the prepared object. `GET /api/demo/objects` includes saved imports;
+the regular object-select route can load their IDs subsequently.
 
 ### Cluttered-table collection
 
@@ -310,8 +362,8 @@ pixel boxes and scores independently of Panda scene assets. Import it from
 `robogogogo.demo.pretrained`; pass a uint8 RGB array. `find(query, **sensor_packet)`
 adds tabletop depth localization. Neither method accepts a catalog or live object poses.
 
-The detector's vocabulary is broader than the simulation's nine current assets.
-This does not add arbitrary object imports or general grasp planning. Synthetic
+The detector can also query objects brought in through the importer above.
+This does not provide general grasp planning. Synthetic
 appearance, small objects, occlusion, ambiguous descriptions, and domain shift can
 cause misses or wrong detections. A confident wrong prediction can still cause a
 wrong grasp. The pickup estimator assumes upright resting objects and calibrated,

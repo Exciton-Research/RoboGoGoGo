@@ -15,6 +15,12 @@ free-text descriptions and inspection RGB, then estimates pickup from calibrated
 depth without catalog references or dimensions. Catalog matching and a
 simulator-pose reference remain available for comparison.
 
+**Import your own object without editing code:** open **Objects → Import a
+textured object**, upload a self-contained GLB or OBJ/MTL/texture ZIP, set its
+size, and preview its texture and convex collision hull. Load it alone or with
+eight distractors, then describe it for OWLv2. Imports stay in your local library.
+See [formats and pickup limits](docs/demo.md#import-your-own-textured-object).
+
 The controller is scripted. This is a working simulation demonstration, with
 no learned-policy or real-robot performance claim. Start with the
 [demo guide](docs/demo.md).

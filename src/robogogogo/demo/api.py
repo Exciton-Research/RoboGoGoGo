@@ -144,7 +144,7 @@ def create_demo_router(cache, *, legacy_workspace=False, recordings=None):
             raise HTTPException(
                 503, "Install the updated .[studio,demo] dependencies to import objects"
             ) from error
-        except (ValueError, KeyError, OSError, zipfile.BadZipFile) as error:
+        except (ValueError, KeyError, TypeError, IndexError, OSError, zipfile.BadZipFile) as error:
             raise HTTPException(422, f"Object could not be imported: {error}") from error
         finally:
             await file.close()
