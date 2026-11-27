@@ -1,7 +1,8 @@
 # robogogogo
 
-A robotics workbench with one **Panda grasp-and-place environment**. The robot
-grasps a block through simulated finger contact, lifts it, carries it to a marked
+A robotics workbench with one **Panda grasp-and-place environment** and a small
+**textured object library**: a scanned tomato soup can and Rubik’s Cube from YCB. The robot
+grasps the selected object through simulated finger contact, lifts it, carries it to a marked
 destination, releases it, and withdraws. MuJoCo provides rigid-body dynamics;
 Three.js renders the official Panda meshes and live overhead/wrist views.
 Seeded reset, explicit 20 Hz stepping, manual control, native RGB recording,

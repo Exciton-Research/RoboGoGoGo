@@ -263,6 +263,7 @@ export function EpisodeControls({ state, busy, act }: Props) {
                   ? "Failed attempt"
                   : "Partial episode"}
             </strong>
+            <span>{episode.object_name ?? "Original block"}</span>
             <span>
               {episode.transitions} steps · {episode.duration.toFixed(1)} s ·
               seed {episode.seed}

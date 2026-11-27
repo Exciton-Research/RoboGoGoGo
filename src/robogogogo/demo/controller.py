@@ -2,8 +2,6 @@
 
 import numpy as np
 
-from .task import TABLE_Z, TARGET
-
 
 class ReferenceController:
     labels = (
@@ -20,16 +18,17 @@ class ReferenceController:
 
     def __init__(self, env):
         pick = env.data.xpos[env.block].copy()
+        target = env.target
         self.phases = [
             (1.8, pick + [0, 0, 0.17], 0.08),
             (1.4, pick + [0, 0, 0.003], 0.08),
             (0.9, pick + [0, 0, 0.003], 0),
             (1.6, pick + [0, 0, 0.20], 0),
-            (2.0, TARGET + [0, 0, 0.20], 0),
-            (1.5, TARGET + [0, 0, 0.003], 0),
-            (0.9, TARGET + [0, 0, 0.003], 0.08),
-            (1.5, TARGET + [0, 0, 0.22], 0.08),
-            (0.6, TARGET + [0, 0, 0.22], 0.08),
+            (2.0, target + [0, 0, 0.20], 0),
+            (1.5, target + [0, 0, 0.003], 0),
+            (0.9, target + [0, 0, 0.003], 0.08),
+            (1.5, target + [0, 0, 0.22], 0.08),
+            (0.6, target + [0, 0, 0.22], 0.08),
         ]
         self.phase, self.elapsed, self.grasp_seconds = 0, 0.0, 0.0
         self.begin(env)
@@ -53,8 +52,8 @@ class ReferenceController:
             return
         if self.phase == 2 and self.grasp_seconds < 0.1:
             raise ValueError("Grasp missed: both fingers did not establish contact")
-        if self.phase in (3, 4) and env.data.xpos[env.block, 2] < TABLE_Z + 0.12:
-            raise ValueError("The block slipped before placement")
+        if self.phase in (3, 4) and env.data.xpos[env.block, 2] < env.pick[2] + 0.095:
+            raise ValueError("The object slipped before placement")
         if self.phase == len(self.phases) - 1:
             raise ValueError("Placement did not settle inside the target")
         self.phase += 1

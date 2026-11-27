@@ -101,9 +101,20 @@ export default function TaskScene({
       geometry.setIndex(
         new THREE.BufferAttribute(new Uint32Array(decode(asset.faces)), 1),
       );
-      geometry.computeVertexNormals();
+      if (asset.uv)
+        geometry.setAttribute(
+          "uv",
+          new THREE.BufferAttribute(new Float32Array(decode(asset.uv)), 2),
+        );
+      if (asset.normals)
+        geometry.setAttribute(
+          "normal",
+          new THREE.BufferAttribute(new Float32Array(decode(asset.normals)), 3),
+        );
+      else geometry.computeVertexNormals();
       meshAssets[id] = geometry;
     }
+    const textures: THREE.Texture[] = [];
     const objects = sceneData.geoms.map((geom) => {
       const [x, y, z] = geom.size;
       let geometry: THREE.BufferGeometry;
@@ -123,7 +134,21 @@ export default function TaskScene({
         geometry.rotateX(Math.PI / 2);
       } else geometry = new THREE.SphereGeometry(x, 32, 24);
       const [r, g, b] = geom.rgba;
+      const texture = geom.texture
+        ? new THREE.TextureLoader().load(geom.texture)
+        : null;
+      if (texture) {
+        // MuJoCo's compiled OBJ UVs already have their V coordinate flipped.
+        texture.flipY = false;
+        texture.colorSpace = THREE.SRGBColorSpace;
+        texture.anisotropy = Math.min(
+          8,
+          renderer.capabilities.getMaxAnisotropy(),
+        );
+        textures.push(texture);
+      }
       const material = new THREE.MeshStandardMaterial({
+        map: texture,
         color: new THREE.Color(r, g, b).convertSRGBToLinear(),
         roughness:
           geom.name === "block_geom"
@@ -131,7 +156,7 @@ export default function TaskScene({
             : geom.name === "worktop"
               ? 0.88
               : 0.38,
-        metalness: geom.type === 7 ? 0.18 : 0.05,
+        metalness: texture ? 0 : geom.type === 7 ? 0.18 : 0.05,
       });
       const mesh = new THREE.Mesh(geometry, material);
       mesh.castShadow = geom.type !== 0;
@@ -250,6 +275,7 @@ export default function TaskScene({
         }
       });
       environment.dispose();
+      textures.forEach((texture) => texture.dispose());
       pmrem.dispose();
       renderer.dispose();
       sensor.dispose();

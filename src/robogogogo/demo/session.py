@@ -13,6 +13,7 @@ import numpy as np
 
 from .controller import ReferenceController
 from .environment import PandaEnv
+from .objects import catalog
 from .recording import Episode, Recording
 
 
@@ -55,7 +56,7 @@ class PandaSession:
                         self._tick()
                     except Exception as error:
                         self.status, self.message, self.playing = "failed", str(error), False
-                    self.next_tick = max(self.next_tick + env.dt, time.perf_counter())
+                    self.next_tick = max(self.next_tick + self.env.dt, time.perf_counter())
                     continue
                 try:
                     method, kwargs, future = self.requests.get(
@@ -76,13 +77,15 @@ class PandaSession:
                 # Preserve any finished transitions on ordinary shutdown.
                 try:
                     if self.recording.actions:
-                        self.recording.save(env, "shutdown")
+                        self.recording.save(self.env, "shutdown")
                 except Exception as error:
                     self.shutdown_error = error
                 finally:
                     self.recording.close()
             if env is not None:
-                env.close()
+                self.env.close()
+                if getattr(self, "backup", None) is not None:
+                    self.backup[0].close()
             while not self.requests.empty():
                 _, _, future = self.requests.get_nowait()
                 future.set_exception(getattr(self, "startup_error", RuntimeError("Session closed")))
@@ -132,7 +135,28 @@ class PandaSession:
         }
 
     def _scene(self):
-        return {**self.env.geometry(), "state": self._snapshot()}
+        return {**self.env.geometry(), "objects": catalog(self.assets), "state": self._snapshot()}
+
+    def _select_object(self, identifier, seed=0):
+        if self.replay is not None or self.recording is not None or self.playing:
+            raise ValueError(
+                "Pause playback and save or discard any recording before changing objects"
+            )
+        replacement = PandaEnv(self.assets, object_id=identifier)
+        try:
+            replacement.reset(seed=seed)
+        except Exception:
+            replacement.close()
+            raise
+        self.env.close()
+        self.env = replacement
+        self.seed, self.controller, self.mode, self.status = seed, None, "manual", "ready"
+        self.episode_id = str(uuid4())
+        self.message = (
+            f"{replacement.object['name']} loaded. Ready for manual control or the reference task."
+        )
+        self.revision += 1
+        return self._snapshot()
 
     def _guard_live(self, expected_revision=None):
         if self.replay is not None:
@@ -153,7 +177,7 @@ class PandaSession:
             self.playing = False
             self.status = "complete" if result[4]["success"] else "failed"
             self.message = (
-                "Block placed, released, and settled."
+                "Object placed, released, and settled."
                 if result[4]["success"]
                 else "Episode ended: " + str(result[4]["reason"])
             )
@@ -281,16 +305,19 @@ class PandaSession:
                 if row.get("schema") == "panda-episode-v1" and str(UUID(row["id"])) == path.stem:
                     episodes.append(
                         {
-                            key: row[key]
-                            for key in (
-                                "id",
-                                "created",
-                                "seed",
-                                "transitions",
-                                "duration",
-                                "outcome",
-                                "rgb",
-                            )
+                            "object_name": row.get("object", {}).get("name", "Original block"),
+                            **{
+                                key: row[key]
+                                for key in (
+                                    "id",
+                                    "created",
+                                    "seed",
+                                    "transitions",
+                                    "duration",
+                                    "outcome",
+                                    "rgb",
+                                )
+                            },
                         }
                     )
             except (ValueError, KeyError, OSError, zipfile.BadZipFile):
@@ -303,9 +330,22 @@ class PandaSession:
     def _load_replay(self, identifier):
         if self.recording is not None:
             raise ValueError("Save or discard the current recording before replay")
-        episode = Episode(self.episode_path(identifier), self.env)
+        path = self.episode_path(identifier)
+        with zipfile.ZipFile(path) as archive:
+            if archive.getinfo("episode.json").file_size > 100_000:
+                raise ValueError("Episode metadata exceeds supported size")
+            manifest = json.loads(archive.read("episode.json"))
+        replay_env = PandaEnv(self.assets, object_id=manifest.get("object", {}).get("id", "block"))
+        try:
+            episode = Episode(path, replay_env)
+        except Exception:
+            replay_env.close()
+            raise
         if self.replay is None:
-            self.backup = (self.env.capture_state(), self.status, self.mode, self.message)
+            self.backup = (self.env, self.status, self.mode, self.message)
+        else:
+            self.env.close()
+        self.env = replay_env
         self.playing, self.replay, self.mode, self.status = False, episode, "replay", "paused"
         return self._seek(0)
 
@@ -333,8 +373,9 @@ class PandaSession:
             self.playing = False
         elif command == "exit":
             self.playing = False
-            state, status, mode, message = self.backup
-            self.env.restore_state(state)
+            live_env, status, mode, message = self.backup
+            self.env.close()
+            self.env = live_env
             self.status, self.mode, self.message = (
                 "paused" if status == "running" else status,
                 mode,

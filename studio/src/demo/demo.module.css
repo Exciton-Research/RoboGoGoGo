@@ -856,3 +856,81 @@
     overflow-y: visible;
   }
 }
+
+.objectLibrary > p {
+  font-size: 11px;
+  line-height: 1.65;
+  color: #788078;
+  margin: 16px 0;
+}
+.objectCard {
+  border: 1px solid #d7dbd1;
+  border-radius: 5px;
+  background: #f7f7f1;
+  padding: 13px;
+  margin: 10px 0;
+}
+.objectCard[data-selected="true"] {
+  border-color: #82957c;
+  background: #eef2e8;
+}
+.objectCardHeading {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.objectCardHeading > svg {
+  margin-left: auto;
+  color: #54755b;
+}
+.objectIcon {
+  color: #687b69;
+  display: flex;
+}
+.objectCardHeading div > span {
+  font: 9px var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #7c8479;
+}
+.objectCard h3 {
+  font-size: 13px;
+  margin-top: 3px;
+  font-weight: 500;
+}
+.objectCard > p {
+  font-size: 10px;
+  color: #7a8278;
+  margin: 10px 0 0 32px;
+}
+.objectCardActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+}
+.objectCardActions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  padding: 5px 9px;
+  background: #e6ebdf;
+  border-radius: 3px;
+  color: #415c45;
+}
+.objectCardActions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.objectCardActions a,
+.objectCredit a {
+  font-size: 10px;
+  color: #70806a;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.objectLibrary > .objectPhysicsNote,
+.objectLibrary > .objectCredit {
+  font-size: 10px;
+}

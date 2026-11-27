@@ -1,4 +1,6 @@
 export type TaskState = {
+  object: LibraryObject;
+  scene_id: string;
   status: "ready" | "running" | "paused" | "complete" | "failed";
   message: string;
   phase: number;
@@ -42,6 +44,7 @@ export type TaskState = {
 };
 
 export type EpisodeSummary = {
+  object_name?: string;
   id: string;
   created: string;
   seed: number;
@@ -51,14 +54,32 @@ export type EpisodeSummary = {
   rgb: boolean;
 };
 
+export type LibraryObject = {
+  id: string;
+  name: string;
+  category: string;
+  ready: boolean;
+  dimensions?: number[];
+  mass?: number;
+  collision?: string;
+  source: string | null;
+  license?: string;
+};
+
 export type SceneData = {
-  meshes: Record<string, { vertices: string; faces: string }>;
+  scene_id: string;
+  objects: LibraryObject[];
+  meshes: Record<
+    string,
+    { vertices: string; faces: string; uv?: string; normals?: string }
+  >;
   geoms: {
     type: number;
     mesh: number;
     size: number[];
     rgba: number[];
     name: string | null;
+    texture?: string | null;
   }[];
   source: string;
   legacy_workspace: boolean;

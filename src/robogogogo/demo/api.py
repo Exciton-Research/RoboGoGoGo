@@ -41,6 +41,10 @@ class ReplayRequest(BaseModel):
     frame: int | None = Field(default=None, ge=0)
 
 
+class ObjectRequest(ResetRequest):
+    identifier: Literal["block", "soup-can", "rubiks-cube"]
+
+
 def create_demo_router(cache, *, legacy_workspace=False, recordings=None):
     # Construction starts a single worker. No model or rendering work runs on
     # arbitrary FastAPI pool threads, and every mutation passes through its queue.
@@ -77,6 +81,35 @@ def create_demo_router(cache, *, legacy_workspace=False, recordings=None):
                 await asyncio.to_thread(session.close)
 
     router = APIRouter(prefix="/api/demo", lifespan=lifespan)
+
+    @router.get("/objects")
+    async def objects():
+        from .objects import catalog
+
+        return await asyncio.to_thread(catalog, cache)
+
+    @router.post("/objects/select")
+    async def select_object(body: ObjectRequest):
+        return await call("select_object", **body.model_dump())
+
+    @router.post("/objects/{identifier}/download")
+    async def download_object(identifier: Literal["soup-can", "rubiks-cube"]):
+        from .objects import download_object
+
+        try:
+            return await asyncio.to_thread(download_object, cache, identifier)
+        except (OSError, ValueError) as error:
+            raise HTTPException(502, f"Object download failed: {error}") from error
+
+    @router.get("/objects/{identifier}/texture")
+    async def object_texture(identifier: Literal["soup-can", "rubiks-cube"]):
+        from .objects import directory, require_object
+
+        try:
+            await asyncio.to_thread(require_object, cache, identifier)
+        except FileNotFoundError as error:
+            raise HTTPException(404, str(error)) from error
+        return FileResponse(directory(cache, identifier) / "texture.png", media_type="image/png")
 
     @router.get("/scene")
     async def scene():

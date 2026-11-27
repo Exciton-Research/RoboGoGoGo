@@ -53,13 +53,19 @@ def main():
         "--recordings", type=Path, default=Path.cwd() / "runs" / "demo" / "episodes"
     )
     parser.add_argument(
-        "--setup", action="store_true", help="Download official Panda assets and exit"
+        "--setup",
+        action="store_true",
+        help="Download the Panda model and two YCB objects, then exit",
     )
     args = parser.parse_args()
     if args.setup:
         from .assets import download
+        from .objects import CATALOG, download_object
 
         download(args.assets)
+        for identifier in CATALOG:
+            print(f"Preparing {identifier}…", flush=True)
+            download_object(args.assets, identifier)
         return
     if not 1024 <= args.port <= 65535:
         parser.error("port must be between 1024 and 65535")

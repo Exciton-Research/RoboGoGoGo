@@ -11,3 +11,12 @@ or grant rights to third-party trademarks, patents, or downloadable vendor CAD.
 
 The robot design is an illustrative research concept, not commissioned hardware.
 The project does not certify physical safety, payload capacity, or build readiness.
+
+Optional object-library assets are downloaded separately from the YCB Object and
+Model Set (Calli et al., Google 16k scans):
+https://ycb-benchmarks.s3.amazonaws.com/index.html
+They remain under CC BY 4.0: https://creativecommons.org/licenses/by/4.0/
+Scans are centered/rotated and textures resized for use in the workbench. Their
+source, credit, changes, and digests are retained in the local object manifests
+and episode metadata. Screenshots depicting these assets include third-party
+material under that license; the project license does not relicense the scans.

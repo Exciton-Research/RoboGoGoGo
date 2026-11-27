@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowUpRight,
   Check,
@@ -13,12 +13,13 @@ import {
 } from "lucide-react";
 import { request } from "../api";
 import TaskScene from "./TaskScene";
+import ObjectLibrary from "./ObjectLibrary";
 import {
   ManualControls,
   RecordingControls,
   EpisodeControls,
 } from "./EnvironmentControls";
-import type { SceneData, TaskState } from "./types";
+import type { LibraryObject, SceneData, TaskState } from "./types";
 import styles from "./demo.module.css";
 
 export default function PickPlaceDemo() {
@@ -29,8 +30,18 @@ export default function PickPlaceDemo() {
   const [view, setView] = useState(0);
   const [seed, setSeed] = useState(0);
   const [connected, setConnected] = useState(false);
-  const [tab, setTab] = useState<"task" | "manual" | "episodes">("task");
+  const [tab, setTab] = useState<"objects" | "task" | "manual" | "episodes">(
+    "objects",
+  );
+  const sceneKey = useRef("");
+  const accepted = useRef<{ session: string; revision: number } | null>(null);
   function accept(next: TaskState) {
+    if (
+      accepted.current?.session === next.session_id &&
+      accepted.current.revision > next.revision
+    )
+      return false;
+    accepted.current = { session: next.session_id, revision: next.revision };
     setState((previous) =>
       !previous ||
       previous.session_id !== next.session_id ||
@@ -38,6 +49,38 @@ export default function PickPlaceDemo() {
         ? next
         : previous,
     );
+    return true;
+  }
+  async function synchronize(next: TaskState) {
+    if (next.scene_id !== sceneKey.current) {
+      const updated = await request<SceneData>("/demo/scene");
+      if (accept(updated.state)) {
+        sceneKey.current = updated.scene_id;
+        setScene(updated);
+      }
+    } else accept(next);
+  }
+  async function loadObject(object: LibraryObject) {
+    setBusy(true);
+    setError("");
+    try {
+      if (!object.ready)
+        await request(`/demo/objects/${object.id}/download`, {});
+      await synchronize(
+        await request<TaskState>("/demo/objects/select", {
+          identifier: object.id,
+          seed,
+        }),
+      );
+    } catch (failure) {
+      setError(
+        failure instanceof Error
+          ? failure.message
+          : "Object could not be loaded",
+      );
+    } finally {
+      setBusy(false);
+    }
   }
   useEffect(() => {
     let active = true,
@@ -47,6 +90,7 @@ export default function PickPlaceDemo() {
         const scene = await request<SceneData>("/demo/scene");
         if (!active) return;
         setScene(scene);
+        sceneKey.current = scene.scene_id;
         accept(scene.state);
         setConnected(true);
         setError("");
@@ -62,7 +106,7 @@ export default function PickPlaceDemo() {
       try {
         const next = await request<TaskState>("/demo/state");
         if (!active) return;
-        accept(next);
+        await synchronize(next);
         setConnected(true);
       } catch {
         if (active) setConnected(false);
@@ -81,7 +125,7 @@ export default function PickPlaceDemo() {
     setError("");
     try {
       const next = await request<TaskState>(`/demo${path}`, body);
-      accept(next);
+      await synchronize(next);
       setConnected(true);
       if (
         path.startsWith("/replay/") ||
@@ -144,7 +188,7 @@ export default function PickPlaceDemo() {
             Drag to orbit <span>·</span> Scroll to zoom
           </div>
           <div className={styles.objectLegend}>
-            <span /> 50 mm block <i /> Placement target
+            <span /> {state?.object.name ?? "Object"} <i /> Placement target
           </div>
         </section>
         <aside className={styles.panel}>
@@ -155,7 +199,8 @@ export default function PickPlaceDemo() {
               place.
             </h1>
             <p>
-              Pick up the orange block and place it inside the marked square.
+              Pick up the {state?.object.name.toLowerCase() ?? "object"} and
+              place it inside the marked square.
             </p>
           </div>
           <div
@@ -277,21 +322,33 @@ export default function PickPlaceDemo() {
                 role="tablist"
                 aria-label="Environment controls"
               >
-                {(["task", "manual", "episodes"] as const).map((name) => (
-                  <button
-                    key={name}
-                    role="tab"
-                    aria-selected={tab === name}
-                    onClick={() => setTab(name)}
-                  >
-                    {name === "episodes"
-                      ? "Episodes"
-                      : name === "manual"
-                        ? "Manual"
-                        : "Task"}
-                  </button>
-                ))}
+                {(["objects", "task", "manual", "episodes"] as const).map(
+                  (name) => (
+                    <button
+                      key={name}
+                      role="tab"
+                      aria-selected={tab === name}
+                      onClick={() => setTab(name)}
+                    >
+                      {name === "episodes"
+                        ? "Episodes"
+                        : name === "manual"
+                          ? "Manual"
+                          : name === "objects"
+                            ? "Objects"
+                            : "Task"}
+                    </button>
+                  ),
+                )}
               </div>
+              {tab === "objects" && scene && (
+                <ObjectLibrary
+                  objects={scene.objects}
+                  state={state}
+                  busy={busy || !connected}
+                  load={loadObject}
+                />
+              )}
               {tab === "manual" && (
                 <ManualControls
                   key={`${state.episode_id}:${state.mode}`}
@@ -381,7 +438,7 @@ export default function PickPlaceDemo() {
           <p className={styles.outcome}>
             {finished
               ? state.message
-              : "The fingers hold the block through contact and friction. Opening them releases it under gravity."}
+              : "The fingers hold the object through contact and friction. Opening them releases it under gravity."}
           </p>
           <div className={styles.modelNote}>
             <strong>Franka Emika Panda</strong>

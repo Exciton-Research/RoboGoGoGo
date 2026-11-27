@@ -1,13 +1,13 @@
 # Panda grasp-and-place environment
 
-One Franka Emika Panda grasps a 50 mm, 80 g block, carries it to a marked target,
+One Franka Emika Panda grasps a selected tabletop object, carries it to a marked target,
 releases it, and withdraws. The environment provides seeded reset, explicit
 stepping, manual control, local episode recording, and read-only replay.
-MuJoCo simulates the arm, gripper, block, and table contacts. Three.js displays
+MuJoCo simulates the arm, gripper, object, and table contacts. Three.js displays
 the simulated poses using the official robot meshes.
 
 The reference controller uses scripted Jacobian IK with smooth joint targets.
-It is not a learned policy or a real-robot result. The block has a free joint
+It is not a learned policy or a real-robot result. The selected object has a free joint
 throughout the task; it is never attached or welded to the hand. Only reset
 writes its initial position.
 
@@ -34,6 +34,71 @@ Setup explicitly downloads pinned official Panda assets into the Git-ignored
 binds to localhost and serves only the Panda environment. The original RG Mobile
 Duo workspace remains available through `robogogogo-studio` at `/simulation/`
 and `/workflow/`.
+
+## Object library
+
+The **Objects** tab includes two textured scans from the
+[YCB Object and Model Set](https://ycb-benchmarks.s3.amazonaws.com/index.html):
+
+- **Tomato soup can**, `soup-can` / `005_tomato_soup_can`: about 6.8 × 6.8 × 10.2 cm,
+  with an analytic cylinder for collision and an assigned mass of 350 g.
+- **Rubik’s Cube**, `rubiks-cube` / `077_rubiks_cube`: about 5.9 × 5.8 × 5.8 cm,
+  with a box for collision and an assigned mass of 90 g. It is a single rigid body;
+  its faces do not turn.
+
+The original 50 mm block remains available. Select **Load object** to start a new
+task with the chosen object. Pause a reference run and save/discard any recording
+before switching. Exit replay before loading another object.
+
+Setup downloads both pinned Google 16k scan archives. Existing installations can
+rerun `robogogogo-demo --setup` or use **Download & load** in the Objects tab.
+Scene/state requests never initiate downloads. Explicit downloads require network
+access; installed objects work offline. Meshes, textures, and provenance manifests
+stay under the ignored `runs/demo/assets/objects/` cache, not in Git.
+
+Metric dimensions and UV textures are preserved. Processing centers each mesh,
+rotates the toy upright, and reduces its 4096 px texture to 1024 px. The browser
+and native MuJoCo RGB renderer use the same mesh and texture. Browser OBJ export
+preserves texture seams and the compiled UV convention.
+
+Collision shapes approximate the scanned can and cube; scanned surface dents and
+small toy gaps are not reproduced in the contact geometry. Mass and friction are
+assigned simulation parameters, not measured calibration. Imported objects use a
+300 N/m gripper tendon servo gain within the upstream force limit so the heavier
+can can be held; the original block configuration stays unchanged. Objects stay
+free bodies and are never welded to the gripper. The reference controller adjusts
+pickup/placement heights to the selected object's size.
+
+Each recording includes the object's identity, dimensions, assigned physical
+properties, source, processing notes, and asset digests. Replay loads the recorded
+object, including when another object is live, and returning from replay restores
+the original live object and physical state. The asset cache must be present.
+Old block recordings remain supported.
+
+For Python, install assets once, then choose an object explicitly:
+
+```python
+from robogogogo.demo import PandaEnv
+from robogogogo.demo.objects import download_object
+
+# Explicit network setup; omit once cached.
+download_object("runs/demo/assets", "soup-can")
+with PandaEnv(object_id="soup-can") as env:
+    observation, info = env.reset(seed=0)
+    result = env.step(observation["previous_action"])
+```
+
+API routes: `GET /api/demo/objects`,
+`POST /api/demo/objects/{id}/download`, and
+`POST /api/demo/objects/select` with `{"identifier": "soup-can", "seed": 0}`.
+Changing objects is an explicit scene reset. This library supports one selected
+object at a time; room imports and arbitrary mesh uploads are outside this version.
+
+**Asset attribution:** YCB Object and Model Set, Calli et al., Google 16k scans.
+The scanned assets are [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+Source URLs, credit, license links, modifications, and archive/asset hashes are
+retained in each local `object.json` and recorded episode metadata. Product names
+identify scanned objects and do not imply endorsement.
 
 ## Control one task
 

@@ -10,7 +10,8 @@ import numpy as np
 from gymnasium import spaces
 
 from .assets import SOURCE, require_model
-from .task import HALF_CUBE, HOME, TABLE_Z, TARGET, scene_xml
+from .objects import directory, require_object
+from .task import HOME, TABLE_Z, TARGET, scene_xml
 
 CAMERAS = ("overhead", "wrist")
 WIDTH, HEIGHT = 240, 144
@@ -27,18 +28,34 @@ class PandaEnv(gym.Env):
 
     metadata = {"render_modes": ["rgb_array"], "render_fps": 20}
 
-    def __init__(self, assets=None, *, observation_mode="state", render_mode=None, max_steps=800):
+    def __init__(
+        self,
+        assets=None,
+        *,
+        object_id="block",
+        observation_mode="state",
+        render_mode=None,
+        max_steps=800,
+    ):
         if observation_mode not in ("state", "rgb") or render_mode not in (None, "rgb_array"):
             raise ValueError(
                 "observation_mode must be state/rgb; render_mode must be rgb_array/None"
             )
         if type(max_steps) is not int or max_steps < 1:
             raise ValueError("max_steps must be a positive integer")
-        asset_path = require_model(assets or Path.cwd() / "runs/demo/assets")
-        xml = scene_xml(asset_path)
-        self.model_hash = hashlib.sha256(
-            xml.replace(str(asset_path.parent / "assets"), "@panda/assets").encode()
-        ).hexdigest()
+        cache = Path(assets or Path.cwd() / "runs/demo/assets").resolve()
+        asset_path = require_model(cache)
+        self.object = require_object(cache, object_id)
+        self.half_height = self.object["dimensions"][2] / 2
+        self.target = np.array([*TARGET[:2], TABLE_Z + self.half_height])
+        object_dir = directory(cache, object_id) if object_id != "block" else None
+        xml = scene_xml(asset_path, object_spec=self.object, object_dir=object_dir)
+        canonical = xml.replace(str(asset_path.parent / "assets"), "@panda/assets")
+        if object_dir is not None:
+            canonical = canonical.replace(str(object_dir), "@object/assets") + str(
+                self.object["sha256"]
+            )
+        self.model_hash = hashlib.sha256(canonical.encode()).hexdigest()
         self.model = mujoco.MjModel.from_xml_string(xml)
         self.data, self.scratch = mujoco.MjData(self.model), mujoco.MjData(self.model)
         self.site = self.model.site("grasp_center").id
@@ -92,7 +109,7 @@ class PandaEnv(gym.Env):
         mujoco.mj_resetData(self.model, self.data)
         self.data.qpos[:7], self.data.qpos[7:9] = HOME, 0.04
         self.data.qpos[9:12], self.data.qpos[12:16] = (
-            [*xy, TABLE_Z + HALF_CUBE + 0.002],
+            [*xy, TABLE_Z + self.half_height + 0.002],
             [1, 0, 0, 0],
         )
         self.data.ctrl[:7], self.data.ctrl[7] = HOME, 255
@@ -138,12 +155,12 @@ class PandaEnv(gym.Env):
     def _placed(self):
         position = self.data.xpos[self.block]
         return bool(
-            np.linalg.norm(position[:2] - TARGET[:2]) < 0.035
-            and abs(position[2] - TARGET[2]) < 0.008
+            np.linalg.norm(position[:2] - self.target[:2]) < 0.035
+            and abs(position[2] - self.target[2]) < 0.008
             and np.linalg.norm(self.data.qvel[9:12]) < 0.02
             and sum(self.data.qpos[7:9]) > 0.065
             and not self.contacts()
-            and self.max_height > TABLE_Z + 0.12
+            and self.max_height > self.pick[2] + 0.095
             and np.linalg.norm(self.data.site_xpos[self.site] - position) > 0.12
         )
 
@@ -171,7 +188,7 @@ class PandaEnv(gym.Env):
             if self.truncated
             else None,
             "block": self.data.xpos[self.block].copy(),
-            "target": TARGET.copy(),
+            "target": self.target.copy(),
         }
 
     def observe(self):
@@ -280,6 +297,8 @@ class PandaEnv(gym.Env):
             }
         return {
             "poses": poses,
+            "object": self.object,
+            "scene_id": self.model_hash,
             "cameras": cameras,
             "time": self.steps * self.dt,
             "step_index": self.steps,
@@ -287,12 +306,12 @@ class PandaEnv(gym.Env):
             "tool": self.data.site_xpos[self.site].tolist(),
             "hand_position": self.data.xpos[self.hand].tolist(),
             "hand_rotation": self.data.xmat[self.hand].tolist(),
-            "target": TARGET.tolist(),
+            "target": self.target.tolist(),
             "pick": self.pick.tolist(),
             "finger_gap_mm": float(sum(self.data.qpos[7:9]) * 1000),
             "lift_mm": max(0, float(self.data.xpos[self.block, 2] - self.pick[2]) * 1000),
             "placement_error_mm": float(
-                np.linalg.norm(self.data.xpos[self.block, :2] - TARGET[:2]) * 1000
+                np.linalg.norm(self.data.xpos[self.block, :2] - self.target[:2]) * 1000
             ),
             "finger_contacts": len(self.contacts()),
             "joint_target": self.previous_action.tolist(),
@@ -315,6 +334,23 @@ class PandaEnv(gym.Env):
                         np.asarray(model.mesh_face[face : face + nface], dtype="<u4").tobytes()
                     ).decode(),
                 }
+                if model.mesh_texcoordnum[mesh]:
+                    # OBJ has separate position, normal and UV indices.
+                    triangles = model.mesh_face[face : face + nface]
+                    uv_faces = model.mesh_facetexcoord[face : face + nface]
+                    normal_faces = model.mesh_facenormal[face : face + nface]
+                    uv_start = model.mesh_texcoordadr[mesh]
+                    normal_start = model.mesh_normaladr[mesh]
+
+                    def pack(values, dtype="<f4"):
+                        return base64.b64encode(np.asarray(values, dtype=dtype).tobytes()).decode()
+
+                    meshes[str(mesh)] = {
+                        "vertices": pack(model.mesh_vert[start + triangles]),
+                        "faces": pack(np.arange(nface * 3), "<u4"),
+                        "uv": pack(model.mesh_texcoord[uv_start + uv_faces]),
+                        "normals": pack(model.mesh_normal[normal_start + normal_faces]),
+                    }
             material = int(model.geom_matid[geom])
             geoms.append(
                 {
@@ -325,9 +361,17 @@ class PandaEnv(gym.Env):
                         model.mat_rgba[material] if material >= 0 else model.geom_rgba[geom]
                     ).tolist(),
                     "name": mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_GEOM, geom),
+                    "texture": f"/api/demo/objects/{self.object['id']}/texture"
+                    if mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_GEOM, geom) == "object_visual"
+                    else None,
                 }
             )
-        self._geometry = {"meshes": meshes, "geoms": geoms, "source": SOURCE}
+        self._geometry = {
+            "meshes": meshes,
+            "geoms": geoms,
+            "source": SOURCE,
+            "scene_id": self.model_hash,
+        }
         return self._geometry
 
     def close(self):

@@ -10,7 +10,7 @@ TARGET = np.array([0.47, 0.19, TABLE_Z + HALF_CUBE])
 HOME = np.array([0, -0.35, 0, -2.1, 0, 1.75, -0.7854])
 
 
-def scene_xml(path):
+def scene_xml(path, *, object_spec=None, object_dir=None):
     root = ET.parse(path).getroot()
     root.find("compiler").set("meshdir", str(path.parent / "assets"))
     root.find("option").set("timestep", "0.002")
@@ -59,6 +59,53 @@ def scene_xml(path):
         condim="4",
         solref="0.005 1",
     )
+    if object_spec is not None and object_spec["id"] != "block":
+        # The original light block uses a very soft gripper servo. A modest
+        # 300 N/m tendon gain supports household-object loads within the
+        # upstream 100 N force limit; contact still supplies all grasp forces.
+        gripper = root.find("actuator/general[@name='actuator8']")
+        gripper.set("gainprm", "0.04705882353 0 0")
+        gripper.set("biasprm", "0 -300 -30")
+        cube.remove(cube.find("geom"))
+        asset = root.find("asset")
+        ET.SubElement(asset, "mesh", name="object_mesh", file=str(object_dir / "visual.obj"))
+        ET.SubElement(
+            asset, "texture", name="object_texture", type="2d", file=str(object_dir / "texture.png")
+        )
+        ET.SubElement(
+            asset,
+            "material",
+            name="object_material",
+            texture="object_texture",
+            specular="0.15",
+            shininess="0.1",
+        )
+        ET.SubElement(
+            cube,
+            "geom",
+            name="object_visual",
+            type="mesh",
+            mesh="object_mesh",
+            material="object_material",
+            contype="0",
+            conaffinity="0",
+            mass="0",
+            group="2",
+        )
+        half = np.asarray(object_spec["dimensions"]) / 2
+        size = [max(half[:2]), half[2]] if object_spec["collision"] == "cylinder" else half
+        ET.SubElement(
+            cube,
+            "geom",
+            name="object_collision",
+            type=object_spec["collision"],
+            size=" ".join(map(str, size)),
+            mass=str(object_spec["mass"]),
+            friction=f"{object_spec['friction']} 0.01 0.0001",
+            condim="4",
+            solref="0.005 1",
+            group="3",
+        )
     ET.SubElement(world, "camera", name="overhead", pos="0.47 0 1.75", fovy="42")
     ET.SubElement(
         hand,
