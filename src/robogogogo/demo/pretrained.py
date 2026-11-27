@@ -15,6 +15,10 @@ MODEL_ID = "google/owlv2-base-patch16-ensemble"
 MODEL_REVISION = "cfd3195ba4ea9592eec887ded089f4c08eff231d"
 
 
+class DetectionRejected(ValueError):
+    """A valid text query was not confidently grounded in the image."""
+
+
 class ModelNotReady(RuntimeError):
     pass
 
@@ -148,21 +152,35 @@ class PretrainedDetector:
                 detections.append({"box": box, "score": score, "query": query})
         return detections
 
-    def find(self, query, *, rgb, depth, position, rotation, fovy):
+    def find(self, query, *, rgb, depth, position, rotation, fovy, crop=None):
         """Locate one text detection with depth; never accepts catalog IDs or dimensions."""
         from .vision import localize_box
 
         started = time.perf_counter()
         # Keep weak competitors for the ambiguity check, even if they fall just
         # below the acceptance threshold. Filtering them first hides near ties.
-        detections = self.detect(rgb, query, threshold=0.05)
+        if crop is None:
+            detections = self.detect(rgb, query, threshold=0.05)
+        else:
+            left, top, right, bottom = crop
+            if not (0 <= left < right <= rgb.shape[1] and 0 <= top < bottom <= rgb.shape[0]):
+                raise ValueError("Detection crop must lie within the camera image")
+            detections = self.detect(rgb[top:bottom, left:right], query, threshold=0.05)
+            detections = [
+                {**item, "box": (np.asarray(item["box"]) + [left, top, left, top]).tolist()}
+                for item in detections
+            ]
         if not detections or detections[0]["score"] < 0.2:
-            raise ValueError(f"OWLv2 did not confidently detect '{query}'. No motion started.")
+            raise DetectionRejected(
+                f"OWLv2 did not confidently detect '{query}'. No motion started."
+            )
         best = detections[0]
         query = best["query"]
         margin = best["score"] - detections[1]["score"] if len(detections) > 1 else best["score"]
         if len(detections) > 1 and margin < 0.06:
-            raise ValueError("OWLv2 found ambiguous instances. Use a more specific description.")
+            raise DetectionRejected(
+                "OWLv2 found ambiguous instances. Use a more specific description."
+            )
         try:
             pick, region, grasp = localize_box(
                 best["box"], rgb=rgb, depth=depth, position=position, rotation=rotation, fovy=fovy

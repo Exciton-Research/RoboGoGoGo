@@ -140,6 +140,13 @@ export default function ObjectLibrary({
             {state.vision.model ? "OWLv2 score" : "image match"}{" "}
             {state.vision.score.toFixed(2)}
             <small>
+              {state.vision.camera_view && (
+                <span>
+                  {state.vision.camera_view === "front"
+                    ? "Front camera · workspace crop after side-view rejection. "
+                    : "Side camera. "}
+                </span>
+              )}
               {state.vision.model
                 ? "Pretrained model score; not calibrated certainty. Pickup estimated from depth."
                 : "Catalog similarity score, not a probability. Pickup uses known upright dimensions."}

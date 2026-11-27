@@ -28,7 +28,8 @@ def test_missing_model_has_an_actionable_error_without_downloading(tmp_path):
 
 
 @pytest.mark.parametrize("scores", [(0.7, 0.68), (0.21, 0.199)])
-def test_ambiguous_model_predictions_are_rejected_before_localization(monkeypatch, scores):
+@pytest.mark.parametrize("crop", [None, [0, 0, 12, 12]])
+def test_ambiguous_model_predictions_are_rejected_before_localization(monkeypatch, scores, crop):
     pytest.importorskip("robogogogo.demo.vision")
     detector = object.__new__(PretrainedDetector)
     detector.detect = lambda rgb, query, **kwargs: [
@@ -48,7 +49,39 @@ def test_ambiguous_model_predictions_are_rejected_before_localization(monkeypatc
             position=None,
             rotation=None,
             fovy=45,
+            crop=crop,
         )
+
+
+def test_cropped_detections_are_localized_in_the_original_camera_frame(monkeypatch):
+    pytest.importorskip("robogogogo.demo.vision")
+    detector = object.__new__(PretrainedDetector)
+    detector.device = "test"
+    rgb = np.zeros((40, 50, 3), np.uint8)
+    depth = np.ones((40, 50))
+
+    def detect(image, query, **kwargs):
+        assert image.shape == (20, 30, 3)
+        return [{"box": [2, 3, 12, 15], "score": 0.7, "query": query}]
+
+    def localize(box, **sensor):
+        assert box == [12, 8, 22, 20]
+        assert sensor["rgb"] is rgb and sensor["depth"] is depth
+        return np.array([0.4, -0.2, 0.8]), box, np.array([0.4, -0.2, 0.82])
+
+    detector.detect = detect
+    monkeypatch.setattr("robogogogo.demo.vision.localize_box", localize)
+    result = detector.find(
+        "can",
+        rgb=rgb,
+        depth=depth,
+        position=None,
+        rotation=None,
+        fovy=45,
+        crop=[10, 5, 40, 25],
+    )
+    assert result["box"] == [12, 8, 22, 20]
+    assert result["position"] == [0.4, -0.2, 0.8]
 
 
 @pytest.fixture(scope="module")
@@ -247,3 +280,78 @@ def test_pretrained_api_detects_without_motion_and_records_its_action_source(
         with zipfile.ZipFile(path) as archive:
             with np.load(io.BytesIO(archive.read("trajectory.npz")), allow_pickle=False) as data:
                 assert set(data["sources"]) == {"vlm_scripted"}
+
+
+def test_default_soup_name_retries_the_camera_and_collects_from_full_clutter(
+    pretrained_setup, monkeypatch, tmp_path
+):
+    import time
+
+    from fastapi.testclient import TestClient
+
+    from robogogogo.demo.__main__ import create_app
+
+    _, detector = pretrained_setup
+    monkeypatch.setattr("robogogogo.demo.session.PretrainedDetector", lambda _: detector)
+    app = create_app(
+        os.environ["ROBOGOGOGO_VLM_ASSETS"], static_dir=tmp_path, recordings=tmp_path / "episodes"
+    )
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        client.post(
+            "/api/demo/objects/select",
+            json={
+                "identifier": "sugar-box",
+                "clutter": True,
+                "seed": 1,
+            },
+        ).raise_for_status()
+        client.post("/api/demo/target", json={"identifier": "soup-can"}).raise_for_status()
+        before = client.get("/api/demo/state").json()
+        assert len(before["instances"]) == 9
+
+        def forbidden(*args, **kwargs):
+            pytest.fail("Camera retry consulted catalog references")
+
+        monkeypatch.setattr("robogogogo.demo.vision.require_object", forbidden)
+        monkeypatch.setattr("robogogogo.demo.vision.CatalogVision.find", forbidden)
+        found = client.post("/api/demo/vision/find", json={"query": "Tomato soup can"})
+        found.raise_for_status()
+        state = found.json()
+        assert state["step_index"] == 0
+        detection = state["vision"]
+        assert detection["camera_view"] == "front"
+        assert len(detection["detection_crop"]) == 4
+        assert detection["query"] == "Tomato soup can"
+        assert detection["score"] >= 0.2 and detection["margin"] >= 0.06
+        np.testing.assert_allclose(detection["position"], before["block"], atol=0.014)
+        client.post(
+            "/api/demo/record", json={"command": "start", "images": False}
+        ).raise_for_status()
+        client.post(
+            "/api/demo/command",
+            json={
+                "command": "run",
+                "perception": "vlm",
+                "query": "Tomato soup can",
+            },
+        ).raise_for_status()
+        deadline = time.monotonic() + 25
+        while time.monotonic() < deadline:
+            state = client.get("/api/demo/state").json()
+            if state["status"] != "running":
+                break
+            time.sleep(0.1)
+        assert state["status"] == "complete", state["message"]
+        assert state["last_saved"]["outcome"] == "success"
+        # Translation must clear the tall carton while the can stays held.
+        path = tmp_path / "episodes" / f"{state['last_saved']['id']}.zip"
+        with zipfile.ZipFile(path) as archive:
+            with np.load(io.BytesIO(archive.read("trajectory.npz")), allow_pickle=False) as data:
+                assert set(data["sources"]) == {"vlm_scripted"}
+                # Soup is the second free joint: qpos follows 9 robot coordinates.
+                centers = data["qpos"][:, 16:19]
+                assert np.min(centers[115:155, 2]) > 0.99
+                # The can remains near the fingers until the release phase;
+                # landing in the tray after an early drop is not sufficient.
+                tools = data["proprio"][:, 18:21]
+                assert np.max(np.linalg.norm(tools[115:202] - centers[115:202], axis=1)) < 0.065

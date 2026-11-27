@@ -17,7 +17,9 @@ def collection_xy(index, count):
     return np.array([0.28 + (index % 4) * 0.15, 0.16 + (index // 4) * 0.14])
 
 
-def scene_xml(path, *, object_spec=None, object_dir=None, other_objects=None):
+def scene_xml(
+    path, *, object_spec=None, object_dir=None, other_objects=None, gripper_stiffness=600
+):
     root = ET.parse(path).getroot()
     root.find("compiler").set("meshdir", str(path.parent / "assets"))
     root.find("option").set("timestep", "0.002")
@@ -68,11 +70,11 @@ def scene_xml(path, *, object_spec=None, object_dir=None, other_objects=None):
     )
     if object_spec is not None and object_spec["id"] != "block":
         # The original light block uses a very soft gripper servo. A modest
-        # 300 N/m tendon gain supports household-object loads within the
-        # upstream 100 N force limit; contact still supplies all grasp forces.
+        # 600 N/m tendon gain keeps household loads from sliding out of the
+        # pads, within the upstream 100 N force limit. Contact supplies all forces.
         gripper = root.find("actuator/general[@name='actuator8']")
-        gripper.set("gainprm", "0.04705882353 0 0")
-        gripper.set("biasprm", "0 -300 -30")
+        gripper.set("gainprm", f"{0.04 * gripper_stiffness / 255:.11f} 0 0")
+        gripper.set("biasprm", f"0 {-gripper_stiffness:g} {-gripper_stiffness * 0.1:g}")
         cube.remove(cube.find("geom"))
         add_scan(root, cube, object_spec, object_dir)
     for index, (spec, folder) in enumerate(other_objects or [], start=1):

@@ -26,6 +26,8 @@ export type TaskState = {
     query?: string;
     pickup_error?: string | null;
     inference_seconds?: number;
+    camera_view?: "front" | "side";
+    detection_crop?: number[];
   } | null;
   pretrained_ready: boolean;
   phase: number;

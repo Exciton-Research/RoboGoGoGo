@@ -37,6 +37,7 @@ class PandaEnv(gym.Env):
         observation_mode="state",
         render_mode=None,
         max_steps=800,
+        gripper_stiffness=600,
     ):
         if observation_mode not in ("state", "rgb") or render_mode not in (None, "rgb_array"):
             raise ValueError(
@@ -44,6 +45,8 @@ class PandaEnv(gym.Env):
             )
         if type(max_steps) is not int or max_steps < 1:
             raise ValueError("max_steps must be a positive integer")
+        if not np.isfinite(gripper_stiffness) or not 0 < gripper_stiffness <= 2500:
+            raise ValueError("gripper_stiffness must be in (0,2500] N/m")
         cache = Path(assets or Path.cwd() / "runs/demo/assets").resolve()
         asset_path = require_model(cache)
         ids = list(object_ids) if object_ids is not None else [object_id]
@@ -57,6 +60,7 @@ class PandaEnv(gym.Env):
                 "Scene requires up to nine distinct scanned objects including the target"
             )
         self.objects = [require_object(cache, identifier) for identifier in ids]
+        self.gripper_stiffness = float(gripper_stiffness) if ids[0] != "block" else 100.0
         self.layout = "clutter" if len(ids) > 1 else "single"
         folders = [
             directory(cache, identifier) if identifier != "block" else None for identifier in ids
@@ -66,6 +70,7 @@ class PandaEnv(gym.Env):
             object_spec=self.objects[0],
             object_dir=folders[0],
             other_objects=list(zip(self.objects[1:], folders[1:])),
+            gripper_stiffness=self.gripper_stiffness,
         )
         canonical = xml.replace(str(asset_path.parent / "assets"), "@panda/assets")
         for index, (spec, folder) in enumerate(zip(self.objects, folders)):

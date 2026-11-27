@@ -104,6 +104,17 @@ def proposals(rgb, depth, position, rotation, fovy, *, with_appearance=True):
     return result
 
 
+def workspace_crop(*, rgb, depth, position, rotation, fovy):
+    """Pixel bounds of visible pickup geometry, without object IDs or templates."""
+    regions = proposals(rgb, depth, position, rotation, fovy, with_appearance=False)
+    if not regions:
+        raise ValueError("No visible objects in the calibrated pickup workspace")
+    boxes = np.asarray([region["box"] for region in regions])
+    low = np.maximum(0, boxes[:, :2].min(axis=0) - 16)
+    high = np.minimum([rgb.shape[1], rgb.shape[0]], boxes[:, 2:].max(axis=0) + 16)
+    return [int(value) for value in np.r_[low, high]]
+
+
 def localize_box(box, *, rgb, depth, position, rotation, fovy):
     """Refine a text detector's pixel box using depth geometry, without object priors."""
     from .pretrained import box_iou
@@ -138,7 +149,7 @@ def localize_box(box, *, rgb, depth, position, rotation, fovy):
     # Objects taller than the finger clearance need an upper grasp, otherwise
     # the hand housing strikes their top. Grip 25 mm below the visible top so
     # the pads retain contact during lowering. Retain the center for placement.
-    if height > 0.12:
+    if height > 0.08:
         grasp[2] = TABLE_Z + height - 0.025
         upper = region["cloud"][region["cloud"][:, 2] > TABLE_Z + height - 0.01]
         if len(upper) < 12:

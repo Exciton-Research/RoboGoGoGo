@@ -47,6 +47,7 @@ class Recording:
             "control_dt": env.dt,
             "physics_dt": float(env.model.opt.timestep),
             "max_steps": env.max_steps,
+            "gripper_stiffness": env.gripper_stiffness,
             "rgb": images,
             "action_spec": {
                 "names": [f"joint{i}_target" for i in range(1, 8)] + ["finger_opening"],

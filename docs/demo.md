@@ -117,10 +117,13 @@ collection cells occupy the other side of the table and contain rounded fruit.
 original objects, with nine collection cells on the other side of the table.
 Click **Shuffle table**, select **Pretrained OWLv2**, enter **tall yellow box**,
 and choose **Find in image** or **Find & collect target**. The original eight-object
-layout remains available. OWLv2 observes a fixed calibrated side camera, which
-shows the boxes' broad faces. The catalog baseline retains its original front
-camera. Both use real rendered RGB and depth; camera placement is independent
-of the selected target and shuffled object positions.
+layout remains available. OWLv2 first observes a fixed calibrated side camera.
+If detection is rejected or has unusable depth, it retries the identical text on
+a front-camera crop enclosing visible pickup geometry. That crop comes from
+calibrated depth, not object identities or simulator positions. Pixel boxes are
+mapped back to the full camera image before depth localization. The catalog
+baseline retains its original front camera. Camera placement is independent of
+the selected target and shuffled object positions.
 `POST /api/demo/objects/select` with `{"identifier": "sugar-box", "clutter": true}`
 loads the same task. The carton is disabled in the catalog matcher and has no
 rendered reference bank. Recognition uses the existing OWLv2 model and thresholds,
@@ -226,7 +229,11 @@ Basic simulation and the catalog baseline do not require PyTorch/Transformers.
 When weights are ready, new scenes select **Pretrained OWLv2**. Choose a task
 target and describe it, for example **yellow citrus fruit** for the lemon.
 **Find in image** runs detection without advancing physics. It displays the model's
-actual bounding box and score. **Find & collect target** captures and detects again
+actual bounding box and score, plus the camera view and whether the workspace
+crop retry was used. For example, the default **Tomato soup can** name on the
+nine-object table at shuffle seed 1 needs this retry. Both attempts use the same
+0.20 score and 0.06 competing-instance margin checks; rejection in both views
+starts no motion. **Find & collect target** captures and detects again
 before moving, so a previous detection is never reused as a fresh pickup.
 The task's selected target still defines its destination and success evaluation;
 the free-text description should refer to that selected target.
@@ -236,13 +243,24 @@ duplicate boxes, and low or closely competing scores stop collection. Scores are
 model confidences, not calibrated guarantees. Depth regions refine the chosen box;
 observed height above the calibrated table estimates an upright grasp height, and
 the region's center ray estimates horizontal pickup. This stage uses no catalog
-dimensions. For tall rigid cartons, a visible upper-surface depth patch centers
-an upper grasp so the Panda hand clears the object. The estimated object center
+dimensions. For upright objects above 8 cm, a visible upper-surface depth patch
+centers a grasp 25 mm below the top so the Panda hand clears the object.
+These upper grasps use level carry motion with 25 cm clearance above the grasp
+height, accounting for the tool-to-object offset. This avoids descending into
+tall clutter during translation. The estimated object center
 (`position`) and finger grasp point (`grasp_position`) stay separate, so placement
 accounts for the grasp offset without reading object state. This is a bounded
 grasp heuristic, not general affordance or collision-free grasp planning.
 A detection with unreliable depth remains visible but cannot start motion.
 There is no catalog or simulator-pose fallback in pretrained mode.
+
+Scanned-object scenes use a 600 N/m gripper position-servo stiffness within the
+upstream 100 N force limit. This prevents the 350 g soup can from sliding out of
+the pads; object mass and friction remain unchanged. Lower camera grasps on
+smaller objects use finger proprioception to halve the closing preload. New
+recordings save `gripper_stiffness`, and browser replay reconstructs older
+recordings without that field using their original 300 N/m setting. The primitive
+block retains its original 100 N/m servo.
 
 `POST /api/demo/vision/find` accepts `{"query": "yellow citrus fruit"}` and an
 optional `expected_revision`. It returns the state with detection metadata and

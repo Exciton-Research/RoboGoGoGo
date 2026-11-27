@@ -28,12 +28,20 @@ class ReferenceController:
         grasp = pick if camera_grasp is None else np.asarray(camera_grasp, dtype=float)
         self.grasp_offset = np.zeros(3)
         target = env.target
+        self.upper_grasp = self.camera_based and grasp[2] > pick[2] + 0.01
+        lift, carry = grasp + [0, 0, 0.20], target + [0, 0, 0.20]
+        if self.upper_grasp:
+            # Keep the object above the supported 22 cm tabletop clutter while
+            # translating. Upper grasps need their tool-to-center offset too;
+            # descending toward the destination during carry can strike a carton.
+            travel_z = max(grasp[2], target[2] + max(0, grasp[2] - pick[2])) + 0.25
+            lift[2] = carry[2] = travel_z
         self.phases = [
             (1.8, grasp + [0, 0, 0.17], 0.08),
             (1.4, grasp + [0, 0, 0.003], 0.08),
             (0.9, grasp + [0, 0, 0.003], 0),
-            (1.6, grasp + [0, 0, 0.20], 0),
-            (2.0, target + [0, 0, 0.20], 0),
+            (1.6, lift, 0),
+            (2.0, carry, 0),
             (1.5, target + [0, 0, 0.003], 0),
             (0.9, target + [0, 0, 0.003], 0.08),
             (1.5, target + [0, 0, 0.22], 0.08),
@@ -65,6 +73,11 @@ class ReferenceController:
         duration, _, gap = self.phases[self.phase]
         t = min(1.0, (self.elapsed + env.dt) / duration)
         blend = t * t * t * (10 + t * (-15 + 6 * t))
+        if self.camera_based and not self.upper_grasp and gap == 0:
+            # Lower grasps on small/rounded objects need less squeeze. A target
+            # halfway toward the measured opening halves the closing preload,
+            # using finger proprioception rather than catalog dimensions.
+            gap = float(np.clip(sum(env.data.qpos[7:9]) * 0.5, 0, 0.08))
         return np.r_[self.start + blend * (self.goal - self.start), gap]
 
     def advance(self, env):

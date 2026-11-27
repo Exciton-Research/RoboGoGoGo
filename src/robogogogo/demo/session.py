@@ -17,7 +17,7 @@ from PIL import Image
 from .controller import ReferenceController
 from .environment import PandaEnv
 from .objects import catalog, clutter_objects
-from .pretrained import PretrainedDetector, model_ready
+from .pretrained import DetectionRejected, PretrainedDetector, model_ready
 from .recording import Episode, Recording
 
 
@@ -206,10 +206,27 @@ class PandaSession:
         self.revision += 1
         if self.pretrained_detector is None:
             self.pretrained_detector = PretrainedDetector(self.assets)
-        self.detection = {
-            **self.pretrained_detector.find(query, **self.env.capture_rgbd(view="side")),
-            "id": str(uuid4()),
-        }
+        try:
+            detection = self.pretrained_detector.find(query, **self.env.capture_rgbd(view="side"))
+            detection["camera_view"] = "side"
+            if detection["position"] is None:
+                raise DetectionRejected(detection["pickup_error"])
+        except DetectionRejected:
+            # Retry the identical query from a second fixed camera. Focus its
+            # pixels on visible pickup geometry, never on the selected object's
+            # simulator pose or identity. Keep the model's acceptance checks.
+            from .vision import workspace_crop
+
+            sensor = self.env.capture_rgbd(view="front")
+            crop = workspace_crop(**sensor)
+            try:
+                detection = self.pretrained_detector.find(query, **sensor, crop=crop)
+            except DetectionRejected as error:
+                raise DetectionRejected(
+                    f"{error} Both camera views were checked; no motion started."
+                ) from error
+            detection.update(camera_view="front", detection_crop=crop)
+        self.detection = {**detection, "id": str(uuid4())}
         self.message = (
             "Pretrained image detection ready. Collect uses the selected task's destination."
         )
@@ -248,7 +265,7 @@ class PandaSession:
         self.detection = None
         self.controller, self.mode, self.status = None, "manual", "ready"
         self.episode_id = str(uuid4())
-        self.message = f"Collect the {self.env.object['name']}. Choose camera matching or the simulator reference."
+        self.message = f"Collect the {self.env.object['name']}. Describe it for pretrained detection, or choose another perception mode."
         self.revision += 1
         return self._snapshot()
 
@@ -485,6 +502,7 @@ class PandaSession:
             self.assets,
             object_id=manifest.get("object", {}).get("id", "block"),
             object_ids=manifest.get("scene", {}).get("objects"),
+            gripper_stiffness=manifest.get("gripper_stiffness", 300),
         )
         try:
             episode = Episode(path, replay_env)

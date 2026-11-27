@@ -87,8 +87,9 @@ eight-object set, alongside all eight original objects (nine total). Click
 **Shuffle table** to permute object positions using the next seed. Describe it as
 **tall yellow box**, then find and collect it. This carton is deliberately excluded
 from the catalog image matcher; OWLv2 uses its existing pretrained weights and
-confidence checks. Its fixed side camera observes RGB and calibrated depth;
-neither detection nor pickup reads object poses.
+confidence checks. If the side view is uncertain, it retries the same text on a
+front-camera crop of the visible pickup workspace. Neither detection nor pickup
+reads object poses.
 
 The setup script creates a local `.venv`, installs Python dependencies, builds
 Studio from the npm lockfile, and caches the pinned Panda model and nine YCB
