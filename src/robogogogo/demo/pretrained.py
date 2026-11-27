@@ -164,12 +164,12 @@ class PretrainedDetector:
         if len(detections) > 1 and margin < 0.06:
             raise ValueError("OWLv2 found ambiguous instances. Use a more specific description.")
         try:
-            pick, region = localize_box(
+            pick, region, grasp = localize_box(
                 best["box"], rgb=rgb, depth=depth, position=position, rotation=rotation, fovy=fovy
             )
             pickup_error = None
         except ValueError as error:
-            pick, region, pickup_error = None, None, str(error)
+            pick, region, grasp, pickup_error = None, None, None, str(error)
         annotated = Image.fromarray(rgb)
         draw = ImageDraw.Draw(annotated)
         draw.rectangle(best["box"], outline="#ffb340", width=3)
@@ -180,6 +180,7 @@ class PretrainedDetector:
             "name": query,
             "query": query,
             "position": None if pick is None else pick.tolist(),
+            "grasp_position": None if grasp is None else grasp.tolist(),
             "pickup_error": pickup_error,
             "box": best["box"],
             "depth_box": region,

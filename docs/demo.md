@@ -37,7 +37,7 @@ and `/workflow/`.
 
 ## Object library
 
-The **Objects** tab includes eight textured scans from the
+The **Objects** tab includes nine textured scans from the
 [YCB Object and Model Set](https://ycb-benchmarks.s3.amazonaws.com/index.html):
 
 - **Tomato soup can**, `soup-can` / `005_tomato_soup_can`: about 6.8 × 6.8 × 10.2 cm,
@@ -51,11 +51,16 @@ meat can, a strawberry, a lemon, and an orange. Boxes are oriented upright witho
 changing their metric dimensions. Fruit and the meat can use MuJoCo convex mesh
 collisions; their small concavities are approximated by the convex hull.
 
+The ninth scan is **Sugar carton**, `sugar-box` / `004_sugar_box`: approximately
+4.95 × 9.42 × 17.60 cm, with a fitted box collider and an assigned mass of 250 g.
+It is excluded from catalog image matching. The scan, texture, metric scale,
+source checksum, and attribution use the same import path as the original assets.
+
 The original 50 mm block remains available. Select **Load object** to start a new
 task with the chosen object. Pause a reference run and save/discard any recording
 before switching. Exit replay before loading another scene.
 
-Setup downloads the eight pinned Google 16k scan archives. Existing installations can
+Setup downloads the nine pinned Google 16k scan archives. Existing installations can
 rerun `robogogogo-demo --setup` or use **Download & load** in the Objects tab.
 Scene/state requests never initiate downloads. Explicit downloads require network
 access; installed objects work offline. Meshes, textures, and provenance manifests
@@ -101,10 +106,20 @@ uploads are outside this version.
 
 ### Cluttered-table collection
 
-Choose **Load cluttered table · 8 objects** to place all eight scans on the same
+Choose **Load cluttered table · 8 objects** to place the original eight scans on the same
 table. Each has an independent free joint, collision geometry, and texture.
 The layout is reproducible by seed, with small bounded position jitter. Shallow
 collection cells occupy the other side of the table and contain rounded fruit.
+
+**New household object · sugar carton** loads the new carton with a soup can and
+orange as two distractors. Select **Pretrained OWLv2**, enter **tall yellow box**,
+and choose **Find in image** or **Find & collect target**. This is a separate
+three-object task; the original eight-object layout remains available.
+`POST /api/demo/objects/select` with `{"identifier": "sugar-box", "clutter": true}`
+loads the same task. The carton is disabled in the catalog matcher and has no
+rendered reference bank. Recognition uses the existing OWLv2 model and thresholds,
+with no fine-tuning or object-specific detector labels. “New” means newly added
+to this environment; its presence in OWLv2 pretraining is unknown.
 
 Choose a target by its name in **Objects**, then **Find & collect target**. The selected
 object has its own marked collection cell. After completion, choose another
@@ -160,7 +175,7 @@ the current scene. A target change leaves all physical state intact. The scene
 state reports every object instance and whether it is at its collection cell.
 
 Clutter recordings use `panda-episode-v2`: they include the scene object list,
-active target index, full physical state of all eight objects, actions, and
+active target index, full physical state of all scene objects, actions, and
 optional aligned RGB. Replay reconstructs the recorded scene and target, and
 returning to live control restores the previous live scene. Single-object v1
 archives remain supported.
@@ -210,7 +225,12 @@ duplicate boxes, and low or closely competing scores stop collection. Scores are
 model confidences, not calibrated guarantees. Depth regions refine the chosen box;
 observed height above the calibrated table estimates an upright grasp height, and
 the region's center ray estimates horizontal pickup. This stage uses no catalog
-dimensions. A detection with unreliable depth remains visible but cannot start motion.
+dimensions. For tall rigid cartons, a visible upper-surface depth patch centers
+an upper grasp so the Panda hand clears the object. The estimated object center
+(`position`) and finger grasp point (`grasp_position`) stay separate, so placement
+accounts for the grasp offset without reading object state. This is a bounded
+grasp heuristic, not general affordance or collision-free grasp planning.
+A detection with unreliable depth remains visible but cannot start motion.
 There is no catalog or simulator-pose fallback in pretrained mode.
 
 `POST /api/demo/vision/find` accepts `{"query": "yellow citrus fruit"}` and an
@@ -226,7 +246,7 @@ pixel boxes and scores independently of Panda scene assets. Import it from
 `robogogogo.demo.pretrained`; pass a uint8 RGB array. `find(query, **sensor_packet)`
 adds tabletop depth localization. Neither method accepts a catalog or live object poses.
 
-The detector's vocabulary is broader than the simulation's eight current assets.
+The detector's vocabulary is broader than the simulation's nine current assets.
 This does not add arbitrary object imports or general grasp planning. Synthetic
 appearance, small objects, occlusion, ambiguous descriptions, and domain shift can
 cause misses or wrong detections. A confident wrong prediction can still cause a
@@ -396,6 +416,8 @@ ROBOGOGOGO_VLM_ASSETS=runs/demo/assets .venv/bin/python -m pytest -q tests/test_
 They exercise free-text grounding, moved objects, absent queries, catalog access
 blocked during localization, collection without privileged object state, and
 API detection/recording provenance. Tests never download weights implicitly.
+The new-carton check also verifies reference-bank exclusion, actual lifting and
+placement, and reconstruction of its successful recording for replay.
 
 ## Model provenance
 

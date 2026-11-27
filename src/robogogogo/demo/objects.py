@@ -97,6 +97,31 @@ CATALOG.update(
     }
 )
 
+# Preserve the original eight-object comparison scene as the library grows.
+DEFAULT_CLUTTER = tuple(CATALOG)
+CATALOG["sugar-box"] = {
+    "name": "Sugar carton",
+    "category": "Household",
+    "ycb": "004_sugar_box",
+    "archive_sha256": "38e5820b942e7db501ba105cfb42ba8b470f27540dbab95324105a52de8617c6",
+    "mass": 0.25,
+    "collision": "box",
+    "yaw": 0.0,
+    "reference_matching": False,
+}
+
+
+def clutter_objects(identifier="soup-can"):
+    """Original eight-object scene, or a new object with two distractors."""
+    if identifier not in CATALOG:
+        raise ValueError("Clutter requires a scanned object")
+    return (
+        list(DEFAULT_CLUTTER)
+        if identifier in DEFAULT_CLUTTER
+        else [identifier, "soup-can", "orange"]
+    )
+
+
 BLOCK = {
     "id": "block",
     "name": "Original block",
@@ -132,7 +157,11 @@ def require_object(cache, identifier):
         raise FileNotFoundError(
             f"Download {CATALOG[identifier]['name']} from the object library first"
         ) from error
-    return {**manifest, "ready": True}
+    return {
+        **manifest,
+        "reference_matching": CATALOG[identifier].get("reference_matching", True),
+        "ready": True,
+    }
 
 
 def catalog(cache):
@@ -147,6 +176,7 @@ def catalog(cache):
                     "name": item["name"],
                     "category": item["category"],
                     "ready": False,
+                    "reference_matching": item.get("reference_matching", True),
                     "source": SOURCE,
                     "license": LICENSE,
                 }
@@ -230,6 +260,7 @@ def download_object(cache, identifier):
             "dimensions": dimensions.tolist(),
             "mass": item["mass"],
             "collision": item["collision"],
+            "reference_matching": item.get("reference_matching", True),
             "friction": 1.1,
             "physics": "Assigned mass and friction; not calibrated physical measurements",
             "source": SOURCE,

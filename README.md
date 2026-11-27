@@ -1,7 +1,7 @@
 # robogogogo
 
 A robotics workbench with one **Panda grasp-and-place environment** and a small
-**textured object library** of eight YCB scans: household packages, fruit, and a
+**textured object library** of nine YCB scans: household packages, fruit, and a
 Rubik’s Cube. Load one object or a cluttered table, choose a named target, and
 collect it into its marked cell. The robot grasps through simulated finger
 contact, lifts the selected object, and carries it to a marked
@@ -79,11 +79,16 @@ For pretrained text detection, install its optional dependencies and weights onc
 Restart the demo, select **Pretrained OWLv2**, and enter a short description such
 as **yellow citrus fruit**. **Find in image** shows the detection without motion;
 **Find & collect target** detects again before grasping. OWLv2 runs locally with
-pinned Google weights (about 620 MB). The scene still has eight scanned assets,
-and physical collection assumes upright objects in the calibrated pickup area.
+pinned Google weights (about 620 MB). Physical collection assumes upright objects
+in the calibrated pickup area.
+
+Choose **New household object · sugar carton** for a scan outside the original
+eight-object set, with a soup can and orange as distractors. Describe it as
+**tall yellow box**, then find and collect it. This carton is deliberately excluded
+from the catalog image matcher; OWLv2 uses its existing pretrained weights.
 
 The setup script creates a local `.venv`, installs Python dependencies, builds
-Studio from the npm lockfile, and caches the pinned Panda model and eight YCB
+Studio from the npm lockfile, and caches the pinned Panda model and nine YCB
 scans. Rerun it
 with the same options after updating the checkout. It does not install system
 packages or change global Python/npm configuration.

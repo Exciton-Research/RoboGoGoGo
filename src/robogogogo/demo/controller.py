@@ -16,7 +16,7 @@ class ReferenceController:
         "Verify placement",
     )
 
-    def __init__(self, env, *, camera_pick=None):
+    def __init__(self, env, *, camera_pick=None, camera_grasp=None):
         self.camera_based = camera_pick is not None
         self.perception = "camera" if self.camera_based else "simulator"
         pick = (
@@ -25,13 +25,14 @@ class ReferenceController:
             else env.data.xpos[env.block].copy()
         )
         self.pick = pick.copy()
+        grasp = pick if camera_grasp is None else np.asarray(camera_grasp, dtype=float)
         self.grasp_offset = np.zeros(3)
         target = env.target
         self.phases = [
-            (1.8, pick + [0, 0, 0.17], 0.08),
-            (1.4, pick + [0, 0, 0.003], 0.08),
-            (0.9, pick + [0, 0, 0.003], 0),
-            (1.6, pick + [0, 0, 0.20], 0),
+            (1.8, grasp + [0, 0, 0.17], 0.08),
+            (1.4, grasp + [0, 0, 0.003], 0.08),
+            (0.9, grasp + [0, 0, 0.003], 0),
+            (1.6, grasp + [0, 0, 0.20], 0),
             (2.0, target + [0, 0, 0.20], 0),
             (1.5, target + [0, 0, 0.003], 0),
             (0.9, target + [0, 0, 0.003], 0.08),

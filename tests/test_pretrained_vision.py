@@ -11,6 +11,17 @@ import pytest
 from robogogogo.demo.pretrained import MODEL_ID, ModelNotReady, PretrainedDetector
 
 
+def test_new_household_object_is_excluded_from_catalog_image_matching(tmp_path):
+    vision = pytest.importorskip("robogogogo.demo.vision")
+    from robogogogo.demo.objects import CATALOG, DEFAULT_CLUTTER, clutter_objects
+
+    assert "sugar-box" not in DEFAULT_CLUTTER
+    assert not CATALOG["sugar-box"]["reference_matching"]
+    assert clutter_objects("sugar-box") == ["sugar-box", "soup-can", "orange"]
+    with pytest.raises(ValueError, match="excluded"):
+        vision.CatalogVision(tmp_path)._reference("sugar-box")
+
+
 def test_missing_model_has_an_actionable_error_without_downloading(tmp_path):
     with pytest.raises(ModelNotReady, match="setup-vlm"):
         PretrainedDetector(tmp_path)
@@ -48,9 +59,9 @@ def pretrained_setup():
     pytest.importorskip("torch")
     pytest.importorskip("transformers")
     environment = pytest.importorskip("robogogogo.demo.environment")
-    from robogogogo.demo.objects import CATALOG
+    from robogogogo.demo.objects import clutter_objects
 
-    with environment.PandaEnv(assets, object_id="lemon", object_ids=list(CATALOG)) as env:
+    with environment.PandaEnv(assets, object_id="lemon", object_ids=clutter_objects()) as env:
         yield env, PretrainedDetector(assets)
 
 
@@ -114,13 +125,70 @@ def test_pretrained_collection_with_pose_and_contact_labels_blocked(pretrained_s
     robot = SimpleNamespace(
         data=RobotSensors(), site=env.site, dt=env.dt, target=env.target, solve=env.solve
     )
-    controller = ReferenceController(robot, camera_pick=result["position"])
+    controller = ReferenceController(
+        robot, camera_pick=result["position"], camera_grasp=result["grasp_position"]
+    )
     for _ in range(350):
         _, _, done, truncated, info = env.step(controller.action(robot))
         if done or truncated:
             break
         controller.advance(robot)
     assert info["success"], info
+
+
+def test_new_household_scan_is_detected_and_collected_without_catalog_references(
+    pretrained_setup, monkeypatch, tmp_path
+):
+    from robogogogo.demo.controller import ReferenceController
+    from robogogogo.demo.environment import PandaEnv
+    from robogogogo.demo.objects import clutter_objects
+    from robogogogo.demo.recording import Episode, Recording
+
+    _, detector = pretrained_setup
+    assets = os.environ["ROBOGOGOGO_VLM_ASSETS"]
+    identifiers = clutter_objects("sugar-box")
+    with PandaEnv(assets, object_id="sugar-box", object_ids=identifiers) as env:
+        assert env.model.body_mass[env.block] == pytest.approx(0.25)
+        sensor = env.capture_rgbd()
+
+        def forbidden(*args, **kwargs):
+            pytest.fail("New object recognition consulted catalog references")
+
+        monkeypatch.setattr("robogogogo.demo.vision.require_object", forbidden)
+        monkeypatch.setattr("robogogogo.demo.vision.CatalogVision.find", forbidden)
+        detection = detector.find("tall yellow box", **sensor)
+        assert detection["model"] == MODEL_ID
+        assert detection["grasp_position"][2] > detection["position"][2] + 0.03
+
+        class RobotSensors:
+            qpos = env.data.qpos
+            site_xpos = env.data.site_xpos
+
+            @property
+            def xpos(self):
+                pytest.fail("New-object controller read privileged object poses")
+
+        robot = SimpleNamespace(
+            data=RobotSensors(), site=env.site, dt=env.dt, target=env.target, solve=env.solve
+        )
+        controller = ReferenceController(
+            robot, camera_pick=detection["position"], camera_grasp=detection["grasp_position"]
+        )
+        recording = Recording(tmp_path, env, seed=0, images=False)
+        for _ in range(350):
+            action = controller.action(robot)
+            result = env.step(action)
+            recording.append(env, action, result, "vlm_scripted")
+            if result[2] or result[3]:
+                break
+            controller.advance(robot)
+        assert result[4]["success"], result[4]
+        recording.save(env, "environment_ended")
+        path = tmp_path / f"{recording.id}.zip"
+    with PandaEnv(assets, object_id="sugar-box", object_ids=identifiers) as replay:
+        episode = Episode(path, replay)
+        replay.restore_state(episode.state(episode.count))
+        assert replay.info()["success"]
 
 
 def test_pretrained_api_detects_without_motion_and_records_its_action_source(

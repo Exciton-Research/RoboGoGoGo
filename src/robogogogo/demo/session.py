@@ -16,7 +16,7 @@ from PIL import Image
 
 from .controller import ReferenceController
 from .environment import PandaEnv
-from .objects import CATALOG, catalog
+from .objects import catalog, clutter_objects
 from .pretrained import PretrainedDetector, model_ready
 from .recording import Episode, Recording
 
@@ -221,7 +221,9 @@ class PandaSession:
                 "Pause playback and save or discard any recording before changing objects"
             )
         replacement = PandaEnv(
-            self.assets, object_id=identifier, object_ids=list(CATALOG) if clutter else None
+            self.assets,
+            object_id=identifier,
+            object_ids=clutter_objects(identifier) if clutter else None,
         )
         try:
             replacement.reset(seed=seed)
@@ -350,7 +352,9 @@ class PandaSession:
                     if self.detection["position"] is None:
                         raise ValueError(self.detection["pickup_error"])
                     self.controller = ReferenceController(
-                        self.env, camera_pick=self.detection["position"]
+                        self.env,
+                        camera_pick=self.detection["position"],
+                        camera_grasp=self.detection.get("grasp_position"),
                     )
                     self.controller.perception = "vlm"
                 elif camera_based:
@@ -366,7 +370,9 @@ class PandaSession:
                         catalog_ids=[
                             item["id"]
                             for item in catalog(self.assets)
-                            if item["ready"] and item["id"] != "block"
+                            if item["ready"]
+                            and item["id"] != "block"
+                            and item.get("reference_matching", True)
                         ],
                     )
                     self.controller = ReferenceController(

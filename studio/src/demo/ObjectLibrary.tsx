@@ -22,7 +22,7 @@ export default function ObjectLibrary({
   state: TaskState;
   busy: boolean;
   load: (object: LibraryObject) => Promise<void>;
-  loadClutter: () => Promise<void>;
+  loadClutter: (identifier?: string) => Promise<void>;
   selectTarget: (identifier: string) => Promise<void>;
   perception: PerceptionMode;
   setPerception: (mode: PerceptionMode) => void;
@@ -32,6 +32,8 @@ export default function ObjectLibrary({
 }) {
   const [search, setSearch] = useState("");
   const clutter = state.layout === "clutter";
+  const newObjectScene =
+    clutter && state.instances.some((item) => item.id === "sugar-box");
   const locked =
     busy ||
     Boolean(state.recording) ||
@@ -43,14 +45,23 @@ export default function ObjectLibrary({
         <button disabled={locked} onClick={() => void loadClutter()}>
           {busy
             ? "Preparing…"
-            : clutter
-              ? "Reset cluttered table"
-              : "Load cluttered table · 8 objects"}
+            : newObjectScene
+              ? "Load original table · 8 objects"
+              : clutter
+                ? "Reset cluttered table"
+                : "Load cluttered table · 8 objects"}
+        </button>
+        <button disabled={locked} onClick={() => void loadClutter("sugar-box")}>
+          {newObjectScene
+            ? "Reset sugar carton scene"
+            : "New household object · sugar carton"}
         </button>
         <p>
           {clutter
-            ? "Choose a named target below, then find and collect it. Other objects remain on the table."
-            : "Load all eight scans together, or choose one object from the library."}
+            ? newObjectScene
+              ? "New sugar carton with two distractors. Try the description ‘tall yellow box’."
+              : "Choose a named target below, then find and collect it. Other objects remain on the table."
+            : "Load the original eight-object table, the new sugar carton scene, or one object."}
         </p>
       </div>
       <div className={styles.detectorControls}>
@@ -68,11 +79,23 @@ export default function ObjectLibrary({
           <option value="vlm" disabled={!state.pretrained_ready}>
             Pretrained OWLv2{!state.pretrained_ready ? " · setup required" : ""}
           </option>
-          <option value="camera" disabled={state.object.id === "block"}>
+          <option
+            value="camera"
+            disabled={
+              state.object.id === "block" ||
+              state.object.reference_matching === false
+            }
+          >
             Catalog image baseline
           </option>
           <option value="simulator">Simulator-pose reference</option>
         </select>
+        {state.object.reference_matching === false && (
+          <p className={styles.poseNotice}>
+            New to this environment. No catalog image references; use pretrained
+            detection.
+          </p>
+        )}
         <p className={styles.poseNotice}>
           {perception === "vlm"
             ? "Text + RGB detection · depth-based pickup · no catalog images or dimensions. Stops on uncertain matches."

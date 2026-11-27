@@ -16,6 +16,7 @@ export type TaskState = {
   vision: {
     name: string;
     position: number[] | null;
+    grasp_position?: number[] | null;
     score: number;
     margin: number;
     box: number[];
@@ -84,6 +85,7 @@ export type LibraryObject = {
   name: string;
   category: string;
   ready: boolean;
+  reference_matching?: boolean;
   dimensions?: number[];
   mass?: number;
   collision?: string;

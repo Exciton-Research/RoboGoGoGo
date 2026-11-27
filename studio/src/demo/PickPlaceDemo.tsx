@@ -83,7 +83,7 @@ export default function PickPlaceDemo() {
       setPerception(
         state?.pretrained_ready
           ? "vlm"
-          : object.id === "block"
+          : object.id === "block" || object.reference_matching === false
             ? "simulator"
             : "camera",
       );
@@ -97,7 +97,7 @@ export default function PickPlaceDemo() {
       setBusy(false);
     }
   }
-  async function loadClutter() {
+  async function loadClutter(identifier = "soup-can") {
     setBusy(true);
     setError("");
     try {
@@ -107,12 +107,18 @@ export default function PickPlaceDemo() {
       }
       await synchronize(
         await request<TaskState>("/demo/objects/select", {
-          identifier: "soup-can",
+          identifier,
           clutter: true,
           seed,
         }),
       );
-      setPerception(state?.pretrained_ready ? "vlm" : "camera");
+      setPerception(
+        state?.pretrained_ready
+          ? "vlm"
+          : identifier === "sugar-box"
+            ? "simulator"
+            : "camera",
+      );
     } catch (failure) {
       setError(
         failure instanceof Error

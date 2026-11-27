@@ -13,7 +13,7 @@ import mujoco
 import numpy as np
 from PIL import Image, ImageDraw
 
-from .objects import directory, require_object
+from .objects import CATALOG, directory, require_object
 from .task import TABLE_Z, add_scan
 
 VISION_WIDTH, VISION_HEIGHT = 640, 384
@@ -63,7 +63,7 @@ def proposals(rgb, depth, position, rotation, fovy, *, with_appearance=True):
         & (y > -0.39)
         & (y < 0.035)
         & (z > TABLE_Z + 0.008)
-        & (z < TABLE_Z + 0.16)
+        & (z < TABLE_Z + 0.23)
     )
     # Separate touching silhouettes where their observed surface heights jump.
     jumps = np.zeros(mask.shape, dtype=bool)
@@ -123,11 +123,21 @@ def localize_box(box, *, rgb, depth, position, rotation, fovy):
     )
     # Upright resting-object assumption; observed height replaces catalog dimensions.
     height = region["size"][2]
-    if not 0.015 <= height <= 0.15 or abs(ray[2]) < 1e-6:
+    if not 0.015 <= height <= 0.22 or abs(ray[2]) < 1e-6:
         raise ValueError("Depth cannot support an upright tabletop pickup")
     center_z = TABLE_Z + height / 2
     pick = np.asarray(position) + ray * ((center_z - position[2]) / ray[2])
-    return pick, region["box"]
+    grasp = pick.copy()
+    # Objects taller than the finger clearance need an upper grasp, otherwise
+    # the hand housing strikes their top. Retain the center for placement.
+    if height > 0.12:
+        grasp[2] = TABLE_Z + height - 0.005
+        upper = region["cloud"][region["cloud"][:, 2] > TABLE_Z + height - 0.01]
+        if len(upper) < 12:
+            raise ValueError("The upper grasp surface has insufficient visible depth")
+        low, high = np.percentile(upper, [3, 97], axis=0)
+        grasp[:2] = (low[:2] + high[:2]) / 2
+    return pick, region["box"], grasp
 
 
 class CatalogVision:
@@ -136,6 +146,10 @@ class CatalogVision:
         self.references = {}
 
     def _reference(self, identifier):
+        if identifier not in CATALOG or not CATALOG[identifier].get("reference_matching", True):
+            raise ValueError(
+                "This object is excluded from catalog matching; use pretrained detection"
+            )
         if identifier in self.references:
             return self.references[identifier]
         spec = require_object(self.cache, identifier)
@@ -174,9 +188,14 @@ class CatalogVision:
 
     def find(self, identifier, *, rgb, depth, position, rotation, fovy, catalog_ids):
         """Accept pixels/calibration/catalog only; no env, instance IDs or object poses."""
-        references = {key: self._reference(key) for key in catalog_ids}
-        if identifier not in references:
-            raise ValueError("Camera matching requires a scanned library object")
+        allowed = [
+            key
+            for key in catalog_ids
+            if key in CATALOG and CATALOG[key].get("reference_matching", True)
+        ]
+        if identifier not in allowed:
+            raise ValueError("This object has no catalog references; use pretrained detection")
+        references = {key: self._reference(key) for key in allowed}
         candidates = proposals(rgb, depth, position, rotation, fovy)
         ranked = []
         for candidate in candidates:

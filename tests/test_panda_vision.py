@@ -15,7 +15,7 @@ pytest.importorskip("gymnasium")
 
 from robogogogo.demo.controller import ReferenceController
 from robogogogo.demo.environment import PandaEnv
-from robogogogo.demo.objects import CATALOG
+from robogogogo.demo.objects import DEFAULT_CLUTTER
 from robogogogo.demo.vision import CatalogVision, point_cloud
 
 
@@ -30,7 +30,7 @@ def camera_setup():
     assets = os.environ.get("ROBOGOGOGO_VISION_ASSETS")
     if not assets:
         pytest.skip("Set ROBOGOGOGO_VISION_ASSETS to run native RGB-D integration checks")
-    with PandaEnv(assets, object_id="lemon", object_ids=list(CATALOG)) as env:
+    with PandaEnv(assets, object_id="lemon", object_ids=list(DEFAULT_CLUTTER)) as env:
         yield env, CatalogVision(assets)
 
 
@@ -51,8 +51,8 @@ def test_camera_finds_all_names_after_objects_change_positions(camera_setup, shu
             mujoco.mj_step(env.model, env.data)
         mujoco.mj_forward(env.model, env.data)
     sensor = env.capture_rgbd()
-    for index, name in enumerate(CATALOG):
-        match = vision.find(name, **sensor, catalog_ids=list(CATALOG))
+    for index, name in enumerate(DEFAULT_CLUTTER):
+        match = vision.find(name, **sensor, catalog_ids=list(DEFAULT_CLUTTER))
         # Privileged state is used only as an evaluation label, never by the matcher.
         expected = env.data.xpos[env.bodies[index], :2]
         assert np.linalg.norm(match["position"][:2] - expected) < 0.012, name
@@ -61,23 +61,23 @@ def test_camera_finds_all_names_after_objects_change_positions(camera_setup, shu
 def test_absent_and_occluded_targets_stop_instead_of_using_their_scene_pose(camera_setup):
     env, vision = camera_setup
     env.reset(seed=0)
-    address = int(env.joints[list(CATALOG).index("lemon")].qposadr[0])
+    address = int(env.joints[list(DEFAULT_CLUTTER).index("lemon")].qposadr[0])
     env.data.qpos[address : address + 3] = [2, 2, 0.8]
     mujoco.mj_forward(env.model, env.data)
     sensor = env.capture_rgbd()
     with pytest.raises(ValueError, match="identify|ambiguous"):
-        vision.find("lemon", **sensor, catalog_ids=list(CATALOG))
+        vision.find("lemon", **sensor, catalog_ids=list(DEFAULT_CLUTTER))
     sensor["rgb"][:] = 0
     with pytest.raises(ValueError, match="identify|ambiguous"):
-        vision.find("orange", **sensor, catalog_ids=list(CATALOG))
+        vision.find("orange", **sensor, catalog_ids=list(DEFAULT_CLUTTER))
 
 
-@pytest.mark.parametrize("name", list(CATALOG))
+@pytest.mark.parametrize("name", list(DEFAULT_CLUTTER))
 def test_camera_collection_cannot_read_object_poses_or_labeled_contacts(camera_setup, name):
     env, vision = camera_setup
     env.reset(seed=0)
     env.select_target(name)
-    match = vision.find(name, **env.capture_rgbd(), catalog_ids=list(CATALOG))
+    match = vision.find(name, **env.capture_rgbd(), catalog_ids=list(DEFAULT_CLUTTER))
 
     class RobotSensors:
         @property
