@@ -1,57 +1,51 @@
 # robogogogo documentation
 
-robogogogo connects a local JAX robot simulation to a browser workbench. The
-supported robot is RG Mobile Duo, an illustrative mobile dual-arm design. Start
-with simulation; hardware integration and learning have explicit readiness
-boundaries.
+Start with the **[Panda workbench guide](demo.md)**. It covers eight textured YCB
+scans, individual-object loading, named-target collection from a shared table,
+manual control, recording/replay, and the policy interface for a future VLA.
+The current collector uses known scene identities and poses; camera-based
+recognition and learned control are not implemented.
+
+![Recorded lemon collection among the other scanned objects](images/panda-grasp-place.jpg)
 
 ## Start here
 
-Start with the **[Panda grasp-and-place demo](demo.md)** for one focused task using
-MuJoCo dynamics and the official robot meshes. The guides below cover the original
-RG Mobile Duo Studio, available through `robogogogo-studio`.
+1. **[Installation](installation.md):** macOS/Linux setup, asset downloads,
+   native rendering, headless use, and troubleshooting.
+2. **[Panda workbench](demo.md):** load the object library, collect a target,
+   continue with another target, record/replay, and connect an external policy.
+3. **[Paper](../paper/):** current environment design, illustrative collection
+   sequence, related work, limitations, and source/PDF build instructions.
+4. **[Development](development.md):** Python/TypeScript ownership, local preview,
+   packaging, and verification commands.
 
-1. **[Installation](installation.md):** macOS/Linux prerequisites, scripted and
-   manual setup, headless operation, updates, and troubleshooting.
-2. **[Studio walkthrough](getting-started.md):** navigate the UI, move the robot,
-   collect and validate an episode, and understand saved files.
-3. **[Development](development.md):** run tests, edit Python/TypeScript, rebuild
-   packaged assets, and regenerate the screenshots.
+## Earlier RG Mobile Duo workspace
 
-## Go deeper
+The original illustrative mobile dual-arm workbench remains separate from the
+Panda environment. Its dynamics, action convention, and archive format differ.
+Launch `robogogogo-studio` and use `/simulation/` or `/workflow/` for these guides:
 
-- **[Controlled simulation-error research](research.md)** defines the new research
-  question, matched-budget study, robosuite Panda adapter, visual imitation
-  baseline, and external trainer interface. No study results are available yet.
-- **[Research paper](../paper/)** provides the manuscript, reading PDF,
-  bibliography, figures, and build instructions.
-- **[Contributing](../CONTRIBUTING.md)** explains issues, pull requests, and licensing.
-- **[Security policy](../SECURITY.md)** explains reporting and the local deployment boundary.
+- **[Studio walkthrough](getting-started.md)** for movement, collection, exports,
+  and episode validation in the original workspace.
+- **[Platform layers](platform.md)** for robot identity, runtime ownership, and
+  the legacy data/command interfaces.
+- **[Mobile robot design](mobile-robot-design.md)** for geometry, actuator
+  packaging, swerve dynamics, planning, and model limits.
+- **[JAX physics](physics.md)** for the original numerical model and conventions.
+- **[Command execution](command-execution.md)** for the deterministic command
+  backend, ownership leases, stop, and takeover.
+- **[Hardware perception](hardware-perception.md)** for read-only measured
+  telemetry/calibration integration. Simulation camera presets are not physical
+  calibration measurements.
+- **[Design iteration reports](validation/)** for historical robot revisions.
+  These reports are not Panda task evaluations.
 
-- **[Platform layers](platform.md)** explains robot identity, data contracts,
-  runtime ownership, compatibility imports, and the remaining integration work.
-- **[Mobile robot design](mobile-robot-design.md)** covers geometry, coordinate
-  conventions, actuator packaging, swerve dynamics, planning, and model limits.
-- **[Physics](physics.md)** documents the numerical engine and mathematical
-  conventions. Some numerical algorithms are exercised only by legacy fixtures;
-  their presence does not imply a Studio product feature.
-- **[Command execution](command-execution.md)** explains coordinated test goals,
-  leases, watchdogs, stop, takeover, and the local execution API.
-- **[Hardware perception](hardware-perception.md)** describes measured calibration,
-  timestamp synchronization, ROS camera topics, localization, and read-only SDK
-  adapters. A simulation camera preset is not a measured calibration profile.
-- **[Engineering evidence](validation/)** holds design iteration reports and
-  numerical evidence. Check the robot revision when comparing old reports.
+## Other material
 
-## Readiness at a glance
+- **[Historical optional simulation-error protocol](research.md)** describes an
+  earlier unvalidated robosuite experiment, separate from the current workbench.
+- **[Contributing](../CONTRIBUTING.md)** and **[security](../SECURITY.md)** cover
+  contribution guidelines and the local deployment boundary.
 
-Simulation, browser capture, dataset validation, and command lifecycle testing
-are available. Training, learned inference, physical actuation, teleoperation
-recording, and physical evaluation still need integration. The workflow overview
-reports these boundaries from implemented paths rather than a user-set ready flag.
-
-![Workflow readiness and episode library](images/workflow.png)
-
-Screenshots show the real locally built Studio with a disposable simulation
-workspace. The disconnected hardware screen is intentional; no physical robot
-was connected or represented as calibrated.
+Object data and recordings stay in ignored local caches. Training, learned VLA
+inference, room imports, and physical robot execution require further work.

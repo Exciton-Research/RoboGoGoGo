@@ -1,9 +1,17 @@
-# Research direction: which simulation errors matter for demonstration learning?
+# Historical optional simulation-error protocol
 
-The research objective is to determine whether a small amount of downstream
+This document preserves an earlier, unvalidated robosuite study proposal. It is
+separate from the current Panda object-collection workbench and its policy
+interface. Start with the [Panda workbench guide](demo.md) and the updated
+[paper](../paper/) for the current project. This protocol is not evidence of a
+research contribution or an implemented VLA training workflow.
+
+## Original proposal: which simulation errors matter for demonstration learning?
+
+The proposed objective was to determine whether a small amount of downstream
 policy feedback can identify which simulation errors should be corrected when
-collecting demonstrations under a limited interaction budget. RoboGoGoGo is the
-experimental workbench for investigating this question.
+collecting demonstrations under a limited interaction budget. The optional
+implementation was intended as an experimental harness for this question; it has not been validated through the proposed study.
 
 **Status:** the protocol and an initial implementation are present. No experiments
 have been run for this research direction. The demonstrator, learner, and adapter

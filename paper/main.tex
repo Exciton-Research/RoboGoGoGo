@@ -3,204 +3,174 @@
 \usepackage[margin=0.9in]{geometry}
 \usepackage{lmodern,microtype,amsmath,amssymb,booktabs,tabularx,graphicx}
 \usepackage[numbers,sort&compress]{natbib}
-\renewcommand{\bibfont}{\small}
+\renewcommand{\bibfont}{\footnotesize}\setlength{\bibsep}{3pt}
 \usepackage{xcolor,tikz,xurl}
 \usetikzlibrary{arrows.meta,positioning}
 \usepackage[hidelinks]{hyperref}
-\definecolor{accent}{HTML}{C65320}
 \definecolor{ink}{HTML}{273747}
 \setlength{\emergencystretch}{2em}
 \setlength{\textfloatsep}{12pt plus 3pt minus 3pt}
-\title{Robogogogo: An Early Robot Simulation Environment\\for Demonstration Data Collection}
+\title{Robogogogo: A Tabletop Simulation Workbench\\for Object Collection and Policy Integration}
 \author{the Robo Team}
 \date{November 27, 2026}
-\hypersetup{pdftitle={Robogogogo: An Early Robot Simulation Environment for Demonstration Data Collection},pdfauthor={the Robo Team}}
+\hypersetup{pdftitle={Robogogogo: A Tabletop Simulation Workbench for Object Collection and Policy Integration},pdfauthor={the Robo Team}}
 
 \begin{document}
 \maketitle
 \begin{abstract}
-Simulation environments for vision--language--action (VLA) research must couple visual observations with robot state and actions whose meaning remains consistent throughout data collection and learning. We present Robogogogo, an early simulation environment for studying this interface in mobile dual-arm robotics. The environment combines a Python/JAX dynamics model, a browser-based interface with four camera views, and an episode representation linking instructions, observations, commands, and subsequent states. Its reference embodiment, RG Mobile Duo, has 31 generalized coordinates spanning a planar mobile base, independently steerable wheels, a folding torso, two seven-joint arms, and a pan--tilt head. The representation distinguishes requested commands, bounded command targets, and realized motion, while retaining embodiment identity and action provenance. A preliminary geometric characterization identifies 62 clearance violations among 594 sampled configurations, motivating explicit treatment of the operating domain during demonstration collection. We describe the architecture, data representation, and requirements for connecting external learning methods, and formulate studies of collection quality, policy learning, language grounding, and action-conditioned world prediction. The present contribution is an environment design and preliminary model characterization; learned-policy performance and physical fidelity remain open empirical questions.
-
+Familiar objects provide a concrete setting for examining how robot observations, actions, and task outcomes are represented in a simulation environment. We describe Robogogogo, a local tabletop workbench combining a simulated Franka Emika Panda with eight textured scans from the Yale--CMU--Berkeley object set. Objects retain metric geometry and are represented as independent rigid bodies with approximate collision models. Users can manipulate one object or select a named target among several objects and collect it into a designated cell. The environment couples explicit simulation stepping, manual control, and a scripted reference controller with temporally aligned observations and action records. Stored physical states support replay of the complete scene, while a separate policy interface supplies task instructions, camera images, and proprioception for future vision--language--action integration. An illustrative sequence collects all eight objects without resetting their physical state between targets. This paper documents the environment design and the scope of that demonstration; learned perception, policy generalization, and physical transfer remain questions for subsequent study.
 \end{abstract}
-\noindent\textbf{Keywords:} robot simulation; demonstration data; vision--language--action; world models; mobile manipulation.
+\noindent\textbf{Keywords:} robot simulation; object collection; demonstration data; vision--language--action; world models.
 
 \section{Introduction}
-Demonstration data for robot learning connects several representations of the same interaction: a natural-language instruction, camera observations, numerical robot state, and an action interpreted by a controller. Consistency across these representations is necessary for learning a meaningful mapping from perception to behavior. For a mobile dual-arm robot, the collection process must additionally account for multiple camera viewpoints and coordinated motion across the base, torso, and arms.
+A useful robot simulation workbench should connect recognizable objects to physical interactions that can be inspected, repeated, and recorded. For tabletop manipulation, this means more than displaying a textured mesh: the object must have a defined scale, collision geometry, and dynamics, and the recorded action must describe the command that produced the next observation. This relationship matters when the same environment is used first for interactive exploration and later as an interface to a learned policy.
 
-Robot foundation models and learned world models motivate complementary uses of interaction data. Vision--language--action policies map observations and instructions to commands, as illustrated by RT-2 and Gemini Robotics~\cite{rt2,geminirobotics}. Learned world models instead predict future observations or latent states, supporting imagined rollouts and interactive environments~\cite{dreamerv3,genie,cosmos}. Both uses require a meaningful relationship between the recorded action and the observed transition, although the learning objectives and evaluation criteria differ.
+Robogogogo~\cite{robogogogo} develops this workflow around one Panda arm and a small collection of scanned household objects, fruit, and a toy. A user can load the objects together, choose a target by name, and execute a physical grasp-and-place sequence while the remaining objects stay in the scene. A dedicated collection cell for each object permits successive tasks without restoring the initial arrangement. Figure~\ref{fig:tabletop} shows a recorded lemon grasp among the other objects.
 
-Robogogogo is an early environment for investigating these requirements in simulation~\cite{robogogogo}. It integrates motion rehearsal, visual inspection, and demonstration recording around a single reference embodiment. The design emphasizes the interpretation of recorded transitions: which robot generated them, which observation preceded an action, what the command represented, and how the resulting state differed from the commanded target. These distinctions matter when demonstrations are transferred from an interactive simulator to policy-learning or world-modeling pipelines.
+The motivation is a compact, inspectable environment for object interaction and demonstration collection. Established engines, asset libraries, and robot-learning platforms already provide much of the underlying functionality. Our account therefore concerns how these components are assembled into this workbench, how an episode is defined when targets change within a persistent scene, and where the interface to a future vision--language--action (VLA) policy lies.
 
-The central design question is how a simulation environment can preserve the relationship between observations, commands, and embodiment throughout demonstration collection. This paper makes three contributions:
-\begin{enumerate}
-\item A simulation environment integrating a mobile dual-arm model, motion planning, and four-camera observation within a common collection workflow.
-\item An episode representation that links language, visual and proprioceptive observations, bounded commands, and subsequent states while retaining embodiment identity and action provenance.
-\item A preliminary characterization of modeled geometric constraints and a research agenda for evaluating collection quality, policy learning, and action-conditioned world modeling.
-\end{enumerate}
-
-\section{Related Work}
-\subsection{Robot Foundation Models}
-Google DeepMind's RT-2 studies the transfer of web-scale vision--language representations to robot control by expressing actions as tokens~\cite{rt2}. Gemini Robotics extends this direction with generalist VLA control and a complementary embodied-reasoning model~\cite{geminirobotics}. NVIDIA's GR00T N1 combines vision--language interpretation with action generation and uses heterogeneous real, human-video, and synthetic data for humanoid learning~\cite{gr00t}. Physical Intelligence's $\pi_{0.5}$ investigates open-world generalization through heterogeneous co-training~\cite{pi05}. Together, these works motivate collecting data whose camera, embodiment, and action representations can be interpreted beyond the original collection interface.
-
-OpenVLA and Octo provide further reference points for adapting pretrained policies to new robot settings~\cite{openvla,octo}. The role of Robogogogo is to expose the environment and recording interfaces needed to investigate such adaptation. No compatibility with these models is assumed: their action representations, preprocessing, and embodiment assumptions must be reconciled with the simulator before policy performance can be measured.
-
-\subsection{Simulation, Demonstration Data, and Evaluation}
-General-purpose engines such as MuJoCo provide physical simulation for model-based control~\cite{mujoco}. NVIDIA Isaac Lab integrates GPU-accelerated physics, rendering, sensing, and learning workflows~\cite{isaaclab}; ManiSkill3 combines simulation and rendering with robot-learning tasks and demonstration generation~\cite{maniskill3}. These systems establish important comparison dimensions for a collection environment: task and embodiment coverage, observation fidelity, collection throughput, and integration with learning methods. Robogogogo currently addresses a narrower setting, centered on one mobile dual-arm embodiment and its episode representation.
-
-Demonstration-learning systems such as robomimic investigate learning from recorded manipulation data~\cite{robomimic}. LeRobotDataset provides an external representation for states, actions, camera streams, timestamps, and episode metadata~\cite{lerobotdataset}. Robogogogo uses an episode representation tailored to its simulator. Integration with these learning ecosystems requires an adapter that preserves the temporal and physical interpretation of each field.
-
-LIBERO provides task suites and demonstrations for evaluating transfer in robot learning~\cite{libero}. SIMPLER examines simulated evaluation of real-world manipulation policies, identifying visual and control disparities and assessing sim--real performance correlation~\cite{simpler}. This distinction is important for the present work: a coherent recording interface is a prerequisite for experiments, while a useful evaluation environment additionally requires evidence that its observations, controls, and task outcomes measure the intended behavior.
-
-\subsection{Learned World Models and Interactive Simulation}
-World models learn predictive structure from interaction or video data. DreamerV3 uses a learned environment model to improve behavior through imagined trajectories~\cite{dreamerv3}. Google DeepMind's Genie learns action-controllable interactive environments from unlabeled video, using a learned latent action representation~\cite{genie}. The later Genie 4 research announcement describes real-time interactive world generation with language-directed scene changes~\cite{genie4}. These examples cover different control interfaces; a learned latent action or a scene-editing instruction is not automatically equivalent to a robot joint command.
-
-NVIDIA Cosmos develops world foundation models and associated video-curation and adaptation tools for physical AI~\cite{cosmos}. More recent interactive Cosmos work supports both predicting visual consequences of actions and generating observations from physical state maintained by an external simulator~\cite{cosmosinteractive}. This provides a direct research connection between explicit simulation and learned observation generation. Robogogogo currently uses explicit dynamics and a conventional renderer; a learned world model is a possible consumer of its transitions or a future observation-generation component, not an implemented part of the environment.
-
-For this setting, the relationship between simulated state, commanded action, and predicted observation is an experimental requirement. A visually plausible rollout may still disagree with the commanded motion, camera geometry, or modeled collision constraints. Consequently, connecting learned world models to demonstration collection requires evaluation of action conditioning, temporal and multi-view consistency, and preservation of task-relevant state. Section~\ref{sec:worldmodel} formulates a study of these properties.
-
-\section{Simulation Environment}
-\subsection{Reference Embodiment}
-RG Mobile Duo is an illustrative mobile dual-arm design: independently steerable wheels, a folding torso, a stereo pair on the head, and one wrist camera on each arm. Each arm has seven actuated simulation joints, covering three shoulder-related axes, an elbow, and three wrist axes. The coordinate vector is
-\begin{equation}
- q = (q_{\mathrm{base}},q_{\mathrm{wheels}},q_{\mathrm{torso}},q_L,q_R,q_{\mathrm{head}})
- \in\mathbb{R}^{31},
-\end{equation}
-with dimensions $3+8+4+7+7+2$. The base is planar position and yaw. Rendered fingers are visual; grasp contact is not actuated on this robot. Each episode records the embodiment identity and a fixed coordinate ordering. This association allows a downstream consumer to distinguish changes in the robot model from changes in the observed behavior.
+The present task uses known scene identities and positions to direct a scripted controller. Choosing the word ``lemon'' in the interface identifies an object instance; it is not a visual recognition result. The policy interface is deliberately narrower: it exposes the instruction, robot observations, and optional images, with object poses reserved for task accounting and the reference controller. This separation allows a later learned policy to act through the same dynamics without inheriting the demonstrator's object-state access.
 
 \begin{figure}[!htbp]
 \centering
-\includegraphics[width=0.94\linewidth]{figures/studio.png}
-\caption{Robogogogo Studio showing the reference embodiment, mechanism hierarchy, simulation controls, and four camera views. The interface supports inspection of the robot configuration and camera coverage during demonstration collection. Screenshot reproduced from the project documentation under Apache-2.0.}
-\label{fig:studio}
+\includegraphics[width=0.86\linewidth]{figures/tabletop.jpg}
+\caption{Recorded collection in the eight-object Panda environment. The arm holds the selected lemon while the other scanned objects remain on the table. The lower panels show saved overhead and wrist RGB at the same recorded boundary as the displayed physical state. The reference controller uses known scene poses. Object imagery is from YCB~\cite{ycb,ycbdata}, under CC BY 4.0; the Panda model is from MuJoCo Menagerie~\cite{menagerie}.}
+\label{fig:tabletop}
 \end{figure}
 
-Figure~\ref{fig:studio} shows the collection interface. A common view of the mechanism, joint state, and camera streams supports inspection of the relationship between robot configuration and visual observations.
+\section{Related Work}
+\subsection{Simulation and Object Assets}
+MuJoCo provides articulated-body and contact simulation for control~\cite{mujoco}. Isaac Lab and ManiSkill3 provide broader simulation, sensing, and learning frameworks~\cite{isaaclab,maniskill3}. RoboTwin 2.0 combines an annotated object library, demonstration generation, domain randomization, and bimanual evaluation~\cite{robotwin2}. These systems establish capabilities and comparison settings that extend well beyond the bounded tabletop workflow described here.
 
-\subsection{Demonstration Collection Workflow}
-Collection consists of motion specification, observation capture, action execution, and episode storage. Whole-body reaching coordinates the base, torso, and arms toward a shared hand-center target with a specified final hand spacing. Configuration-space detours operate on the arms and torso while holding the base, wheels, and head fixed. These modes support motion rehearsal within the modeled constraints.
+The YCB Object and Model Set supplies shared physical objects and digital models for manipulation research~\cite{ycb,ycbdata}. Google Scanned Objects provides a separate, larger collection of scanned household items~\cite{gso}. Robogogogo currently uses eight objects from the Google 16k variants of the YCB releases; these are not downloads from the Google Scanned Objects dataset. The project adds scene assembly and interaction interfaces around these existing assets rather than introducing a new scan dataset.
 
-During recording, the current images and numerical state define an observation. An action refers to that observation, and the subsequent observation completes the transition. The stored episode can then be consumed independently of the browser. Exploratory motion is excluded from the recording sequence. Simulation checkpoints, numerical trajectories, and visual episodes are represented separately because they support different uses: state restoration, numerical analysis, and multimodal learning, respectively.
+\subsection{Policies and Demonstration Learning}
+Google DeepMind's RT-2 and Gemini Robotics connect visual and language representations to robot behavior~\cite{rt2,geminirobotics}. NVIDIA's GR00T N1 and Physical Intelligence's $\pi_{0.5}$ further motivate interfaces between heterogeneous observations, instructions, and robot actions~\cite{gr00t,pi05}. OpenVLA and Octo offer additional reference points for adapting generalist policies~\cite{openvla,octo}. Their embodiment, image-preprocessing, and action conventions require explicit adaptation before they can control this environment.
 
-\section{System Architecture and Data Representation}
-\subsection{Component Boundaries}
-\begin{figure}[ht]
+Robomimic studies learning from offline demonstrations~\cite{robomimic}, while LIBERO evaluates knowledge transfer across manipulation tasks~\cite{libero}. SIMPLER examines simulated evaluation of real-world policies and the effect of visual and control disparities~\cite{simpler}. These works distinguish an available environment interface from evidence that its data improves learning or that its outcomes predict physical performance. The present work establishes the former workflow and leaves the latter evaluations open.
+
+\subsection{World Models}
+World models offer another use for interaction records. DreamerV3 learns a predictive model for imagined control trajectories~\cite{dreamerv3}; Genie studies action-controllable interactive generation from video~\cite{genie}; NVIDIA Cosmos develops world foundation models for physical AI~\cite{cosmos}. For a robot workbench, action-conditioned prediction would require agreement with the robot command, camera geometry, and temporal correspondence of the recorded transition. Robogogogo currently advances explicit MuJoCo dynamics and uses conventional rendering. Its aligned records could support a later world-model study, but no learned simulator or world-model result is included here.
+
+\section{Environment and Object Representation}
+\subsection{Robot and Physical Scene}
+The current environment uses the official Panda model distributed through MuJoCo Menagerie~\cite{menagerie}. Seven arm joints and two finger coordinates form the robot state. A table supports either one selected object or an eight-object arrangement. Each object has an independent free joint, so contact forces determine its motion throughout grasping, transport, and release. No attachment constraint connects an object to the gripper.
+
+MuJoCo advances at a physics interval of 2\,ms. One environment action holds its command for 25 physics steps, giving a 50\,ms control interval, or 20\,Hz. Manual mode advances only in response to an explicit action. The scripted controller supplies actions on this same interface. Initial scene settling precedes the task clock; a seed determines the bounded variation in starting positions. The multi-object layout uses small position jitter of at most 5\,mm per horizontal axis around a curated arrangement.
+
+The earlier RG Mobile Duo workbench remains a separate Python/JAX environment. Its illustrative mobile dual-arm design, geometric analysis, and hardware-related interfaces are not the embodiment or experimental setting of the Panda task presented here.
+
+\subsection{Scanned Visual Geometry and Collision Models}
+Table~\ref{tab:objects} lists the eight scans. Processing preserves metric scale, centers the meshes, and rotates the toy and packages into upright poses. The original texture coordinates are retained, with textures reduced from 4096 to 1024 pixels per side. The can uses a cylindrical collision approximation; the toy and two packages use fitted boxes. Fruit and the meat can use convex mesh collision geometry. These approximations omit small surface features and concavities.
+
+\begin{table}[!htbp]
 \centering
-\begin{tikzpicture}[font=\small, box/.style={draw=ink!55,rounded corners,fill=ink!3,align=center,minimum height=12mm,text width=39mm}, link/.style={-{Latex[length=2mm]},thick,draw=ink!75}]
-\node[box] (ui) {Browser Studio\\Next.js / Three.js};
-\node[box,right=6mm of ui] (api) {Local service\\HTTP / WebSocket};
-\node[box,right=6mm of api] (sim) {Simulation / planning\\Python / JAX};
-\node[box,below=6mm of ui] (learn) {Training-input inspection\\External trainer boundary};
-\node[box,below=6mm of api] (data) {Episode store / readers\\Images, state, actions};
-\node[box,below=6mm of sim] (id) {Robot definition\\Identity / ordered joints};
-\draw[link] (ui) -- (api);
-\draw[link] (api) -- (sim);
-\draw[link] (api) -- (data);
-\draw[link] (data) -- (learn);
-\draw[link] (id) -- (sim);
-\draw[link] (id) -- (data);
-\end{tikzpicture}
-\caption{System architecture. The browser communicates with a local service that coordinates simulation and episode storage. The robot definition supplies a shared embodiment and coordinate ordering to both components. Stored episodes form the interface to external learning tools. Hardware observation and execution boundaries are discussed in Section~\ref{sec:authority}.}
-\label{fig:layers}
-\end{figure}
-
-The architecture separates embodiment definition, numerical simulation, recording, and external data consumption (Figure~\ref{fig:layers}). The robot definition supplies identity, geometry, camera mounts, and coordinate ordering. Simulation and planning components advance the model and construct motion references. Shared runtime interfaces describe observations and action sequences independently of the browser.
-
-The data layer stores episodes and reconstructs aligned transitions, while a separate inspection layer examines their structural consistency. These readers operate without initializing the dynamics engine or the web interface. This separation allows external learning tools to consume recordings without participating in the interactive simulation process. The browser and local service coordinate collection but do not define the meaning of the stored actions.
-
-\subsection{Dynamics and Motion Planning}
-The engine implements articulated forward kinematics, inverse dynamics, mass matrices, and integration in Python/JAX~\cite{jax}. In conventional notation the forward dynamics have the form
-\begin{equation}
- M(q)\ddot q + b(q,\dot q)
- = \tau_{\mathrm{motor}} + \tau_{\mathrm{passive}} + Q_{\mathrm{tire}},
-\end{equation}
-where $b$ collects inertial and gravitational bias, passive terms include damping and joint-limit responses, and $Q_{\mathrm{tire}}$ is the generalized tire force. The mobile integrator treats damping implicitly, bounds motor effort, and computes tire forces from longitudinal and lateral slip with $\|f_i\|\leq\mu N_i$. The base moves because of those forces. Geometry, inertias, friction, and actuator limits are illustrative numbers that still need measurement.
-
-The planner tests endpoints and a direct edge, tries a neutral detour, and can call a bounded seeded RRT-Connect search~\cite{rrtconnect}. Capsule swept-edge checks reject edges that cannot be certified, and support margin is sampled along candidate paths. Accepted joint paths become synchronized quintic references. Execution rechecks each segment from the actual numerical state and checks predicted integration substeps before committing an update. These constraints are defined relative to the model. A rule-based reach controller uses simulator target positions to generate reference motion; its access to target state distinguishes it from a policy whose targets must be inferred from images and language.
-
-\subsection{Observation and Action Representation}
-For observation index $t$ we store
-\begin{equation}
- o_t = (\ell_t, q_t,\dot q_t,\{I_t^c\}_{c\in C},\theta_t),\qquad
- (o_t,a_t,o_{t+1},s_t),
-\end{equation}
-where $\ell_t$ is the instruction, $C$ is the configured camera set, $\theta_t$ holds timestamps and camera metadata, and $s_t$ labels the action source as manual, rule-based, reference, or policy. Optional depth is renderer ground truth and is returned only when a reader asks for it. Actions are ordered joint-position increments, in meters for prismatic coordinates and radians for revolute ones. The manifest records dimensions, units, limits, control duration, and the physics step.
-
-To distinguish controller input from realized motion, let $u_t$ be the requested delta, $d$ the per-coordinate delta limit, and $q_{\min},q_{\max}$ the coordinate bounds. The command path computes
-\begin{equation}
- q_t^\star=\operatorname{clip}\bigl(q_t+\operatorname{clip}(u_t,-d,d),q_{\min},q_{\max}\bigr),
- \qquad a_t=q_t^\star-q_t.
-\end{equation}
-The archive stores $u_t$ as \texttt{requested\_delta} and $a_t$ as \texttt{applied\_delta}; the transition reader returns the latter as its action label. It is the clipped target increment, computed before integration, rather than the realized displacement $q_{t+1}-q_t$. Dynamics and runtime guards determine the next state. A learner should therefore predict the command label, and evaluate tracking using the observed state change separately. The recorded action duration is the executed control-tick count times the physics substeps times the physics timestep. With a 0.002\,s physics timestep and five substeps per control tick, a fully executed ten-tick request spans 0.1\,s of simulation time. Simulation duration does not specify wall-clock collection or inference latency.
-
-An episode contains a manifest, camera frames, optional depth, and numerical state data. Structural inspection examines temporal alignment, state dimensions, finite numerical values, frame references, and the action representation. Embodiment identity and coordinate ordering are checked when an episode is interpreted against the current model. These constraints establish how a transition can be read; the semantic correctness of an instruction and the usefulness of its visual content require separate evaluation.
-
-\subsection{Policy Integration Requirements}\label{sec:vla}
-The policy interface maps an observation to an action sequence. Connecting a VLA requires agreement between the model's input representation and the recorded camera views, instruction, and proprioception. The output mapping must specify action coordinates, units, normalization, temporal horizon, and execution rate. The 31-coordinate simulation command includes base, wheel, torso, arm, and head coordinates and currently has no actuated gripper channel.
-
-Information access is also part of the experimental definition. The observation representation can expose simulator targets, tool positions, and optional ground-truth depth. A visual-language policy must receive a declared subset of these fields, with privileged target state reserved for reference controllers or explicitly identified experimental conditions. Otherwise, performance may reflect access to simulator state rather than interpretation of visual and linguistic inputs. The current environment defines this interface; learned-model inference and training remain external integration work.
-
-\subsection{Hardware Observation and Execution Boundaries}\label{sec:authority}
-A separate read-only path supports hardware telemetry and measured camera calibration. Simulated camera presets and measured calibration are represented independently, and observing a physical source does not enable actuation. An optional command-test backend supports coordinated command-lifecycle development independently of the simulator; it is not a physical robot interface. The collection process studied here uses simulated state and rendered observations. Physical demonstration recording would require synchronized measured observations and commands together with a commissioned execution adapter.
-
-\section{Preliminary Geometric Characterization}\label{sec:evidence}
-The preliminary analysis examines self-clearance within the reference model's declared working ranges. Its purpose is to characterize geometric constraints relevant to demonstration collection. It does not evaluate learned control or the quality of the recorded visual data.
-
-\subsection{Sampling Procedure}
-Configurations are evaluated using capsule-based collision proxies with a required positive clearance of 12\,mm. Random configurations are drawn from specified practical arm intervals across three nominal torso postures. Two posture transitions contribute 41 discretized configurations each. The first sample contains 24 random configurations at seed~42 and the 82 transition configurations. A previously recorded analysis of the same embodiment contains 512 random configurations at seed~43 and the same 82 transition configurations. The transition configurations are shared deterministic samples, rather than independent observations in the two analyses.
-
-\subsection{Observed Clearance}
-All 106 configurations in the smaller sample meet the modeled clearance threshold. In the broader sample, 532 of 594 configurations meet the full rigid-body threshold and 538 meet the shoulder-pair threshold. The 62 full-body clearance violations occur in the random subset; all 82 transition configurations meet the threshold. The minimum guard-equivalent clearance is approximately $-63.9$\,mm. Negative values indicate overlap of the collision proxies. Reported interference includes upper-arm/chest and hand/base pairs, with additional wrist/torso and cross-arm cases described in the accompanying model analysis.
-
-\begin{table}[ht]
-\centering\small
-\caption{Sampled geometric clearance at a required 12\,mm margin. Random samples use the same declared coordinate ranges. The deterministic transition samples are shared by both analyses and are listed once.}
-\begin{tabularx}{\linewidth}{@{}Xrr@{}}
+\small
+\begin{tabular}{lllr}
 \toprule
-Configuration subset & Configurations evaluated & Meeting clearance\\
+Object & YCB identifier & Collision model & Mass (g)\\
 \midrule
-Random configurations, seed 42 & 24 & 24\\
-Random configurations, seed 43 & 512 & 450\\
-Shared posture-transition configurations & 82 & 82\\
+Tomato soup can & 005\_tomato\_soup\_can & Cylinder & 350\\
+Rubik's Cube & 077\_rubiks\_cube & Box & 90\\
+Chocolate pudding box & 008\_pudding\_box & Box & 190\\
+Strawberry gelatin box & 009\_gelatin\_box & Box & 90\\
+Potted meat can & 010\_potted\_meat\_can & Convex mesh & 170\\
+Strawberry & 012\_strawberry & Convex mesh & 20\\
+Lemon & 014\_lemon & Convex mesh & 60\\
+Orange & 017\_orange & Convex mesh & 140\\
 \bottomrule
-\end{tabularx}
-\label{tab:evidence}
+\end{tabular}
+\caption{Curated YCB objects. Masses are assigned simulation parameters, not calibrated measurements. The toy is one rigid body; its faces do not turn. An additional primitive block remains available for the single-object task.}
+\label{tab:objects}
 \end{table}
 
-The contrast between the smaller and broader samples demonstrates the limited coverage of a small configuration set. A clear finite sample cannot establish clearance throughout the declared operating domain, and discrete transition samples do not establish continuous-path clearance. The broader analysis supplies concrete counterexamples that can inform model refinement and selection of collection configurations. These counts describe sampled geometry, not a workspace-wide success probability or a policy completion rate.
+Sliding friction is assigned rather than identified from physical trials. The scanned-object configuration uses a gripper tendon servo gain of 300\,N/m within the upstream actuator force limit, accommodating the heavier can. Geometry, friction, mass, servo response, and collision approximation jointly determine the simulated interaction; visual resemblance alone does not establish physical fidelity.
 
-\section{Research Agenda}\label{sec:proposed}
-The environment motivates three empirical questions: whether collection preserves informative and aligned observations, whether the resulting data supports closed-loop learning, and which aspects of the simulation are sufficient for the selected tasks. The following studies are proposed; their outcomes are not part of the present results.
+\subsection{Observations and Rendering}
+The numerical robot observation has 25 proprioceptive values: nine joint positions, nine velocities, the three-dimensional tool position, and a four-component tool quaternion in XYZW order. The previous eight-dimensional command and task-relative time are also available. Optional overhead and wrist images are RGB arrays of $144\times240$ pixels.
 
-\subsection{Collection Quality and Cost}
-An initial study will examine multi-step rendered episodes for single-arm reaching, coordinated dual-arm reaching, and posture transitions. These tasks are compatible with the current model without requiring actuated grasp contact. Fixed task instances will specify instructions, initial states, targets, horizons, and success tolerances. Successful and unsuccessful attempts will be retained to estimate complete-transition yield, frame consistency, command clipping, and the incidence of runtime interventions.
+The browser renders MuJoCo poses and scanned textures through Three.js. Native MuJoCo rendering supplies the recorded images and image observations used at the policy boundary. Both views use the model's camera poses and fields of view, but their lighting and material rendering differ. Browser previews should therefore be distinguished from the native images stored in an episode.
 
-Collection cost can be characterized by wall-clock time per transition and storage per episode, separating physics, four-camera rendering, image transfer, serialization, and inspection. Cold JAX compilation and steady-state execution require separate measurements. Manual collection and the privileged reach controller provide two collection conditions with different information access. An external dataset adapter will be assessed by comparing source transitions with those returned by the target format's native reader, including temporal alignment and command interpretation.
+\section{Target Collection and Control}
+\subsection{Task Definition}
+In the multi-object setting, a user selects a named target from the object instances already on the table. Each object has a designated 13\,cm collection cell. Shallow physical walls contain rounded items after release and separate successive destinations. Selecting a new target starts a new task episode while preserving the physical state of the arm, all objects, and previously collected items. Resetting the table instead restores the complete seeded arrangement.
 
-\subsection{Learning Utility and Language Grounding}
-A first learning study will train a behavior-cloning baseline in the supported action space before adapting a pretrained VLA. Evaluation splits will separate episodes and target or scene instances, with all camera views of an episode assigned to the same split. Normalization will be estimated from training data only. Held-out rollout completion, hand-target error, and runtime interventions will characterize closed-loop behavior; offline action error will provide a complementary diagnostic.
+Collection succeeds when the target center is within 6\,cm of the cell center on each horizontal axis and within 8\,mm of its nominal resting height; its translational speed is below 20\,mm/s; the gripper is open beyond 65\,mm with no finger contact; the object was previously lifted by at least 95\,mm; and the tool is more than 120\,mm clear. These conditions must persist for six control steps. Reward is one on success and zero otherwise. Success or an object falling below the workspace terminates the task; the default 800-action limit truncates it. The single-object task uses a 35\,mm horizontal-distance condition around a marked destination instead of a collection cell.
 
-Language grounding requires task instances in which different instructions select different reachable goals within the same scene. Paired evaluations with the instruction retained, removed, or shuffled can assess whether behavior depends on the language input. Camera-subset and dataset-size comparisons can examine the contribution of observation coverage and collection volume. Trial counts will be selected from pilot variability and the desired precision, with uncertainty reported at the episode level and variability across training runs reported separately.
+These definitions measure the selected object's transfer and release. They do not impose a quantitative penalty for disturbing another object. The remaining instances continue to respond physically to contacts, and their complete states remain available for later analysis.
 
-\subsection{Numerical and Geometric Validity}
-Further model characterization will examine timestep convergence and energy behavior on controlled fixtures, followed by matched kinematic and simple-trajectory comparisons with an independently configured simulator. Agreement between engines would establish a consistency result under matched assumptions; physical validation would additionally require measured robot data. Expanded geometric sampling with independently specified seeds will retain failing configurations and collision pairs to support analysis of the collection domain.
+\subsection{Manual and Reference Control}
+The native action is
+\begin{equation}
+ a_t=(q^{\star}_{1,t},\ldots,q^{\star}_{7,t},g^{\star}_t)\in\mathbb{R}^{8},
+\end{equation}
+where arm targets are absolute joint angles in radians and $g^{\star}_t\in[0,0.08]$ is total finger opening in meters. Commands outside the model's joint bounds are rejected. A commanded target is not a measured joint displacement or contact force.
 
-\subsection{Action-Conditioned World-Model Evaluation}\label{sec:worldmodel}
-Recorded transitions could support a complementary study of predicting future observations from an observation history and a sequence of commands. A controlled evaluation would compare predicted rollouts against held-out simulated trajectories under the same initial conditions and action sequences. One-step prediction and longer open-loop rollouts would be analyzed separately to expose accumulated drift. Paired action sequences from a common initial state would test whether predictions respond to the command rather than reproducing a typical motion independent of control.
+Manual control provides Cartesian tool nudges through inverse kinematics, gripper-opening commands, and single control steps. The reference controller uses smooth joint-target interpolation through approach, descent, grasp, lift, carry, lower, release, and withdrawal phases. It uses known object state to compensate for displacement before grasping and the measured object-to-tool offset before lowering. Bilateral finger contact and retained elevation inform its grasp and transport conditions.
 
-Relevant criteria include task-relevant state error, temporal consistency, agreement among camera views, and correspondence between predicted motion and the modeled geometric constraints. For a generative observation component conditioned on external simulator state, the numerical trajectory would remain fixed while camera observations vary, allowing the effect of visual variation on policy behavior to be studied separately from changes in dynamics. Such generated observations would require explicit provenance and alignment with the conditioning state. The present environment has no trained world model or generative observation component; these experiments define a possible extension of its collection role.
+The controller is a bounded scripted procedure rather than a general collision-free planner. It operates on the curated arrangement and can fail on missed contacts, slip, unreachable poses, or an unsettled placement. A failure does not convert into a successful episode through object repositioning or attachment.
 
-\section{Discussion and Limitations}
-The architecture makes action interpretation and embodiment identity explicit at the boundary between simulation and learning. This can support analysis of whether collection errors arise from temporal misalignment, representation changes, or the behavior itself. Establishing a practical benefit requires the collection and learning studies outlined above. The geometric characterization addresses one property of the model; rendered data quality, collection productivity, learned-policy success, and comparative performance remain unmeasured.
+\section{Episodes and Policy Integration}
+\subsection{Temporal and Scene Correspondence}
+An episode with instruction $\ell$ and $H$ actions is represented as
+\begin{equation}
+ E=\bigl(\ell,\{o_t\}_{t=0}^{H},\{a_t,r_t,d_t,u_t\}_{t=0}^{H-1},\mathcal{M}\bigr),
+\end{equation}
+where $d_t$ and $u_t$ denote termination and truncation, and $\mathcal{M}$ describes the robot, scene, objects, cameras, and control timing. Transition $t$ associates $o_t$, the command $a_t$, and the resulting $o_{t+1}$. Thus $H$ actions require $H+1$ observation boundaries and, when both cameras are recorded, $2(H+1)$ images.
 
-The physical model also limits the tasks and conclusions supported by the environment. Geometry, inertias, actuator limits, tire parameters, and calibration are illustrative and require measurement. The base is constrained to level planar motion, excluding roll, pitch, suspension, and rollover. Support-margin monitoring is not a tipping-dynamics model, and capsule-based clearance depends on the chosen geometric proxies. The observed interference constrains interpretation of the proposed working ranges. Actuated grasp contact, payload handling, and physical execution require further development.
+The record retains the scene's object list, active target, assigned physical properties, model and asset identity, camera geometry, numerical robot and object state, and action source. Manual, scripted, and direct API actions remain distinguishable. Partial and failed runs may be saved. Starting a recording partway through a task preserves the actual starting state and its task-relative time.
 
-Finally, a structurally consistent episode need not be an informative demonstration. It may contain ambiguous instructions, visually uninformative frames, unsuccessful behavior, or insufficient task variation. Dataset characterization and held-out policy evaluation are therefore necessary to determine which recordings are useful for VLA learning. World-model training introduces an additional requirement: visual prediction quality must be related to action conditioning and task-relevant dynamics. The environment provides a basis for these investigations rather than evidence that they have already succeeded.
+Replay restores stored integration states and task bookkeeping for the complete scene. It does not re-execute a policy or assert deterministic action replay across simulator versions. Loading a recorded scene temporarily replaces the displayed environment; leaving replay restores the previous live scene. Target changes and replay therefore have different semantics: the former preserve the live physical scene and begin a new task episode, while the latter display a recorded scene without granting control over it.
 
+\subsection{Policy Observation Boundary}
+A policy is expressed as
+\begin{equation}
+ a_t=\pi_{\theta}(o_t;\ell).
+\end{equation}
+The policy observation includes proprioception, the previous action, time, and optional overhead/wrist RGB. Scene object lists, object positions, reward, and task-success diagnostics are excluded from this observation. They remain accessible to the environment for bookkeeping and to the scripted reference controller, whose information advantage must be acknowledged in any later comparison.
+
+
+
+Both an in-process policy call and an HTTP observation/action interface are available. The latter includes episode identity, a state revision, camera images and geometry, and action bounds and units. A response tied to an outdated revision is rejected rather than applied to a different scene state. This matters when manual interaction or a target change occurs while an external model is computing an action.
+
+A pretrained VLA still needs an adapter for image preprocessing, instruction handling, embodiment, coordinate frames, control rate, and action representation. An end-effector-delta policy, for example, cannot be interpreted directly as eight absolute joint and gripper targets. The interface leaves this adaptation explicit; no learned policy or training procedure is supplied by the current workbench.
+
+\begin{figure}[!h]
+\centering
+\begin{tikzpicture}[font=\small,box/.style={draw=ink!55,rounded corners,fill=ink!3,align=center,minimum height=13mm,text width=39mm},link/.style={-{Latex[length=2mm]},thick,draw=ink!75}]
+\node[box] (browser) {Browser workbench\\Scene / manual controls};
+\node[box,right=7mm of browser] (env) {Environment\\MuJoCo / task state};
+\node[box,right=7mm of env] (store) {Episode records\\States / actions / RGB};
+\node[box,below=9mm of env] (policy) {External policy\\Instruction / RGB / robot state};
+\draw[link] (browser) -- (env);
+\draw[link] (env) -- (store);
+\draw[link] (env) -- node[right,font=\footnotesize]{observations} (policy);
+\draw[link] (policy.west) -- ++(-15mm,0) |- (env.south west);
+\node[font=\footnotesize,anchor=east] at ([xshift=-18mm,yshift=1mm]policy.west) {actions};
+\end{tikzpicture}
+\caption{The environment owns physics and task state. A future learned policy receives a restricted observation and returns the same action representation used by the workbench. Recording is independent of which controller supplies the actions.}
+\label{fig:architecture}
+\end{figure}
+
+\section{Illustrative Demonstration and Scope}
+A scripted sequence in the seeded eight-object arrangement collected the soup can, toy, pudding box, gelatin box, meat can, strawberry, lemon, and orange in succession. Each target entered its own collection cell; selecting the next target preserved all physical state. A recorded lemon episode also retained the other seven instances and both camera streams, as illustrated in Figure~\ref{fig:tabletop}.
+
+This sequence demonstrates the intended interaction and recording workflow in one curated arrangement. Controller development used these objects and placements, so the sequence is not a held-out estimate of success probability. It does not establish robustness to occlusion, arbitrary piles, unseen objects, alternative robots, or real-world dynamics. In particular, the target name is resolved through scene identity, and the controller accesses object poses. Language grounding and visual localization remain distinct empirical problems.
+
+The original object sources, approximate contact geometry, and assigned physical parameters further constrain interpretation. The appearance of a familiar product does not imply that its simulated mass, friction, deformation, or contents match a physical counterpart. The current initial arrangement is more structured than an arbitrary cluttered household surface.
+
+\section{Directions for Learning and Evaluation}
+A next study can connect an image-conditioned policy to the existing action interface and compare it with the privileged-state reference controller. Such an evaluation should separate target identification from grasp execution, vary instructions and object arrangements, and measure non-target disturbance alongside collection success. Training and evaluation arrangements should be distinct, with repeated seeds and reported failures. Access to object-state metadata must be declared separately from camera-only policy input.
+
+Broader asset and scene import requires additional treatment of collision geometry, scale, articulation, and physical calibration. A scanned room can fuse movable objects with its static background; rendering that room alone does not make its contents independently manipulable. These concerns motivate an incremental progression from individual scans to persistent object scenes before room-scale reconstruction.
+
+These records could support prediction of future images or task-relevant state conditioned on robot commands. Evaluation should address temporal alignment, multi-view consistency, and preservation of collection outcomes. This remains a prospective use of the data; no learned world model is implemented.
+
+\begin{samepage}
 \section{Conclusion}
-Robogogogo integrates mobile dual-arm simulation, multi-camera observation, and demonstration recording around an explicit relationship between language, robot state, commands, and subsequent motion. The proposed episode representation preserves embodiment identity and distinguishes a bounded command from its realized outcome. Preliminary geometric characterization identifies limitations of the modeled collection domain, including clearance violations missed by a smaller sample. The next research stage is to evaluate sustained rendered collection and external data integration, followed by controlled studies of policy learning, language grounding, and action-conditioned prediction. These studies will determine the environment's utility as data infrastructure for VLA and world-model research.
+Robogogogo links textured object assets, contact-driven manipulation, persistent tabletop scenes, and aligned episode records. Named-target collection provides a concrete workflow, and the policy boundary supports future VLA integration. Comparative evaluation of learning utility, perceptual generalization, and physical transfer remains future work.
 
-\paragraph{Code and artifact availability.}
-Source code and documentation are available in the project repository~\cite{robogogogo}. The manuscript source and build instructions accompany the paper.
+\end{samepage}
 
 \bibliographystyle{plainnat}
 \bibliography{references}

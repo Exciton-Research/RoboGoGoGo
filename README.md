@@ -34,17 +34,17 @@ baseline is rule-based. Training, learned checkpoint inference, physical command
 execution, and real-robot evaluation still require integration. The mechanical
 design is illustrative; physical hardware has not been commissioned.
 
-## Research paper
+## Paper
 
 **[Read the paper (PDF)](paper/robogogogo.pdf)**:
-*Robogogogo: An Early Robot Simulation Environment for Demonstration Data
-Collection*, by the Robo Team.
+*Robogogogo: A Tabletop Simulation Workbench for Object Collection and Policy
+Integration*, by the Robo Team.
 
-The early paper describes the original environment, data representation,
-preliminary geometric analysis, and research directions for VLA policies and
-learned world models. It does not report results from the new controlled study.
-[LaTeX sources, references, figures, and build instructions](paper/)
-are included in this repository.
+The paper describes the eight-object Panda environment, physical collection task,
+aligned recording and replay, and the interface for a future VLA. Its illustrative
+scripted sequence is separate from claims about learned perception, generalization,
+or real-robot performance. [Sources, references, figures, and build instructions](paper/)
+are included.
 
 ## Install and run
 
@@ -60,10 +60,13 @@ bash scripts/setup.sh
 ```
 
 Open **[http://127.0.0.1:8765](http://127.0.0.1:8765)** and choose
-**Run reference task**. Stop the server with Ctrl+C.
+**Load cluttered table · 8 objects**, select a target, then **Collect target**.
+Use **Record episode** before collection to save RGB and physical state. Stop the
+server with Ctrl+C.
 
 The setup script creates a local `.venv`, installs Python dependencies, builds
-Studio from the npm lockfile, and caches the pinned official Panda model. Rerun it
+Studio from the npm lockfile, and caches the pinned Panda model and eight YCB
+scans. Rerun it
 with the same options after updating the checkout. It does not install system
 packages or change global Python/npm configuration.
 
@@ -73,7 +76,8 @@ outside the standard setup because current JAX CPU wheels target Apple Silicon.
 
 ## Your first session
 
-For the focused demo, follow [grasp and place](docs/demo.md). To use the original
+For object loading, target collection, recording/replay, and policy integration,
+follow the [Panda workbench guide](docs/demo.md). To use the original
 RG Mobile Duo features below, launch `.venv/bin/robogogogo-studio` and open
 `/workflow/` or `/simulation/`.
 
@@ -167,8 +171,8 @@ development loop, package ownership, targeted tests, and screenshot regeneration
 ## Guides
 
 - [Documentation index](docs/README.md)
-- [Panda grasp-and-place demo](docs/demo.md)
-- [Controlled simulation-error research](docs/research.md)
+- [Panda object library, collection, and policy interface](docs/demo.md)
+- [Historical optional simulation-error protocol](docs/research.md)
 - [Install on macOS or Linux](docs/installation.md)
 - [Studio walkthrough](docs/getting-started.md)
 - [Architecture and workflow layers](docs/platform.md)

@@ -5,6 +5,12 @@ Run these commands from the repository root unless stated otherwise. Start with
 
 ## Repository map
 
+- `src/robogogogo/demo/`: Panda scene/assets, explicit environment stepping,
+  object library, reference controller, recording/replay, HTTP transport, and the
+  `PandaPolicy` / `step_policy` boundary. This is the current tabletop workbench.
+- `studio/src/demo/`: Panda scene rendering, object/target selection, manual
+  controls, and recording/replay UI.
+
 - `src/robogogogo/robot/`: robot identity, geometry, camera mounts, hardware
   calibration/telemetry, actuator catalogs, and command adapter contracts.
 - `src/robogogogo/simulation/`: JAX dynamics, kinematics, integration, and numerical
@@ -23,7 +29,9 @@ Run these commands from the repository root unless stated otherwise. Start with
 - `docs/validation/`: engineering evidence for specific design revisions.
 
 See [platform layers](platform.md) before adding cross-layer dependencies. Keep
-product experiments and learning inputs on the canonical RG Mobile Duo definition.
+Panda and RG Mobile Duo observations, actions, and archives separate. The Panda
+uses MuJoCo and eight absolute targets; the original Studio has a different JAX
+model and command convention.
 Use minimal fixtures for isolated mathematical regressions.
 
 ## Python and frontend editing
@@ -32,8 +40,8 @@ The Python installation is editable: source edits apply after server restart.
 For frontend hot reload, run two terminals:
 
 ```sh
-# Terminal 1: Python API and simulation.
-.venv/bin/robogogogo-studio
+# Terminal 1: Panda API and simulation.
+.venv/bin/robogogogo-demo
 ```
 
 ```sh
@@ -43,7 +51,9 @@ npm run dev --prefix studio
 
 Open [http://127.0.0.1:3000](http://127.0.0.1:3000). Next proxies HTTP API requests
 to port 8765; the simulation WebSocket connects directly to that Python port.
-Both localhost development origins are allowed by the local API.
+Both localhost development origins are allowed by the local API. The Panda
+workbench uses HTTP; the WebSocket path applies to the earlier Studio. Launch
+`robogogogo-studio` instead when developing that workspace.
 
 If Python runs on a different port, configure both paths:
 

@@ -1,7 +1,9 @@
 # Install on macOS or Linux
 
-The default install runs JAX on the CPU and serves a built Studio from one local
-Python process. It needs no robot, ROS installation, CUDA toolkit, or GPU.
+The default install provides a local MuJoCo Panda workbench and the earlier
+JAX-based Studio. It needs no physical robot, ROS installation, or CUDA toolkit.
+Native RGB capture needs a working MuJoCo offscreen OpenGL context; browser
+visualization uses WebGL.
 
 ## Supported setup
 
@@ -77,7 +79,7 @@ PYTHON=python3.12 bash scripts/setup.sh
 ```
 
 The script checks the platform and tools, creates `.venv`, installs the `studio`,
-`perception`, and `demo` extras, caches the pinned Panda model, installs locked npm
+`perception`, and `demo` extras, caches the pinned Panda model and eight textured YCB scans, installs locked npm
 dependencies, and builds/packages the static UI. It stops on errors rather
 than reporting a partial installation as complete. It can be run from any working
 directory using the script's full path.
@@ -86,11 +88,27 @@ For development tools use `bash scripts/setup.sh --dev`. To choose a virtualenv
 outside the checkout, set `ROBOGOGOGO_VENV=/absolute/path/to/venv`. Subsequent
 commands must use that environment's executables instead of `.venv/bin/…`.
 
-## 3. Start Studio
+## 3. Start the Panda workbench
 
-For the focused grasp-and-place task, run `.venv/bin/robogogogo-demo` and open
-[the demo](http://127.0.0.1:8765). See [the demo guide](demo.md).
-The original RG Mobile Duo workflow uses the server below and `/workflow/`.
+```sh
+.venv/bin/robogogogo-demo
+```
+
+Open [the workbench](http://127.0.0.1:8765). Choose **Load cluttered table · 8
+objects**, select a named target, and choose **Collect target**. Start **Record
+episode** first to retain RGB and full scene state. Pick another target after
+completion to continue without resetting the table. See the [workbench guide](demo.md)
+for single-object loading, manual control, replay, and the future VLA interface.
+The collector is scripted and uses known scene poses.
+
+Use `--recordings /path/to/episodes` for a stable recording directory and
+`--port 8876` to change the port. Downloads happen during explicit setup or
+**Download & load**, not ordinary scene reads. Cached assets work offline.
+
+### Original RG Mobile Duo Studio
+
+The original workflow uses the server below and `/workflow/`. Run it on a different
+port if the Panda server is already running.
 
 From the repo root:
 
@@ -120,15 +138,16 @@ and simulation smoke test:
 ```sh
 python3 -m venv .venv
 .venv/bin/python -m pip install --upgrade pip
-.venv/bin/python -m pip install -e '.[studio,perception]'
+.venv/bin/python -m pip install -e '.[studio,perception,demo]'
+.venv/bin/python -m robogogogo.demo --setup
 npm ci --prefix studio
 npm run build --prefix studio
-.venv/bin/python -m robogogogo.server
+.venv/bin/python -m robogogogo.demo
 ```
 
 Quote the Python extras so zsh does not expand the brackets. `perception` adds
 OpenCV for stereo analysis; `dev` adds pytest, Ruff, and HTTP client test support.
-Use `.[studio,perception,dev]` for all development checks.
+Use `.[studio,perception,demo,dev]` for development with both environments.
 
 ## Headless numerical use
 
@@ -151,7 +170,8 @@ After updating a clean checkout with `git pull`, rerun `bash scripts/setup.sh`
 rebuilds Studio with the checked-in npm lockfile. A Python editable install picks
 up Python edits, but frontend edits still need a rebuild and server restart.
 
-Recordings survive setup. Back up `runs/studio/` or your `--projects` directory
+Recordings survive setup. Back up `runs/demo/episodes/` (or `--recordings`) and
+`runs/studio/` (or `--projects`)
 before changing robot revisions. Historical archives remain inspectable; current
 learning validation rejects a mismatched robot revision.
 
