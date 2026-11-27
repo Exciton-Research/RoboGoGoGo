@@ -18,12 +18,24 @@ def collection_xy(index, count):
 
 
 def scene_xml(
-    path, *, object_spec=None, object_dir=None, other_objects=None, gripper_stiffness=600
+    path,
+    *,
+    object_spec=None,
+    object_dir=None,
+    other_objects=None,
+    gripper_stiffness=600,
+    collection_style="cells",
+    soft_fingers=True,
 ):
     root = ET.parse(path).getroot()
     root.find("compiler").set("meshdir", str(path.parent / "assets"))
     root.find("option").set("timestep", "0.002")
     root.find("option").set("iterations", "60")
+    if soft_fingers and object_spec is not None and object_spec["id"] != "block":
+        # MuJoCo's recommended manipulation settings stiffen tangential
+        # constraints without inflating the sliding-friction coefficient.
+        root.find("option").set("cone", "elliptic")
+        root.find("option").set("impratio", "10")
     root.remove(root.find("keyframe"))
     world = root.find("worldbody")
     world.find("body").set("pos", f"0 0 {TABLE_Z}")
@@ -76,7 +88,7 @@ def scene_xml(
         gripper.set("gainprm", f"{0.04 * gripper_stiffness / 255:.11f} 0 0")
         gripper.set("biasprm", f"0 {-gripper_stiffness:g} {-gripper_stiffness * 0.1:g}")
         cube.remove(cube.find("geom"))
-        add_scan(root, cube, object_spec, object_dir)
+        add_scan(root, cube, object_spec, object_dir, rolling=soft_fingers)
     for index, (spec, folder) in enumerate(other_objects or [], start=1):
         body = ET.SubElement(
             world,
@@ -85,8 +97,70 @@ def scene_xml(
             pos=f"0.47 -0.17 {TABLE_Z + spec['dimensions'][2] / 2 + 0.002}",
         )
         ET.SubElement(body, "freejoint", name=f"clutter_{index}_free")
-        add_scan(root, body, spec, folder, suffix=f"_{index}")
-    if other_objects:
+        add_scan(root, body, spec, folder, suffix=f"_{index}", rolling=soft_fingers)
+    if soft_fingers and object_spec is not None and object_spec["id"] != "block":
+        # Soft pads resist rolling as well as sliding. Apply this only at finger
+        # contacts. Other contacts retain their original friction coefficients,
+        # with their already-declared rolling resistance enabled.
+        contact = root.find("contact")
+        if contact is None:
+            contact = ET.SubElement(root, "contact")
+        for side in ("left", "right"):
+            finger = world.find(f".//body[@name='{side}_finger']")
+            for index, geom in enumerate(finger.findall("geom")):
+                if geom.get("class") == "visual":
+                    continue
+                name = f"{side}_contact_{index}"
+                geom.set("name", name)
+                for object_index, spec in enumerate(
+                    [object_spec, *[item[0] for item in other_objects or []]]
+                ):
+                    sliding = max(1.0, float(spec["friction"]))
+                    other = "object_collision" + (f"_{object_index}" if object_index else "")
+                    ET.SubElement(
+                        contact,
+                        "pair",
+                        geom1=name,
+                        geom2=other,
+                        condim="6",
+                        friction=f"{sliding:g} {sliding:g} 0.01 0.001 0.001",
+                        solref="0.005 1",
+                    )
+    if other_objects and collection_style == "bin":
+        # A shared receiving bin gives long packages room to settle. Painted
+        # target cells remain distinct; internal rails are unnecessary obstacles.
+        for axis in range(2):
+            for sign in (-1, 1):
+                center, half = np.array([0.47, 0.2425]), np.array([0.285, 0.2075])
+                position = [*center, TABLE_Z + 0.015]
+                position[axis] += sign * half[axis]
+                size = [*half, 0.015]
+                size[axis] = 0.002
+                ET.SubElement(
+                    world,
+                    "geom",
+                    name=f"bin_{axis}_{sign}",
+                    type="box",
+                    pos=" ".join(map(str, position)),
+                    size=" ".join(map(str, size)),
+                    rgba="0.45 0.52 0.44 1",
+                    friction="0.8 0.005 0.0001",
+                )
+        for index in range(1 + len(other_objects)):
+            x, y = collection_xy(index, 1 + len(other_objects))
+            ET.SubElement(
+                world,
+                "geom",
+                name=f"cell_{index}",
+                type="box",
+                size="0.065 0.06 0.0002",
+                pos=f"{x} {y} {TABLE_Z + 0.0002}",
+                rgba="0.60 0.66 0.58 1",
+                contype="0",
+                conaffinity="0",
+                group="2",
+            )
+    elif other_objects:
         for index in range(1 + len(other_objects)):
             x, y = collection_xy(index, 1 + len(other_objects))
             for axis in range(2):
@@ -137,7 +211,7 @@ def scene_xml(
     return ET.tostring(root, encoding="unicode")
 
 
-def add_scan(root, body, spec, folder, suffix=""):
+def add_scan(root, body, spec, folder, suffix="", *, rolling=False):
     asset = root.find("asset")
     mesh, texture, material = (
         name + suffix for name in ("object_mesh", "object_texture", "object_material")
@@ -177,7 +251,7 @@ def add_scan(root, body, spec, folder, suffix=""):
         **attributes,
         mass=str(spec["mass"]),
         friction=f"{spec['friction']} 0.01 0.0001",
-        condim="4",
+        condim="6" if rolling else "4",
         solref="0.005 1",
         group="3",
     )

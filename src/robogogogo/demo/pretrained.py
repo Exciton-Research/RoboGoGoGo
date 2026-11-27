@@ -5,8 +5,11 @@ import hashlib
 import importlib.util
 import io
 import json
+import re
 import time
+from collections import OrderedDict
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 from PIL import Image, ImageDraw
@@ -99,6 +102,7 @@ class PretrainedDetector:
             digest,
         ):
             raise ModelNotReady("OWLv2 cache changed; rerun robogogogo-demo --setup-vlm")
+        self._image_cache = OrderedDict()
         self.torch = torch
         self.device = device or (
             "cuda"
@@ -132,8 +136,29 @@ class PretrainedDetector:
         image = Image.fromarray(rgb)
         text = [[f"a photo of {query}"]]
         inputs = self.processor(text=text, images=image, return_tensors="pt").to(self.device)
+        # Cache visual features by exact RGB bytes, not scene IDs or selected
+        # targets. A fresh sensor frame always determines whether reuse is valid.
+        key = (rgb.shape, hashlib.sha256(rgb.tobytes()).digest())
         with self.torch.inference_mode():
-            output = self.model(**inputs)
+            if key not in self._image_cache:
+                feature_map, _ = self.model.image_embedder(inputs["pixel_values"])
+                features = feature_map.flatten(1, 2)
+                boxes = self.model.box_predictor(features, feature_map)
+                self._image_cache[key] = (features, boxes)
+                if len(self._image_cache) > 48:
+                    self._image_cache.popitem(last=False)
+            self._image_cache.move_to_end(key)
+            features, boxes = self._image_cache[key]
+            text_features = self.model.owlv2.get_text_features(
+                inputs["input_ids"], inputs["attention_mask"]
+            ).unsqueeze(0)
+            text_features = text_features / self.torch.linalg.norm(
+                text_features, dim=-1, keepdim=True
+            )
+            logits, _ = self.model.class_predictor(
+                features, text_features, inputs["input_ids"][:, 0].unsqueeze(0) > 0
+            )
+            output = SimpleNamespace(logits=logits, pred_boxes=boxes)
         result = self.processor.post_process_grounded_object_detection(
             output,
             threshold=threshold,
@@ -152,10 +177,87 @@ class PretrainedDetector:
                 detections.append({"box": box, "score": score, "query": query})
         return detections
 
+    def find_target(self, query, capture):
+        """Inspect fixed RGB-D views; the sensor callback supplies no object state."""
+        from .vision import workspace_crop
+
+        started = time.perf_counter()
+        for view, focused in (("side", False), ("front", True)):
+            sensor = capture(view=view)
+            try:
+                crop = workspace_crop(**sensor) if focused else None
+                result = self.find(query, **sensor, crop=crop)
+                if result["position"] is None:
+                    raise DetectionRejected(result["pickup_error"])
+                result["camera_view"] = view
+                if crop is not None:
+                    result["detection_crop"] = crop
+                result["inference_seconds"] = time.perf_counter() - started
+                return result
+            except DetectionRejected:
+                pass
+        confirmed = []
+        for view in ("side", "diagonal", "front", "left"):
+            try:
+                result = self.inspect(query, **capture(view=view, detail=True))
+                if result["position"] is None:
+                    raise DetectionRejected(result["pickup_error"])
+                result["camera_view"] = view
+                for other in confirmed:
+                    distance = np.linalg.norm(np.asarray(result["position"]) - other["position"])
+                    if distance < 0.035:
+                        best = max((result, other), key=lambda item: item["score"])
+                        best.update(
+                            inspection_views=[other["camera_view"], view],
+                            inference_seconds=time.perf_counter() - started,
+                        )
+                        return best
+                confirmed.append(result)
+            except DetectionRejected:
+                pass
+        raise DetectionRejected(
+            f"OWLv2 could not confirm '{query}' from two inspection views. No motion started."
+        )
+
+    def inspect(self, query, *, rgb, depth, position, rotation, fovy):
+        """Compare close-ups of all visible depth regions using the user's words."""
+        from .vision import proposals
+
+        started = time.perf_counter()
+        query = " ".join(query.split())
+        if not query or len(query) > 120:
+            raise ValueError("Describe the object using 1–120 characters")
+        # Grammatical container phrasing, independent of any library: e.g.
+        # "potted meat can" -> "a can of potted meat". No brand/asset aliases.
+        match = re.fullmatch(r"(.+) (box|carton|can|tin)", query, re.IGNORECASE)
+        prompt = f"a {match[2]} of {match[1]}" if match else query
+        candidates = []
+        for region in proposals(rgb, depth, position, rotation, fovy, with_appearance=False):
+            left, top, right, bottom = region["box"]
+            pad = max(12, int(max(right - left, bottom - top) * 0.15))
+            left, top = max(0, left - pad), max(0, top - pad)
+            right, bottom = min(rgb.shape[1], right + pad), min(rgb.shape[0], bottom + pad)
+            detections = self.detect(rgb[top:bottom, left:right], prompt, threshold=0.05)
+            for detection in detections:
+                box = (np.asarray(detection["box"]) + [left, top, left, top]).tolist()
+                # Recognition must cover the physical object, not a small photo
+                # or printed word on its packaging. Keep every competing region.
+                if box_iou(box, region["box"]) >= 0.35:
+                    candidates.append({**detection, "box": box, "query": query})
+                    break
+        candidates.sort(key=lambda item: item["score"], reverse=True)
+        result = self._localize(
+            query, candidates, rgb=rgb, depth=depth, position=position, rotation=rotation, fovy=fovy
+        )
+        result.update(
+            inspection="object close-ups",
+            detector_prompt=prompt,
+            inference_seconds=time.perf_counter() - started,
+        )
+        return result
+
     def find(self, query, *, rgb, depth, position, rotation, fovy, crop=None):
         """Locate one text detection with depth; never accepts catalog IDs or dimensions."""
-        from .vision import localize_box
-
         started = time.perf_counter()
         # Keep weak competitors for the ambiguity check, even if they fall just
         # below the acceptance threshold. Filtering them first hides near ties.
@@ -170,6 +272,15 @@ class PretrainedDetector:
                 {**item, "box": (np.asarray(item["box"]) + [left, top, left, top]).tolist()}
                 for item in detections
             ]
+        result = self._localize(
+            query, detections, rgb=rgb, depth=depth, position=position, rotation=rotation, fovy=fovy
+        )
+        result["inference_seconds"] = time.perf_counter() - started
+        return result
+
+    def _localize(self, query, detections, *, rgb, depth, position, rotation, fovy):
+        from .vision import localize_box
+
         if not detections or detections[0]["score"] < 0.2:
             raise DetectionRejected(
                 f"OWLv2 did not confidently detect '{query}'. No motion started."
@@ -209,5 +320,4 @@ class PretrainedDetector:
             "model": MODEL_ID,
             "model_revision": MODEL_REVISION,
             "device": self.device,
-            "inference_seconds": time.perf_counter() - started,
         }

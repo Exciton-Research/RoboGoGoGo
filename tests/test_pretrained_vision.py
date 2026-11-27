@@ -84,6 +84,41 @@ def test_cropped_detections_are_localized_in_the_original_camera_frame(monkeypat
     assert result["position"] == [0.4, -0.2, 0.8]
 
 
+@pytest.mark.parametrize("agree", [True, False])
+def test_closeup_retry_requires_two_views_of_the_same_physical_object(monkeypatch, agree):
+    from robogogogo.demo.pretrained import DetectionRejected
+
+    pytest.importorskip("robogogogo.demo.vision")
+    detector = object.__new__(PretrainedDetector)
+
+    def reject(*args, **kwargs):
+        raise DetectionRejected("uncertain")
+
+    detector.find = reject
+    monkeypatch.setattr("robogogogo.demo.vision.workspace_crop", lambda **kwargs: [0, 0, 1, 1])
+    positions = {
+        "side": [0.3, -0.2, 0.8],
+        "diagonal": [0.6, -0.2, 0.8],
+        "front": [0.301, -0.2, 0.8] if agree else [0.6, -0.3, 0.8],
+        "left": [0.4, -0.3, 0.8],
+    }
+    detector.inspect = lambda query, view: {
+        "position": positions[view],
+        "score": 0.7,
+        "query": query,
+    }
+
+    def capture(view, **kwargs):
+        return {"view": view}
+
+    if agree:
+        result = detector.find_target("box", capture)
+        assert result["inspection_views"] == ["side", "front"]
+    else:
+        with pytest.raises(DetectionRejected, match="two inspection views"):
+            detector.find_target("box", capture)
+
+
 @pytest.fixture(scope="module")
 def pretrained_setup():
     assets = os.environ.get("ROBOGOGOGO_VLM_ASSETS")
@@ -191,14 +226,13 @@ def test_new_household_scan_is_detected_and_collected_without_catalog_references
         )
         env.reset(seed=1)
         np.testing.assert_allclose(env.data.xpos[env.bodies], shuffled)
-        sensor = env.capture_rgbd(view="side")
 
         def forbidden(*args, **kwargs):
             pytest.fail("New object recognition consulted catalog references")
 
         monkeypatch.setattr("robogogogo.demo.vision.require_object", forbidden)
         monkeypatch.setattr("robogogogo.demo.vision.CatalogVision.find", forbidden)
-        detection = detector.find("tall yellow box", **sensor)
+        detection = detector.find_target("Sugar carton", env.capture_rgbd)
         assert detection["model"] == MODEL_ID
         assert detection["grasp_position"][2] > detection["position"][2] + 0.03
 
@@ -355,3 +389,41 @@ def test_default_soup_name_retries_the_camera_and_collects_from_full_clutter(
                 # landing in the tray after an early drop is not sufficient.
                 tools = data["proprio"][:, 18:21]
                 assert np.max(np.linalg.norm(tools[115:202] - centers[115:202], axis=1)) < 0.065
+
+
+def test_visual_feature_reuse_matches_frozen_model_and_invalidates_on_pixel_changes(
+    pretrained_setup, monkeypatch
+):
+    from PIL import Image
+
+    env, detector = pretrained_setup
+    env.reset(seed=0)
+    rgb = env.capture_rgbd()["rgb"]
+    inputs = detector.processor(
+        text=[["a photo of lemon"]], images=Image.fromarray(rgb), return_tensors="pt"
+    ).to(detector.device)
+    with detector.torch.inference_mode():
+        output = detector.model(**inputs)
+    expected = (
+        detector.processor.post_process_grounded_object_detection(
+            output, threshold=0.2, target_sizes=[rgb.shape[:2]], text_labels=[["lemon"]]
+        )[0]["scores"]
+        .max()
+        .item()
+    )
+    original, calls = detector.model.image_embedder, []
+
+    def encode(*args, **kwargs):
+        calls.append(True)
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(detector.model, "image_embedder", encode)
+    detector._image_cache.clear()
+    result = detector.detect(rgb, "lemon")
+    assert result[0]["score"] == pytest.approx(expected, abs=1e-5)
+    detector.detect(rgb, "orange")
+    assert len(calls) == 1
+    changed = rgb.copy()
+    changed[0, 0, 0] ^= 1
+    detector.detect(changed, "orange")
+    assert len(calls) == 2

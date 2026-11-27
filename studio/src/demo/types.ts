@@ -26,10 +26,19 @@ export type TaskState = {
     query?: string;
     pickup_error?: string | null;
     inference_seconds?: number;
-    camera_view?: "front" | "side";
+    camera_view?: "front" | "side" | "left" | "diagonal";
+    inspection?: string;
+    inspection_views?: string[];
+    detector_prompt?: string;
     detection_crop?: number[];
   } | null;
   pretrained_ready: boolean;
+  collection: {
+    active: boolean;
+    completed: number;
+    total: number;
+    remaining: number;
+  } | null;
   phase: number;
   time: number;
   phases: string[];

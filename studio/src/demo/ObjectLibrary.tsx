@@ -12,6 +12,7 @@ export default function ObjectLibrary({
   load,
   loadClutter,
   selectTarget,
+  collectRemaining,
   perception,
   setPerception,
   query,
@@ -24,6 +25,7 @@ export default function ObjectLibrary({
   load: (object: LibraryObject) => Promise<void>;
   loadClutter: (identifier?: string) => Promise<void>;
   selectTarget: (identifier: string) => Promise<void>;
+  collectRemaining: () => Promise<void>;
   perception: PerceptionMode;
   setPerception: (mode: PerceptionMode) => void;
   query: string;
@@ -64,6 +66,25 @@ export default function ObjectLibrary({
             : "Load the original eight-object table, the new sugar carton scene, or one object."}
         </p>
       </div>
+      {clutter && perception === "vlm" && (
+        <div className={styles.clutterControl}>
+          <button
+            disabled={
+              locked ||
+              state.collection?.active ||
+              state.collection?.completed === state.collection?.total
+            }
+            onClick={() => void collectRemaining()}
+          >
+            Collect remaining · record
+          </button>
+          <p>
+            {state.collection?.completed ?? 0} / {state.instances.length}{" "}
+            collected. Finds each default name with OWLv2 and saves one episode
+            per object. Stops on uncertain detection.
+          </p>
+        </div>
+      )}
       <div className={styles.detectorControls}>
         <label htmlFor="object-localization">Find objects with</label>
         <select
@@ -142,9 +163,11 @@ export default function ObjectLibrary({
             <small>
               {state.vision.camera_view && (
                 <span>
-                  {state.vision.camera_view === "front"
-                    ? "Front camera · workspace crop after side-view rejection. "
-                    : "Side camera. "}
+                  {state.vision.inspection_views
+                    ? `Close-up inspection agreed: ${state.vision.inspection_views.join(" + ")}. `
+                    : state.vision.camera_view === "front"
+                      ? "Front camera · workspace crop after side-view rejection. "
+                      : "Side camera. "}
                 </span>
               )}
               {state.vision.model

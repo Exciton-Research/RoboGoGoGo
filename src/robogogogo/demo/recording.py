@@ -42,7 +42,12 @@ class Recording:
             "model_sha256": env.model_hash,
             "panda_revision": REVISION,
             "object": env.object,
-            "scene": {"layout": env.layout, "objects": [item["id"] for item in env.objects]},
+            "scene": {
+                "layout": env.layout,
+                "objects": [item["id"] for item in env.objects],
+                "collection_style": env.collection_style,
+                "soft_fingers": env.soft_fingers,
+            },
             "mujoco": mujoco.__version__,
             "control_dt": env.dt,
             "physics_dt": float(env.model.opt.timestep),

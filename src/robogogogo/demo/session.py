@@ -17,7 +17,7 @@ from PIL import Image
 from .controller import ReferenceController
 from .environment import PandaEnv
 from .objects import catalog, clutter_objects
-from .pretrained import DetectionRejected, PretrainedDetector, model_ready
+from .pretrained import PretrainedDetector, model_ready
 from .recording import Episode, Recording
 
 
@@ -53,6 +53,8 @@ class PandaSession:
             self.recording, self.replay, self.backup = None, None, None
             self.frame, self.playing, self.next_tick = 0, False, time.perf_counter()
             self.last_saved = None
+            self.collecting, self.collection_queue, self.collected = False, [], set()
+            self.collection_images = True
             self.episode_id = str(uuid4())
             self.session_id = str(uuid4())
             self.library = self._list_episodes()
@@ -63,6 +65,13 @@ class PandaSession:
                         self._tick()
                     except Exception as error:
                         self.status, self.message, self.playing = "failed", str(error), False
+                        if self.collecting:
+                            self.collecting, self.collection_queue = False, []
+                            if self.recording is not None and self.recording.actions:
+                                try:
+                                    self._finish_recording("collection_failed")
+                                except Exception as save_error:
+                                    self.message += f" Recording could not be saved: {save_error}"
                     self.next_tick = max(self.next_tick + self.env.dt, time.perf_counter())
                     continue
                 try:
@@ -112,6 +121,14 @@ class PandaSession:
             if controller is None or self.replay
             else controller.perception,
             "pretrained_ready": self.pretrained_ready,
+            "collection": None
+            if self.replay
+            else {
+                "active": self.collecting,
+                "completed": len(self.collected),
+                "total": len(self.env.objects),
+                "remaining": len(self.collection_queue),
+            },
             "message": self.message,
             "vision": None
             if self.detection is None or self.replay
@@ -120,7 +137,9 @@ class PandaSession:
                 "image_url": f"/api/demo/vision/image?episode_id={self.episode_id}&detection_id={self.detection['id']}",
             },
             "phase": controller.phase if controller is not None else 0,
-            "phases": list(ReferenceController.labels),
+            "phases": list(
+                controller.labels if controller is not None else ReferenceController.labels
+            ),
             "progress": (
                 (
                     controller.phase
@@ -206,27 +225,9 @@ class PandaSession:
         self.revision += 1
         if self.pretrained_detector is None:
             self.pretrained_detector = PretrainedDetector(self.assets)
-        try:
-            detection = self.pretrained_detector.find(query, **self.env.capture_rgbd(view="side"))
-            detection["camera_view"] = "side"
-            if detection["position"] is None:
-                raise DetectionRejected(detection["pickup_error"])
-        except DetectionRejected:
-            # Retry the identical query from a second fixed camera. Focus its
-            # pixels on visible pickup geometry, never on the selected object's
-            # simulator pose or identity. Keep the model's acceptance checks.
-            from .vision import workspace_crop
-
-            sensor = self.env.capture_rgbd(view="front")
-            crop = workspace_crop(**sensor)
-            try:
-                detection = self.pretrained_detector.find(query, **sensor, crop=crop)
-            except DetectionRejected as error:
-                raise DetectionRejected(
-                    f"{error} Both camera views were checked; no motion started."
-                ) from error
-            detection.update(camera_view="front", detection_crop=crop)
+        detection = self.pretrained_detector.find_target(query, self.env.capture_rgbd)
         self.detection = {**detection, "id": str(uuid4())}
+        self._record_detection()
         self.message = (
             "Pretrained image detection ready. Collect uses the selected task's destination."
         )
@@ -249,6 +250,7 @@ class PandaSession:
             raise
         self.env.close()
         self.env = replacement
+        self.collecting, self.collection_queue, self.collected = False, [], set()
         self.detection = None
         self.seed, self.controller, self.mode, self.status = seed, None, "manual", "ready"
         self.episode_id = str(uuid4())
@@ -258,9 +260,11 @@ class PandaSession:
         self.revision += 1
         return self._snapshot()
 
-    def _select_target(self, identifier):
+    def _select_target(self, identifier, continuing=False):
         if self.replay is not None or self.recording is not None or self.playing:
             raise ValueError("Pause and finish the active recording before selecting a new target")
+        if not continuing:
+            self.collecting, self.collection_queue = False, []
         self.env.select_target(identifier)
         self.detection = None
         self.controller, self.mode, self.status = None, "manual", "ready"
@@ -285,6 +289,8 @@ class PandaSession:
         if self.recording is not None:
             self.recording.append(self.env, action, result, source)
         if result[2] or result[3]:
+            if result[4]["success"]:
+                self.collected.add(self.env.object["id"])
             self.playing = False
             self.status = "complete" if result[4]["success"] else "failed"
             self.message = (
@@ -342,6 +348,7 @@ class PandaSession:
             raise ValueError("Save or discard the current recording before resetting")
         self.playing = False
         self.env.reset(seed=seed)
+        self.collecting, self.collection_queue, self.collected = False, [], set()
         self.detection = None
         self.seed, self.controller, self.mode, self.status = seed, None, "manual", "ready"
         self.episode_id = str(uuid4())
@@ -405,6 +412,34 @@ class PandaSession:
         self.revision += 1
         return self._snapshot()
 
+    def _collect_remaining(self, images=True):
+        if self.replay is not None or self.playing or self.recording is not None:
+            raise ValueError("Pause and finish the active recording before collecting the table")
+        if self.env.layout != "clutter":
+            raise ValueError("Load a cluttered table first")
+        self.collection_queue = [
+            item["id"] for item in self.env.objects if item["id"] not in self.collected
+        ]
+        self.collecting, self.collection_images = True, images
+        try:
+            self._next_collection()
+        except Exception:
+            self.collecting, self.collection_queue = False, []
+            raise
+        return self._snapshot()
+
+    def _next_collection(self):
+        if not self.collection_queue:
+            self.collecting, self.playing, self.status = False, False, "complete"
+            self.message = f"All {len(self.collected)} objects collected and recorded."
+            return
+        identifier = self.collection_queue.pop(0)
+        self._select_target(identifier, continuing=True)
+        # Names are task instructions, not recognition templates. All localization
+        # still crosses the RGB-D-only detector boundary for every pickup.
+        self._command("run", perception="vlm", query=self.env.object["name"])
+        self._record("start", images=self.collection_images)
+
     def _tick(self):
         if self.replay is not None:
             if self.frame < self.replay.count:
@@ -424,6 +459,17 @@ class PandaSession:
         if not self.env.terminated and not self.env.truncated:
             self.controller.advance(self.env)
             self.message = self.controller.labels[self.controller.phase]
+        elif self.collecting:
+            if self.env.info()["success"]:
+                self._next_collection()
+            else:
+                self.collecting, self.collection_queue = False, []
+
+    def _record_detection(self):
+        if self.recording is not None and self.detection is not None:
+            self.recording.manifest["perception"] = {
+                key: value for key, value in self.detection.items() if key not in ("image", "id")
+            }
 
     def _record(self, command, images=True):
         if self.replay is not None:
@@ -434,6 +480,7 @@ class PandaSession:
             if self.env.terminated or self.env.truncated:
                 raise ValueError("Reset before starting a new recording")
             self.recording = Recording(self.directory, self.env, seed=self.seed, images=images)
+            self._record_detection()
         elif command == "save":
             self._finish_recording("user_stopped")
         elif command == "discard":
@@ -503,6 +550,8 @@ class PandaSession:
             object_id=manifest.get("object", {}).get("id", "block"),
             object_ids=manifest.get("scene", {}).get("objects"),
             gripper_stiffness=manifest.get("gripper_stiffness", 300),
+            collection_style=manifest.get("scene", {}).get("collection_style", "cells"),
+            soft_fingers=manifest.get("scene", {}).get("soft_fingers", False),
         )
         try:
             episode = Episode(path, replay_env)

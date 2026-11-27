@@ -24,6 +24,10 @@ class CommandRequest(ResetRequest):
     query: str | None = Field(default=None, min_length=1, max_length=120)
 
 
+class CollectRequest(BaseModel):
+    images: bool = True
+
+
 class FindRequest(BaseModel):
     query: str = Field(min_length=1, max_length=120)
     expected_revision: int | None = Field(default=None, ge=0)
@@ -160,6 +164,10 @@ def create_demo_router(cache, *, legacy_workspace=False, recordings=None):
     @router.post("/vision/find")
     async def find_named_object(body: FindRequest):
         return await call("find", **body.model_dump())
+
+    @router.post("/collect")
+    async def collect_remaining(body: CollectRequest):
+        return await call("collect_remaining", **body.model_dump())
 
     @router.post("/reset")
     async def reset(body: ResetRequest):

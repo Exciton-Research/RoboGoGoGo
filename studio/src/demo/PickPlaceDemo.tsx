@@ -335,11 +335,15 @@ export default function PickPlaceDemo() {
                 : replaying
                   ? "Return to live control"
                   : running
-                    ? "Pause reference"
+                    ? state?.collection?.active
+                      ? "Pause collection"
+                      : "Pause task"
                     : finished
                       ? "Reset task"
                       : state?.status === "paused" && state.mode === "script"
-                        ? "Resume reference"
+                        ? state?.collection?.active
+                          ? "Resume collection"
+                          : "Resume task"
                         : state?.layout === "clutter"
                           ? perception !== "simulator"
                             ? "Find & collect target"
@@ -451,6 +455,7 @@ export default function PickPlaceDemo() {
                   load={loadObject}
                   loadClutter={loadClutter}
                   selectTarget={(identifier) => act("/target", { identifier })}
+                  collectRemaining={() => act("/collect", { images: true })}
                   perception={perception}
                   setPerception={setPerception}
                   query={query}

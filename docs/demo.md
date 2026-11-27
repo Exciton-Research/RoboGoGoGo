@@ -114,24 +114,46 @@ advances the seed and resets the whole scene; the same seed reproduces it. Shall
 collection cells occupy the other side of the table and contain rounded fruit.
 
 **New household object · sugar carton** loads the carton alongside all eight
-original objects, with nine collection cells on the other side of the table.
-Click **Shuffle table**, select **Pretrained OWLv2**, enter **tall yellow box**,
+original objects, with nine marked destinations in a shared receiving bin.
+The bin has outer walls and no internal rails that could leave long boxes perched.
+Click **Shuffle table**, select **Pretrained OWLv2**, enter **Sugar carton**,
 and choose **Find in image** or **Find & collect target**. The original eight-object
-layout remains available. OWLv2 first observes a fixed calibrated side camera.
+layout remains available.
+
+**Collect remaining · record** collects the current scene using each object's
+default name, without shuffling or resetting between pickups. It tracks completed
+targets, shows progress, saves one RGB episode per object, and stops on uncertain
+detection or a failed grasp. Pause/resume uses the main task button. The equivalent
+API is `POST /api/demo/collect` with `{"images": true}`; use `false` to omit RGB
+frames. Reset clears collection progress. The known scene names provide the task
+requests; they are not a catalog of recognition images or poses.
+
+OWLv2 first observes a fixed calibrated side camera.
 If detection is rejected or has unusable depth, it retries the identical text on
 a front-camera crop enclosing visible pickup geometry. That crop comes from
 calibrated depth, not object identities or simulator positions. Pixel boxes are
 mapped back to the full camera image before depth localization. The catalog
-baseline retains its original front camera. Camera placement is independent of
-the selected target and shuffled object positions.
+baseline retains its original front camera. If these views are inconclusive,
+1280 × 768 inspection frames provide close-ups of every visible depth region.
+A container phrase is re-ordered generically (for example, “potted meat can” becomes
+“a can of potted meat”), with no asset aliases or added brands/colors. Each close-up
+view must pass the original score/margin checks, and two camera views must agree
+on a 3D location within 35 mm before pickup. Side, diagonal, front and left views
+are fixed independently of target identity and shuffled positions.
+
+Visual features are reused only when RGB bytes match exactly. A changed image
+invalidates that cache; find-and-collect still captures fresh sensor data.
 `POST /api/demo/objects/select` with `{"identifier": "sugar-box", "clutter": true}`
 loads the same task. The carton is disabled in the catalog matcher and has no
 rendered reference bank. Recognition uses the existing OWLv2 model and thresholds,
-with no fine-tuning or object-specific detector labels. The full nine-object
+with no fine-tuning or per-object aliases. The full nine-object
 integration check uses shuffle seed 1, physically collects the carton, verifies
 that the eight distractors remain on the source table, and restores the successful recorded
-state. This demonstrates one shuffled arrangement, not reliability over every
-arrangement or description; ambiguous detections still stop motion.
+state. Full-table collection is also checked with all nine default names at seeds
+1, 2 and 3: all 27 sequential collections completed, and the final recorded state
+of each table retained all nine objects at their destinations. These results are
+specific to the current upright scans and arrangements.
+Ambiguous detections still stop motion.
 “New” means newly added
 to this environment; its presence in OWLv2 pretraining is unknown.
 
@@ -232,8 +254,8 @@ target and describe it, for example **yellow citrus fruit** for the lemon.
 actual bounding box and score, plus the camera view and whether the workspace
 crop retry was used. For example, the default **Tomato soup can** name on the
 nine-object table at shuffle seed 1 needs this retry. Both attempts use the same
-0.20 score and 0.06 competing-instance margin checks; rejection in both views
-starts no motion. **Find & collect target** captures and detects again
+0.20 score and 0.06 competing-instance margin checks. If coarse views fail,
+confirmed close-up inspection is attempted; rejection starts no pickup motion. **Find & collect target** captures and detects again
 before moving, so a previous detection is never reused as a fresh pickup.
 The task's selected target still defines its destination and success evaluation;
 the free-text description should refer to that selected target.
@@ -242,7 +264,9 @@ OWLv2 predicts text-conditioned pixel boxes. Nonmaximum suppression removes
 duplicate boxes, and low or closely competing scores stop collection. Scores are
 model confidences, not calibrated guarantees. Depth regions refine the chosen box;
 observed height above the calibrated table estimates an upright grasp height, and
-the region's center ray estimates horizontal pickup. This stage uses no catalog
+the region's center ray estimates horizontal pickup. Small rounded surfaces use
+a quality-checked sphere fit to reduce silhouette bias; upright packages use their
+visible top surface to center the grasp. This stage uses no catalog
 dimensions. For upright objects above 8 cm, a visible upper-surface depth patch
 centers a grasp 25 mm below the top so the Panda hand clears the object.
 These upper grasps use level carry motion with 25 cm clearance above the grasp
@@ -250,17 +274,28 @@ height, accounting for the tool-to-object offset. This avoids descending into
 tall clutter during translation. The estimated object center
 (`position`) and finger grasp point (`grasp_position`) stay separate, so placement
 accounts for the grasp offset without reading object state. This is a bounded
-grasp heuristic, not general affordance or collision-free grasp planning.
+grasp heuristic, not general affordance or collision-free grasp planning. Camera
+control tracks Cartesian lines with a fixed hand orientation. Between pickups,
+it can return above the table through ordinary recorded joint commands. Empty
+finger closure during transport stops the task, and a bounded six-second settling
+phase waits for the unchanged placement criteria.
 A detection with unreliable depth remains visible but cannot start motion.
 There is no catalog or simulator-pose fallback in pretrained mode.
 
-Scanned-object scenes use a 600 N/m gripper position-servo stiffness within the
-upstream 100 N force limit. This prevents the 350 g soup can from sliding out of
-the pads; object mass and friction remain unchanged. Lower camera grasps on
-smaller objects use finger proprioception to halve the closing preload. New
-recordings save `gripper_stiffness`, and browser replay reconstructs older
-recordings without that field using their original 300 N/m setting. The primitive
-block retains its original 100 N/m servo.
+Scanned-object scenes use a 600 N/m gripper servo within the upstream 100 N force
+limit. Initial closure is gentle for lower grasps; narrow objects retain that
+lower preload, while wider objects and upper grasps use a firmer hold. Soft-finger
+contact pairs include rolling resistance at the pads (1 mm). Object contacts enable
+their already-declared 0.1 mm rolling resistance; object mass and sliding-friction
+coefficients are unchanged. The solver uses elliptic friction cones with
+`impratio=10`, following [MuJoCo's manipulation guidance](https://mujoco.readthedocs.io/en/3.3.7/modeling.html#preventing-slip).
+These are assigned simulation contact parameters, not measured calibration.
+
+Recordings retain `gripper_stiffness`, `scene.collection_style` and
+`scene.soft_fingers`; browser replay uses the original settings when older archives
+omit these fields. Recorded perception metadata includes the original query,
+actual detector prompt, model revision, camera view(s), scores and pickup estimates.
+The primitive block retains its original servo/contact settings.
 
 `POST /api/demo/vision/find` accepts `{"query": "yellow citrus fruit"}` and an
 optional `expected_revision`. It returns the state with detection metadata and

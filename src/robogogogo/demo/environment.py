@@ -38,6 +38,8 @@ class PandaEnv(gym.Env):
         render_mode=None,
         max_steps=800,
         gripper_stiffness=600,
+        collection_style=None,
+        soft_fingers=True,
     ):
         if observation_mode not in ("state", "rgb") or render_mode not in (None, "rgb_array"):
             raise ValueError(
@@ -59,6 +61,12 @@ class PandaEnv(gym.Env):
             raise ValueError(
                 "Scene requires up to nine distinct scanned objects including the target"
             )
+        self.collection_style = collection_style or ("bin" if len(ids) > 8 else "cells")
+        if self.collection_style not in ("bin", "cells"):
+            raise ValueError("collection_style must be bin or cells")
+        if type(soft_fingers) is not bool:
+            raise ValueError("soft_fingers must be a boolean")
+        self.soft_fingers = soft_fingers and ids[0] != "block"
         self.objects = [require_object(cache, identifier) for identifier in ids]
         self.gripper_stiffness = float(gripper_stiffness) if ids[0] != "block" else 100.0
         self.layout = "clutter" if len(ids) > 1 else "single"
@@ -71,6 +79,8 @@ class PandaEnv(gym.Env):
             object_dir=folders[0],
             other_objects=list(zip(self.objects[1:], folders[1:])),
             gripper_stiffness=self.gripper_stiffness,
+            collection_style=self.collection_style,
+            soft_fingers=self.soft_fingers,
         )
         canonical = xml.replace(str(asset_path.parent / "assets"), "@panda/assets")
         for index, (spec, folder) in enumerate(zip(self.objects, folders)):
@@ -101,6 +111,7 @@ class PandaEnv(gym.Env):
         )
         self.renderer = None
         self.vision_renderer = None
+        self.detail_renderer = None
         self._geometry = None
         self.action_space = spaces.Box(
             np.r_[self.model.jnt_range[:7, 0], 0.0],
@@ -317,15 +328,17 @@ class PandaEnv(gym.Env):
             frames[name] = self.renderer.render().copy()
         return frames
 
-    def capture_rgbd(self, *, view="front"):
+    def capture_rgbd(self, *, view="front", detail=False):
         """A calibrated inspection sensor; excludes object labels and instance poses."""
         from .vision import VISION_HEIGHT, VISION_WIDTH, inspection_camera
 
-        if self.vision_renderer is None:
-            self.vision_renderer = mujoco.Renderer(
-                self.model, height=VISION_HEIGHT, width=VISION_WIDTH
-            )
-        renderer = self.vision_renderer
+        width, height = VISION_WIDTH * (2 if detail else 1), VISION_HEIGHT * (2 if detail else 1)
+        name = "detail_renderer" if detail else "vision_renderer"
+        if getattr(self, name) is None:
+            self.model.vis.global_.offwidth = max(self.model.vis.global_.offwidth, width)
+            self.model.vis.global_.offheight = max(self.model.vis.global_.offheight, height)
+            setattr(self, name, mujoco.Renderer(self.model, height=height, width=width))
+        renderer = getattr(self, name)
         options = mujoco.MjvOption()
         options.geomgroup[3] = 0
         renderer.update_scene(self.data, camera=inspection_camera(view), scene_option=options)
@@ -532,6 +545,9 @@ class PandaEnv(gym.Env):
         return self._geometry
 
     def close(self):
+        if self.detail_renderer is not None:
+            self.detail_renderer.close()
+            self.detail_renderer = None
         if self.vision_renderer is not None:
             self.vision_renderer.close()
             self.vision_renderer = None

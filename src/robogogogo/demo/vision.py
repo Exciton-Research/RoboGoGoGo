@@ -23,11 +23,15 @@ CAMERA_LOOK_AT = np.array([0.50, -0.10, 0.78])
 
 def inspection_camera(view="front"):
     """Fixed calibrated views; neither depends on the target or simulator poses."""
-    if view not in ("front", "side"):
-        raise ValueError("Inspection view must be front or side")
+    if view not in ("front", "side", "left", "diagonal"):
+        raise ValueError("Inspection view must be front, side, left, or diagonal")
     position, look_at = (
         (np.array([1.08, -0.17, 1.25]), np.array([0.46, -0.16, 0.80]))
         if view == "side"
+        else (np.array([1.02, -0.55, 1.30]), np.array([0.46, -0.16, 0.80]))
+        if view == "diagonal"
+        else (np.array([-0.17, -0.16, 1.30]), np.array([0.46, -0.16, 0.80]))
+        if view == "left"
         else (CAMERA_POSITION, CAMERA_LOOK_AT)
     )
     offset = position - look_at
@@ -68,7 +72,7 @@ def proposals(rgb, depth, position, rotation, fovy, *, with_appearance=True):
         & (x > 0.19)
         & (x < 0.84)
         & (y > -0.39)
-        & (y < 0.035)
+        & (y < 0.025)
         & (z > TABLE_Z + 0.008)
         & (z < TABLE_Z + 0.23)
     )
@@ -145,6 +149,26 @@ def localize_box(box, *, rgb, depth, position, rotation, fovy):
         raise ValueError("Depth cannot support an upright tabletop pickup")
     center_z = TABLE_Z + height / 2
     pick = np.asarray(position) + ray * ((center_z - position[2]) / ray[2])
+    # A fitted rounded surface centers small-object pinches more accurately
+    # than the midpoint of a perspective silhouette. Reject poor/planar fits.
+    if height <= 0.08:
+        cloud = region["cloud"]
+        origin = cloud.mean(axis=0)
+        centered = cloud - origin
+        fit, _, _, _ = np.linalg.lstsq(
+            np.c_[2 * centered, np.ones(len(centered))],
+            np.sum(centered * centered, axis=1),
+            rcond=None,
+        )
+        center = origin + fit[:3]
+        radius = np.sqrt(max(0, fit[3] + np.sum(fit[:3] ** 2)))
+        error = np.sqrt(np.mean((np.linalg.norm(cloud - center, axis=1) - radius) ** 2))
+        if (
+            0.35 * height < radius < 0.75 * height
+            and abs(center[2] - center_z) < 0.01
+            and error < 0.002
+        ):
+            pick[:2] = center[:2]
     grasp = pick.copy()
     # Objects taller than the finger clearance need an upper grasp, otherwise
     # the hand housing strikes their top. Grip 25 mm below the visible top so
@@ -156,6 +180,9 @@ def localize_box(box, *, rgb, depth, position, rotation, fovy):
             raise ValueError("The upper grasp surface has insufficient visible depth")
         low, high = np.percentile(upper, [3, 97], axis=0)
         grasp[:2] = (low[:2] + high[:2]) / 2
+        # For an upright object, its observed top center also centers its body.
+        # An image-box ray can be shifted substantially by an occluding neighbor.
+        pick[:2] = grasp[:2]
     return pick, region["box"], grasp
 
 
