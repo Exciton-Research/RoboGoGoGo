@@ -16,6 +16,9 @@ boundaries.
 
 ## Go deeper
 
+- **[Controlled simulation-error research](research.md)** defines the new research
+  question, matched-budget study, robosuite Panda adapter, visual imitation
+  baseline, and external trainer interface. No study results are available yet.
 - **[Research paper](../paper/)** provides the manuscript, reading PDF,
   bibliography, figures, and build instructions.
 - **[Contributing](../CONTRIBUTING.md)** explains issues, pull requests, and licensing.

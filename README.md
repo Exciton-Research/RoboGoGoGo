@@ -1,8 +1,18 @@
 # robogogogo
 
-A local robotics workbench for **RG Mobile Duo**: a wheeled robot concept with a
-folding torso, two seven-joint arms, head stereo cameras, and a camera on each
-wrist. Python/JAX simulates the robot; a Next.js/Three.js Studio lets you inspect
+An experimental robotics workbench investigating **which simulation errors matter
+when collecting demonstrations for robot learning**. The initial research
+framework compares controlled camera, lighting, contact-friction, and command-delay
+errors using Panda Lift in robosuite/MuJoCo, with matched interaction budgets and
+separate selection and held-out evaluation. It includes a visual imitation
+baseline and a trainer interface. **This research implementation has not yet been
+validated or evaluated; it establishes no VLA or real-robot transfer result.**
+See the [research question, protocol, and usage](docs/research.md).
+
+The original browser Studio provides a local workbench for **RG Mobile Duo**:
+a wheeled robot concept with a folding torso, two seven-joint arms, head stereo
+cameras, and a camera on each wrist. Python/JAX simulates the robot; a
+Next.js/Three.js Studio lets you inspect
 its mechanism, plan movement, and record aligned visual demonstrations.
 
 ![RG Mobile Duo in Studio, with the robot controller and four camera views](docs/images/simulation.png)
@@ -12,7 +22,7 @@ collect RGB/depth and joint-state transitions, or develop integrations against
 explicit robot and dataset contracts. You can start entirely in simulation;
 neither a physical robot nor a GPU is required.
 
-**Project status:** simulation and dataset validation work today. The reach
+**Studio status:** simulation and dataset validation work today. The reach
 baseline is rule-based. Training, learned checkpoint inference, physical command
 execution, and real-robot evaluation still require integration. The mechanical
 design is illustrative; physical hardware has not been commissioned.
@@ -24,8 +34,9 @@ design is illustrative; physical hardware has not been commissioned.
 Collection*, by Tian Shi (Exciton Research LLC) and Ping Wang (Department of
 Computer Science, Stevens Institute of Technology).
 
-The paper describes the environment, data representation, preliminary geometric
-analysis, and research directions for VLA policies and learned world models.
+The early paper describes the original environment, data representation,
+preliminary geometric analysis, and research directions for VLA policies and
+learned world models. It does not report results from the new controlled study.
 [LaTeX sources, references, figures, and build instructions](paper/)
 are included in this repository.
 
@@ -147,6 +158,7 @@ development loop, package ownership, targeted tests, and screenshot regeneration
 ## Guides
 
 - [Documentation index](docs/README.md)
+- [Controlled simulation-error research](docs/research.md)
 - [Install on macOS or Linux](docs/installation.md)
 - [Studio walkthrough](docs/getting-started.md)
 - [Architecture and workflow layers](docs/platform.md)
