@@ -108,17 +108,28 @@ uploads are outside this version.
 
 Choose **Load cluttered table · 8 objects** to place the original eight scans on the same
 table. Each has an independent free joint, collision geometry, and texture.
-The layout is reproducible by seed, with small bounded position jitter. Shallow
+Seed zero retains the reference arrangement. Nonzero seeds permute the objects
+across source positions, with small bounded position jitter. **Shuffle table**
+advances the seed and resets the whole scene; the same seed reproduces it. Shallow
 collection cells occupy the other side of the table and contain rounded fruit.
 
-**New household object · sugar carton** loads the new carton with a soup can and
-orange as two distractors. Select **Pretrained OWLv2**, enter **tall yellow box**,
-and choose **Find in image** or **Find & collect target**. This is a separate
-three-object task; the original eight-object layout remains available.
+**New household object · sugar carton** loads the carton alongside all eight
+original objects, with nine collection cells on the other side of the table.
+Click **Shuffle table**, select **Pretrained OWLv2**, enter **tall yellow box**,
+and choose **Find in image** or **Find & collect target**. The original eight-object
+layout remains available. OWLv2 observes a fixed calibrated side camera, which
+shows the boxes' broad faces. The catalog baseline retains its original front
+camera. Both use real rendered RGB and depth; camera placement is independent
+of the selected target and shuffled object positions.
 `POST /api/demo/objects/select` with `{"identifier": "sugar-box", "clutter": true}`
 loads the same task. The carton is disabled in the catalog matcher and has no
 rendered reference bank. Recognition uses the existing OWLv2 model and thresholds,
-with no fine-tuning or object-specific detector labels. “New” means newly added
+with no fine-tuning or object-specific detector labels. The full nine-object
+integration check uses shuffle seed 1, physically collects the carton, verifies
+that the eight distractors remain on the source table, and restores the successful recorded
+state. This demonstrates one shuffled arrangement, not reliability over every
+arrangement or description; ambiguous detections still stop motion.
+“New” means newly added
 to this environment; its presence in OWLv2 pretraining is unknown.
 
 Choose a target by its name in **Objects**, then **Find & collect target**. The selected

@@ -53,13 +53,13 @@ export default function ObjectLibrary({
         </button>
         <button disabled={locked} onClick={() => void loadClutter("sugar-box")}>
           {newObjectScene
-            ? "Reset sugar carton scene"
+            ? "Load full table · 9 objects"
             : "New household object · sugar carton"}
         </button>
         <p>
           {clutter
             ? newObjectScene
-              ? "New sugar carton with two distractors. Try the description ‘tall yellow box’."
+              ? "Sugar carton alongside all eight original objects. Shuffle the table, then try ‘tall yellow box’."
               : "Choose a named target below, then find and collect it. Other objects remain on the table."
             : "Load the original eight-object table, the new sugar carton scene, or one object."}
         </p>

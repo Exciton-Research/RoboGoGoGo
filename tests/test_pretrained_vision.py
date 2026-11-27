@@ -17,7 +17,7 @@ def test_new_household_object_is_excluded_from_catalog_image_matching(tmp_path):
 
     assert "sugar-box" not in DEFAULT_CLUTTER
     assert not CATALOG["sugar-box"]["reference_matching"]
-    assert clutter_objects("sugar-box") == ["sugar-box", "soup-can", "orange"]
+    assert clutter_objects("sugar-box") == ["sugar-box", *DEFAULT_CLUTTER]
     with pytest.raises(ValueError, match="excluded"):
         vision.CatalogVision(tmp_path)._reference("sugar-box")
 
@@ -148,8 +148,17 @@ def test_new_household_scan_is_detected_and_collected_without_catalog_references
     assets = os.environ["ROBOGOGOGO_VLM_ASSETS"]
     identifiers = clutter_objects("sugar-box")
     with PandaEnv(assets, object_id="sugar-box", object_ids=identifiers) as env:
+        assert len(env.objects) == 9
         assert env.model.body_mass[env.block] == pytest.approx(0.25)
-        sensor = env.capture_rgbd()
+        original = env.data.xpos[env.bodies].copy()
+        env.reset(seed=1)
+        shuffled = env.data.xpos[env.bodies].copy()
+        assert (
+            np.count_nonzero(np.linalg.norm(shuffled[:, :2] - original[:, :2], axis=1) > 0.10) >= 6
+        )
+        env.reset(seed=1)
+        np.testing.assert_allclose(env.data.xpos[env.bodies], shuffled)
+        sensor = env.capture_rgbd(view="side")
 
         def forbidden(*args, **kwargs):
             pytest.fail("New object recognition consulted catalog references")
@@ -174,7 +183,7 @@ def test_new_household_scan_is_detected_and_collected_without_catalog_references
         controller = ReferenceController(
             robot, camera_pick=detection["position"], camera_grasp=detection["grasp_position"]
         )
-        recording = Recording(tmp_path, env, seed=0, images=False)
+        recording = Recording(tmp_path, env, seed=1, images=False)
         for _ in range(350):
             action = controller.action(robot)
             result = env.step(action)
@@ -183,6 +192,8 @@ def test_new_household_scan_is_detected_and_collected_without_catalog_references
                 break
             controller.advance(robot)
         assert result[4]["success"], result[4]
+        # The other eight objects remain on the source table after collection.
+        assert np.max(np.linalg.norm(env.data.xpos[env.bodies[1:]] - shuffled[1:], axis=1)) < 0.02
         recording.save(env, "environment_ended")
         path = tmp_path / f"{recording.id}.zip"
     with PandaEnv(assets, object_id="sugar-box", object_ids=identifiers) as replay:

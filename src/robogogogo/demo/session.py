@@ -207,7 +207,7 @@ class PandaSession:
         if self.pretrained_detector is None:
             self.pretrained_detector = PretrainedDetector(self.assets)
         self.detection = {
-            **self.pretrained_detector.find(query, **self.env.capture_rgbd()),
+            **self.pretrained_detector.find(query, **self.env.capture_rgbd(view="side")),
             "id": str(uuid4()),
         }
         self.message = (

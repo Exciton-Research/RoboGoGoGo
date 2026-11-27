@@ -37,7 +37,8 @@ def camera_setup():
 @pytest.mark.parametrize("shuffle", [False, True])
 def test_camera_finds_all_names_after_objects_change_positions(camera_setup, shuffle):
     env, vision = camera_setup
-    env.reset(seed=17)
+    # Seed zero is the reference layout; nonzero seeds now permute identities.
+    env.reset(seed=0)
     if shuffle:
         order = np.random.default_rng(23).permutation(8)
         for index, joint in enumerate(env.joints):

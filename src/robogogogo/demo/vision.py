@@ -21,14 +21,21 @@ CAMERA_POSITION = np.array([0.50, -0.85, 1.40])
 CAMERA_LOOK_AT = np.array([0.50, -0.10, 0.78])
 
 
-def inspection_camera():
-    """A fixed calibrated front view that avoids the arm's overhead occlusion."""
-    offset = CAMERA_POSITION - CAMERA_LOOK_AT
+def inspection_camera(view="front"):
+    """Fixed calibrated views; neither depends on the target or simulator poses."""
+    if view not in ("front", "side"):
+        raise ValueError("Inspection view must be front or side")
+    position, look_at = (
+        (np.array([1.08, -0.17, 1.25]), np.array([0.46, -0.16, 0.80]))
+        if view == "side"
+        else (CAMERA_POSITION, CAMERA_LOOK_AT)
+    )
+    offset = position - look_at
     camera = mujoco.MjvCamera()
-    camera.lookat[:] = CAMERA_LOOK_AT
+    camera.lookat[:] = look_at
     camera.distance = np.linalg.norm(offset)
-    camera.azimuth = 90
-    camera.elevation = -np.rad2deg(np.arctan2(offset[2], -offset[1]))
+    camera.azimuth = np.rad2deg(np.arctan2(-offset[1], -offset[0]))
+    camera.elevation = -np.rad2deg(np.arctan2(offset[2], np.linalg.norm(offset[:2])))
     return camera
 
 
@@ -129,9 +136,10 @@ def localize_box(box, *, rgb, depth, position, rotation, fovy):
     pick = np.asarray(position) + ray * ((center_z - position[2]) / ray[2])
     grasp = pick.copy()
     # Objects taller than the finger clearance need an upper grasp, otherwise
-    # the hand housing strikes their top. Retain the center for placement.
+    # the hand housing strikes their top. Grip 25 mm below the visible top so
+    # the pads retain contact during lowering. Retain the center for placement.
     if height > 0.12:
-        grasp[2] = TABLE_Z + height - 0.005
+        grasp[2] = TABLE_Z + height - 0.025
         upper = region["cloud"][region["cloud"][:, 2] > TABLE_Z + height - 0.01]
         if len(upper) < 12:
             raise ValueError("The upper grasp surface has insufficient visible depth")

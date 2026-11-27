@@ -83,9 +83,12 @@ pinned Google weights (about 620 MB). Physical collection assumes upright object
 in the calibrated pickup area.
 
 Choose **New household object · sugar carton** for a scan outside the original
-eight-object set, with a soup can and orange as distractors. Describe it as
+eight-object set, alongside all eight original objects (nine total). Click
+**Shuffle table** to permute object positions using the next seed. Describe it as
 **tall yellow box**, then find and collect it. This carton is deliberately excluded
-from the catalog image matcher; OWLv2 uses its existing pretrained weights.
+from the catalog image matcher; OWLv2 uses its existing pretrained weights and
+confidence checks. Its fixed side camera observes RGB and calibrated depth;
+neither detection nor pickup reads object poses.
 
 The setup script creates a local `.venv`, installs Python dependencies, builds
 Studio from the npm lockfile, and caches the pinned Panda model and nine YCB

@@ -112,13 +112,13 @@ CATALOG["sugar-box"] = {
 
 
 def clutter_objects(identifier="soup-can"):
-    """Original eight-object scene, or a new object with two distractors."""
+    """Original eight-object scene, or a new object alongside all eight."""
     if identifier not in CATALOG:
         raise ValueError("Clutter requires a scanned object")
     return (
         list(DEFAULT_CLUTTER)
         if identifier in DEFAULT_CLUTTER
-        else [identifier, "soup-can", "orange"]
+        else [identifier, *DEFAULT_CLUTTER]
     )
 
 

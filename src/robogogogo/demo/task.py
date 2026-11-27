@@ -10,6 +10,13 @@ TARGET = np.array([0.47, 0.19, TABLE_Z + HALF_CUBE])
 HOME = np.array([0, -0.35, 0, -2.1, 0, 1.75, -0.7854])
 
 
+def collection_xy(index, count):
+    """Keep collection geometry and environment destinations in agreement."""
+    if count > 8:
+        return np.array([0.28 + (index % 3) * 0.19, 0.10 + (index // 3) * 0.13])
+    return np.array([0.28 + (index % 4) * 0.15, 0.16 + (index // 4) * 0.14])
+
+
 def scene_xml(path, *, object_spec=None, object_dir=None, other_objects=None):
     root = ET.parse(path).getroot()
     root.find("compiler").set("meshdir", str(path.parent / "assets"))
@@ -79,7 +86,7 @@ def scene_xml(path, *, object_spec=None, object_dir=None, other_objects=None):
         add_scan(root, body, spec, folder, suffix=f"_{index}")
     if other_objects:
         for index in range(1 + len(other_objects)):
-            x, y = 0.28 + index % 4 * 0.15, 0.16 + index // 4 * 0.14
+            x, y = collection_xy(index, 1 + len(other_objects))
             for axis in range(2):
                 for sign in (-1, 1):
                     position = [x, y, TABLE_Z + 0.015]

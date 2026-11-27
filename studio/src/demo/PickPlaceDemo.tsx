@@ -375,6 +375,22 @@ export default function PickPlaceDemo() {
             <>
               {!state.replay && (
                 <div className={styles.seedControl}>
+                  {state.layout === "clutter" && (
+                    <button
+                      disabled={
+                        busy ||
+                        Boolean(state.recording) ||
+                        state.status === "running"
+                      }
+                      onClick={() => {
+                        const nextSeed = (state.seed % 1000000) + 1;
+                        setSeed(nextSeed);
+                        void act("/reset", { seed: nextSeed });
+                      }}
+                    >
+                      Shuffle table
+                    </button>
+                  )}
                   <label htmlFor="reset-seed">Reset seed</label>
                   <input
                     id="reset-seed"

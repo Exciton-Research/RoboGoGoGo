@@ -11,7 +11,7 @@ from gymnasium import spaces
 
 from .assets import SOURCE, require_model
 from .objects import directory, require_object
-from .task import HOME, TABLE_Z, TARGET, scene_xml
+from .task import HOME, TABLE_Z, TARGET, collection_xy, scene_xml
 
 CAMERAS = ("overhead", "wrist")
 WIDTH, HEIGHT = 240, 144
@@ -48,13 +48,13 @@ class PandaEnv(gym.Env):
         asset_path = require_model(cache)
         ids = list(object_ids) if object_ids is not None else [object_id]
         if (
-            not 1 <= len(ids) <= 8
+            not 1 <= len(ids) <= 9
             or len(set(ids)) != len(ids)
             or object_id not in ids
             or (len(ids) > 1 and "block" in ids)
         ):
             raise ValueError(
-                "Scene requires up to eight distinct scanned objects including the target"
+                "Scene requires up to nine distinct scanned objects including the target"
             )
         self.objects = [require_object(cache, identifier) for identifier in ids]
         self.layout = "clutter" if len(ids) > 1 else "single"
@@ -117,7 +117,7 @@ class PandaEnv(gym.Env):
     def collection_xy(self, index):
         if self.layout == "single":
             return TARGET[:2].copy()
-        return np.array([0.28 + (index % 4) * 0.15, 0.16 + (index // 4) * 0.14])
+        return collection_xy(index, len(self.objects))
 
     @property
     def instruction(self):
@@ -170,17 +170,28 @@ class PandaEnv(gym.Env):
             raise ValueError("block_xy must be within x=[0.40,0.54], y=[-0.24,-0.10] m")
         mujoco.mj_resetData(self.model, self.data)
         self.data.qpos[:7], self.data.qpos[7:9] = HOME, 0.04
+        slots = (
+            [
+                np.array([0.30 + (i % 3) * 0.16, -0.32 + (i // 3) * 0.14])
+                for i in range(len(self.objects))
+            ]
+            if len(self.objects) > 8
+            else [
+                np.array(
+                    [0.47, -0.20] if i == 0 else [0.28 + (i % 4) * 0.15, -0.28 + (i // 4) * 0.19]
+                )
+                for i in range(len(self.objects))
+            ]
+        )
+        # A nonzero seed permutes identities across slots, rather than merely
+        # jittering fixed object positions. Seed zero retains the reference layout.
+        order = self.np_random.permutation(len(slots)) if seed != 0 else np.arange(len(slots))
         for index, (spec, joint) in enumerate(zip(self.objects, self.joints)):
             address = int(joint.qposadr[0])
             position = (
                 xy
                 if self.layout == "single"
-                else np.array(
-                    [0.47, -0.20]
-                    if index == 0
-                    else [0.28 + (index % 4) * 0.15, -0.28 + (index // 4) * 0.19]
-                )
-                + self.np_random.uniform(-0.005, 0.005, 2)
+                else slots[order[index]] + self.np_random.uniform(-0.005, 0.005, 2)
             )
             self.data.qpos[address : address + 3] = [
                 *position,
@@ -301,7 +312,7 @@ class PandaEnv(gym.Env):
             frames[name] = self.renderer.render().copy()
         return frames
 
-    def capture_rgbd(self):
+    def capture_rgbd(self, *, view="front"):
         """A calibrated inspection sensor; excludes object labels and instance poses."""
         from .vision import VISION_HEIGHT, VISION_WIDTH, inspection_camera
 
@@ -312,7 +323,7 @@ class PandaEnv(gym.Env):
         renderer = self.vision_renderer
         options = mujoco.MjvOption()
         options.geomgroup[3] = 0
-        renderer.update_scene(self.data, camera=inspection_camera(), scene_option=options)
+        renderer.update_scene(self.data, camera=inspection_camera(view), scene_option=options)
         rgb = renderer.render().copy()
         renderer.enable_depth_rendering()
         try:
