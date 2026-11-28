@@ -53,21 +53,11 @@ baseline is rule-based. Training, learned checkpoint inference, physical command
 execution, and real-robot evaluation still require integration. The mechanical
 design is illustrative; physical hardware has not been commissioned.
 
-## Paper
+## Research
 
-The [RSS 2027 research plan](docs/rss-2027-plan.md) proposes studying active
-verification and its effects on manipulation outcomes. It is an unvalidated
-research direction, separate from the current workbench paper and demo.
-
-**[Read the paper (PDF)](paper/robogogogo.pdf)**:
-*Robogogogo: A Tabletop Simulation Workbench for Object Collection and Policy
-Integration*, by the Robo Team.
-
-The paper describes the eight-object Panda environment, physical collection task,
-aligned recording and replay, and the interface for a future VLA. Its illustrative
-scripted sequence is separate from claims about learned perception, generalization,
-or real-robot performance. [Sources, references, figures, and build instructions](paper/)
-are included.
+Manuscripts, research code, experiments, and results are maintained separately
+in [excitonresearch-papers](https://github.com/raugen-ai/excitonresearch-papers/tree/main/robogogogo).
+This repository provides the interactive simulation demo and its reusable interfaces.
 
 ## Install and run
 
@@ -222,7 +212,6 @@ development loop, package ownership, targeted tests, and screenshot regeneration
 
 - [Documentation index](docs/README.md)
 - [Panda object library, collection, and policy interface](docs/demo.md)
-- [Historical optional simulation-error protocol](docs/research.md)
 - [Install on macOS or Linux](docs/installation.md)
 - [Studio walkthrough](docs/getting-started.md)
 - [Architecture and workflow layers](docs/platform.md)

@@ -1,2 +1,0 @@
-# Separate optional environment: the Studio does not depend on robosuite.
-robosuite==1.5.1

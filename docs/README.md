@@ -14,9 +14,7 @@ recognition and learned control are not implemented.
    native rendering, headless use, and troubleshooting.
 2. **[Panda workbench](demo.md):** load the object library, collect a target,
    continue with another target, record/replay, and connect an external policy.
-3. **[Paper](../paper/):** current environment design, illustrative collection
-   sequence, related work, limitations, and source/PDF build instructions.
-4. **[Development](development.md):** Python/TypeScript ownership, local preview,
+3. **[Development](development.md):** Python/TypeScript ownership, local preview,
    packaging, and verification commands.
 
 ## Earlier RG Mobile Duo workspace
@@ -42,10 +40,11 @@ Launch `robogogogo-studio` and use `/simulation/` or `/workflow/` for these guid
 
 ## Other material
 
-- **[Historical optional simulation-error protocol](research.md)** describes an
-  earlier unvalidated robosuite experiment, separate from the current workbench.
 - **[Contributing](../CONTRIBUTING.md)** and **[security](../SECURITY.md)** cover
   contribution guidelines and the local deployment boundary.
 
 Object data and recordings stay in ignored local caches. Training, learned VLA
 inference, room imports, and physical robot execution require further work.
+
+Research papers, experiment code, and results live in the separate
+[excitonresearch-papers repository](https://github.com/raugen-ai/excitonresearch-papers/tree/main/robogogogo).
