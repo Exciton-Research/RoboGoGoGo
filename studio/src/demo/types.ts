@@ -1,6 +1,8 @@
 export type PerceptionMode = "vlm" | "camera" | "simulator";
 
 export type TaskState = {
+  custom_layout: boolean;
+  table_layout: TableLayout;
   object: LibraryObject;
   scene_id: string;
   layout: "single" | "clutter";
@@ -78,6 +80,20 @@ export type TaskState = {
     rgb: boolean;
     outcome: string;
   } | null;
+};
+
+export type TableLayout = {
+  id?: string;
+  name: string;
+  seed: number;
+  target: string;
+  objects: { id: string; x: number; y: number }[];
+};
+
+export type LayoutLibrary = {
+  items: TableLayout[];
+  workspace: [number, number, number, number];
+  gap: number;
 };
 
 export type EpisodeSummary = {

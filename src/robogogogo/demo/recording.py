@@ -47,6 +47,9 @@ class Recording:
                 "objects": [item["id"] for item in env.objects],
                 "collection_style": env.collection_style,
                 "soft_fingers": env.soft_fingers,
+                "table_layout": env.snapshot()["table_layout"]
+                if env.scene_layout is not None
+                else None,
             },
             "mujoco": mujoco.__version__,
             "control_dt": env.dt,

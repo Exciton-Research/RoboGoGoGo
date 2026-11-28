@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Box, Check, Download, Package } from "lucide-react";
 import type { LibraryObject, PerceptionMode, TaskState } from "./types";
 import ObjectImporter from "./ObjectImporter";
+import SceneEditor from "./SceneEditor";
+import type { TableLayout } from "./types";
 import styles from "./demo.module.css";
 
 export default function ObjectLibrary({
@@ -13,6 +15,7 @@ export default function ObjectLibrary({
   load,
   loadClutter,
   importObject,
+  applyLayout,
   selectTarget,
   collectRemaining,
   perception,
@@ -27,6 +30,7 @@ export default function ObjectLibrary({
   load: (object: LibraryObject) => Promise<void>;
   loadClutter: (identifier?: string) => Promise<void>;
   importObject: (draft: string, clutter: boolean) => Promise<boolean>;
+  applyLayout: (layout: TableLayout) => Promise<boolean>;
   selectTarget: (identifier: string) => Promise<void>;
   collectRemaining: () => Promise<void>;
   perception: PerceptionMode;
@@ -48,6 +52,12 @@ export default function ObjectLibrary({
     state.status === "running";
   return (
     <section className={styles.objectLibrary} aria-label="Object library">
+      <SceneEditor
+        objects={objects}
+        state={state}
+        locked={locked}
+        apply={applyLayout}
+      />
       <ObjectImporter
         objects={objects}
         locked={locked}
@@ -72,11 +82,13 @@ export default function ObjectLibrary({
         </button>
         <p>
           {clutter
-            ? importedScene
-              ? "Your imported object alongside eight built-in objects. Shuffle the table, then describe the target for OWLv2."
-              : newObjectScene
-                ? "Sugar carton alongside all eight original objects. Shuffle the table, then try ‘tall yellow box’."
-                : "Choose a named target below, then find and collect it. Other objects remain on the table."
+            ? state.custom_layout
+              ? `${state.instances.length} objects in “${state.table_layout.name}”. Choose a target, or reopen the scene editor to change the arrangement.`
+              : importedScene
+                ? "Your imported object alongside eight built-in objects. Shuffle the table, then describe the target for OWLv2."
+                : newObjectScene
+                  ? "Sugar carton alongside all eight original objects. Shuffle the table, then try ‘tall yellow box’."
+                  : "Choose a named target below, then find and collect it. Other objects remain on the table."
             : "Load the original eight-object table, the new sugar carton scene, or one object."}
         </p>
       </div>

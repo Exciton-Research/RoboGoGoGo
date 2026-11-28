@@ -21,6 +21,11 @@ size, and preview its texture and convex collision hull. Load it alone or with
 eight distractors, then describe it for OWLv2. Imports stay in your local library.
 See [formats and pickup limits](docs/demo.md#import-your-own-textured-object).
 
+**Build your own table:** combine up to nine distinct imported and built-in
+objects in the scene editor. Drag their footprints, choose the collection target,
+apply the scene, and save layouts locally to reopen later. Custom tables support
+repeatable shuffling, reset, manual control, OWLv2 collection, and episode replay.
+
 The controller is scripted. This is a working simulation demonstration, with
 no learned-policy or real-robot performance claim. Start with the
 [demo guide](docs/demo.md).

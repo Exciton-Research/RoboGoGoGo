@@ -1113,3 +1113,102 @@
 .collisionToggle input {
   width: auto;
 }
+
+.sceneEditor {
+  border: 1px solid #bdcbb3;
+  border-radius: 5px;
+  background: #f3f6ec;
+  padding: 12px;
+  margin-bottom: 14px;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.sceneEditor summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.sceneEditor label {
+  display: grid;
+  gap: 4px;
+  margin: 10px 0;
+}
+.sceneEditor input,
+.sceneEditor select,
+.sceneEditor button {
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #cdd8c3;
+  border-radius: 3px;
+  color: #455344;
+  background: #fafbf7;
+}
+.sceneEditor button {
+  cursor: pointer;
+  background: #e2ecd8;
+}
+.sceneEditor button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.editorActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0;
+}
+.editorActions button {
+  flex: 1 1 90px;
+}
+.layoutPlan {
+  margin: 14px 0;
+}
+.layoutPlan figcaption {
+  font: 9px/2 var(--mono);
+  color: #6c7d61;
+}
+.layoutPlan svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  touch-action: none;
+  user-select: none;
+}
+.layoutPlan p {
+  font-size: 10px;
+  color: #6c7d61;
+}
+.planObject {
+  cursor: grab;
+}
+.planObject:active {
+  cursor: grabbing;
+}
+.planObject:focus {
+  outline: none;
+}
+.planObject:focus rect {
+  stroke: #283f31;
+  stroke-width: 4px;
+}
+.planObjects {
+  display: grid;
+  gap: 5px;
+}
+.planObjects > div {
+  display: grid;
+  grid-template-columns: 1fr 30px;
+  gap: 4px;
+}
+.planObjects button:first-child {
+  text-align: left;
+}
+.planObjects button[data-selected="true"] {
+  border-color: #55724c;
+}
+.editorCoordinates {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}

@@ -268,6 +268,42 @@ class PandaSession:
         spec = commit_import(self.assets, draft)
         return self._select_object(spec["id"], seed=seed, clutter=clutter)
 
+    def _apply_layout(self, definition):
+        if self.replay is not None or self.recording is not None or self.playing:
+            raise ValueError(
+                "Pause playback and finish the recording before applying a table layout"
+            )
+        replacement = PandaEnv(self.assets, scene_layout=definition)
+        try:
+            replacement.reset(seed=definition.get("seed", 0))
+        except Exception:
+            replacement.close()
+            raise
+        self.env.close()
+        self.env = replacement
+        self.collecting, self.collection_queue, self.collected = False, [], set()
+        self.detection = None
+        self.seed, self.controller, self.mode, self.status = (
+            definition.get("seed", 0),
+            None,
+            "manual",
+            "ready",
+        )
+        self.episode_id = str(uuid4())
+        self.message = (
+            f"{replacement.scene_layout['name']} loaded. Ready to find and collect a target."
+        )
+        self.revision += 1
+        return self._snapshot()
+
+    def _shuffle_layout(self, seed=0):
+        if self.env.scene_layout is None:
+            raise ValueError("Use this action with a custom table")
+        from .layouts import shuffle_layout
+
+        definition = shuffle_layout(self.assets, self.env.snapshot()["table_layout"], seed)
+        return self._apply_layout(definition)
+
     def _select_target(self, identifier, continuing=False):
         if self.replay is not None or self.recording is not None or self.playing:
             raise ValueError("Pause and finish the active recording before selecting a new target")
@@ -560,6 +596,7 @@ class PandaSession:
             gripper_stiffness=manifest.get("gripper_stiffness", 300),
             collection_style=manifest.get("scene", {}).get("collection_style", "cells"),
             soft_fingers=manifest.get("scene", {}).get("soft_fingers", False),
+            scene_layout=manifest.get("scene", {}).get("table_layout"),
         )
         try:
             episode = Episode(path, replay_env)

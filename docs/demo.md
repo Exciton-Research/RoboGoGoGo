@@ -156,6 +156,68 @@ object metadata, preview geometry and texture URL.
 and loads the prepared object. `GET /api/demo/objects` includes saved imports;
 the regular object-select route can load their IDs subsequently.
 
+### Build and save your own table
+
+Open **Objects → Build your own table**. Start a **New table**, or use **Use
+current table** to copy the current scene's starting arrangement into the plan.
+Choose objects from the local library and click **Add & arrange**. Several imported
+objects can share a scene with built-in scans. Built-in objects must be downloaded
+from the library first; imports must remain in the same local asset cache.
+
+The top-down plan shows each object's bounding footprint and a numbered list.
+Drag a footprint to move it, or focus it and use arrow keys (2 mm per key;
+Shift + arrows moves 1 cm). The position fields allow precise placement in
+centimetres. Pick the **Collection target** and give the table a name.
+Green marks the target, and red marks invalid footprints. The server checks
+that objects remain inside the calibrated pickup area and have at least 8 mm
+of footprint clearance. The editor supports one instance per asset, up to nine
+objects, with the upright orientation prepared by the importer or built-in scan.
+The original primitive block is available separately, outside the scene editor.
+
+**Apply to table** starts a fresh physical scene from the plan. Planning edits
+do not move the live objects. Pause playback and finish any recording before
+applying or reopening a layout. **Shuffle layout** rearranges the draft; the main
+**Shuffle table** control rearranges the live custom scene. Both preserve its
+object choices and selected target. The same objects and seed produce the same
+shuffle. If the selected footprints cannot fit with clearance, the action reports
+an error and leaves the previous layout in place. Adding an object also rearranges
+the draft to find room. **Reset task** restores the current arrangement's starting
+positions, including after a pickup; it does not replace custom objects with the
+default catalog table.
+
+**Save layout** saves the draft locally. Select a saved table and click **Open
+saved table** to apply it later. Saving edits to an opened layout updates that
+saved layout; **Use current table** or **New table** starts a separate save.
+Layouts live under `runs/demo/assets/layouts/` by default, outside Git, and survive
+server restarts. They store object IDs, initial positions, target, name and shuffle
+seed. Keep the imported object cache: layouts do not embed meshes or download
+missing assets automatically.
+
+Custom scenes use the existing controller and perception choices. OWLv2 still
+gets RGB and calibrated depth, without layout positions or object dimensions.
+An editable layout is not a guarantee of recognition or grasp success: visibility,
+geometry and robot reach still matter. Recordings include the custom scene's
+starting arrangement so replay can reconstruct its model and restore the recorded
+physical states. Existing single-object and curated-table recordings remain supported.
+
+API routes:
+
+- `GET /api/demo/layouts`: saved layouts, pickup workspace bounds and clearance.
+- `POST /api/demo/layouts/save`: validate and save a layout; include its optional
+  UUID `id` to update it.
+- `POST /api/demo/layouts/shuffle`: generate a valid draft arrangement from its
+  object choices and seed, without changing the live environment.
+- `POST /api/demo/layouts/apply`: load a layout as the live scene.
+- `POST /api/demo/layouts/shuffle-live` with `{"seed": 3}`: shuffle a custom scene.
+
+A layout body contains `name`, `seed`, `target` (an object ID) and `objects`
+(`[{"id": "lemon", "x": 0.35, "y": -0.20}, ...]`, positions in metres).
+Python clients can use `PandaEnv(assets, scene_layout=layout)` and the ordinary
+`reset` / `step` API. `reset` preserves explicit custom placements; use
+`robogogogo.demo.layouts.shuffle_layout(assets, layout, seed)` to generate a new
+definition. Diagnostic snapshots include `custom_layout` and `table_layout`;
+policy observations retain their existing camera and proprioception boundary.
+
 ### Cluttered-table collection
 
 Choose **Load cluttered table · 8 objects** to place the original eight scans on the same

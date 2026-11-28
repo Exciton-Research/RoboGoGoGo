@@ -24,6 +24,7 @@ import type {
   PerceptionMode,
   SceneData,
   TaskState,
+  TableLayout,
 } from "./types";
 import styles from "./demo.module.css";
 
@@ -93,6 +94,26 @@ export default function PickPlaceDemo() {
           ? failure.message
           : "Object could not be loaded",
       );
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function applyLayout(layout: TableLayout) {
+    setBusy(true);
+    setError("");
+    try {
+      const next = await request<TaskState>("/demo/layouts/apply", layout);
+      await synchronize(next, true);
+      setSeed(next.seed);
+      setPerception(next.pretrained_ready ? "vlm" : "simulator");
+      return true;
+    } catch (failure) {
+      setError(
+        failure instanceof Error
+          ? failure.message
+          : "Table could not be loaded",
+      );
+      return false;
     } finally {
       setBusy(false);
     }
@@ -167,6 +188,7 @@ export default function PickPlaceDemo() {
         setScene(scene);
         sceneKey.current = scene.scene_id;
         accept(scene.state);
+        setSeed(scene.state.seed);
         setConnected(true);
         setError("");
         void poll();
@@ -408,7 +430,7 @@ export default function PickPlaceDemo() {
             <>
               {!state.replay && (
                 <div className={styles.seedControl}>
-                  {state.layout === "clutter" && (
+                  {(state.layout === "clutter" || state.custom_layout) && (
                     <button
                       disabled={
                         busy ||
@@ -418,7 +440,12 @@ export default function PickPlaceDemo() {
                       onClick={() => {
                         const nextSeed = (state.seed % 1000000) + 1;
                         setSeed(nextSeed);
-                        void act("/reset", { seed: nextSeed });
+                        void act(
+                          state.custom_layout
+                            ? "/layouts/shuffle-live"
+                            : "/reset",
+                          { seed: nextSeed },
+                        );
                       }}
                     >
                       Shuffle table
@@ -483,6 +510,7 @@ export default function PickPlaceDemo() {
                   busy={busy || !connected}
                   load={loadObject}
                   importObject={importObject}
+                  applyLayout={applyLayout}
                   loadClutter={loadClutter}
                   selectTarget={(identifier) => act("/target", { identifier })}
                   collectRemaining={() => act("/collect", { images: true })}

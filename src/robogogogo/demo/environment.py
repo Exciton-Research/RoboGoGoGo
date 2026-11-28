@@ -40,6 +40,7 @@ class PandaEnv(gym.Env):
         gripper_stiffness=600,
         collection_style=None,
         soft_fingers=True,
+        scene_layout=None,
     ):
         if observation_mode not in ("state", "rgb") or render_mode not in (None, "rgb_array"):
             raise ValueError(
@@ -50,6 +51,13 @@ class PandaEnv(gym.Env):
         if not np.isfinite(gripper_stiffness) or not 0 < gripper_stiffness <= 2500:
             raise ValueError("gripper_stiffness must be in (0,2500] N/m")
         cache = Path(assets or Path.cwd() / "runs/demo/assets").resolve()
+        self.scene_layout = None
+        if scene_layout is not None:
+            from .layouts import validate_layout
+
+            self.scene_layout = validate_layout(cache, scene_layout)
+            object_ids = [item["id"] for item in self.scene_layout["objects"]]
+            object_id = self.scene_layout["target"]
         asset_path = require_model(cache)
         ids = list(object_ids) if object_ids is not None else [object_id]
         if (
@@ -61,7 +69,9 @@ class PandaEnv(gym.Env):
             raise ValueError(
                 "Scene requires up to nine distinct scanned objects including the target"
             )
-        self.collection_style = collection_style or ("bin" if len(ids) > 8 else "cells")
+        self.collection_style = collection_style or (
+            "bin" if scene_layout is not None or len(ids) > 8 else "cells"
+        )
         if self.collection_style not in ("bin", "cells"):
             raise ValueError("collection_style must be bin or cells")
         if type(soft_fingers) is not bool:
@@ -148,6 +158,8 @@ class PandaEnv(gym.Env):
             raise ValueError("Unknown target in this scene")
         self.target_index = index
         self.object, self.block = self.objects[index], self.bodies[index]
+        if self.scene_layout is not None:
+            self.scene_layout["target"] = self.object["id"]
         self.block_dof = int(self.joints[index].dofadr[0])
         self.half_height = self.object["dimensions"][2] / 2
         self.target = np.r_[self.collection_xy(index), TABLE_Z + self.half_height]
@@ -166,6 +178,8 @@ class PandaEnv(gym.Env):
     def reset(self, *, seed=None, options=None):
         super().reset(seed=seed)
         options = options or {}
+        if self.scene_layout is not None and options:
+            raise ValueError("Custom table positions are set in the scene editor")
         if set(options) - {"block_xy"}:
             raise ValueError("Only block_xy is supported in reset options")
         if self.layout == "clutter" and options:
@@ -202,12 +216,20 @@ class PandaEnv(gym.Env):
         # A nonzero seed permutes identities across slots, rather than merely
         # jittering fixed object positions. Seed zero retains the reference layout.
         order = self.np_random.permutation(len(slots)) if seed != 0 else np.arange(len(slots))
+        self.source_positions = []
+        self.layout_seed = int(seed or 0)
         for index, (spec, joint) in enumerate(zip(self.objects, self.joints)):
             address = int(joint.qposadr[0])
             position = (
                 xy
                 if self.layout == "single"
                 else slots[order[index]] + self.np_random.uniform(-0.005, 0.005, 2)
+            )
+            if self.scene_layout is not None:
+                item = self.scene_layout["objects"][index]
+                position = np.array([item["x"], item["y"]])
+            self.source_positions.append(
+                {"id": spec["id"], "x": float(position[0]), "y": float(position[1])}
             )
             self.data.qpos[address : address + 3] = [
                 *position,
@@ -444,6 +466,13 @@ class PandaEnv(gym.Env):
             "object": self.object,
             "instruction": self.instruction,
             "layout": self.layout,
+            "custom_layout": self.scene_layout is not None,
+            "table_layout": {
+                "name": self.scene_layout["name"] if self.scene_layout else "My table",
+                "seed": self.layout_seed,
+                "target": self.object["id"],
+                "objects": self.source_positions,
+            },
             "instances": [
                 {
                     "id": spec["id"],

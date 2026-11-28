@@ -67,6 +67,19 @@ class TargetRequest(BaseModel):
     identifier: str
 
 
+class LayoutObject(BaseModel):
+    id: str = Field(min_length=1, max_length=80)
+    x: float = Field(allow_inf_nan=False)
+    y: float = Field(allow_inf_nan=False)
+
+
+class LayoutRequest(ResetRequest):
+    name: str = Field(min_length=1, max_length=80)
+    target: str = Field(min_length=1, max_length=80)
+    objects: list[LayoutObject] = Field(min_length=1, max_length=9)
+    id: UUID | None = None
+
+
 def create_demo_router(cache, *, legacy_workspace=False, recordings=None):
     # Construction starts a single worker. No model or rendering work runs on
     # arbitrary FastAPI pool threads, and every mutation passes through its queue.
@@ -111,6 +124,46 @@ def create_demo_router(cache, *, legacy_workspace=False, recordings=None):
         from .objects import catalog
 
         return await asyncio.to_thread(catalog, cache)
+
+    @router.get("/layouts")
+    async def layouts():
+        from .layouts import GAP, WORKSPACE, saved_layouts
+
+        return {
+            "items": await asyncio.to_thread(saved_layouts, cache),
+            "workspace": WORKSPACE,
+            "gap": GAP,
+        }
+
+    @router.post("/layouts/save")
+    async def save_table(body: LayoutRequest):
+        from .layouts import save_layout
+
+        try:
+            return await asyncio.to_thread(
+                save_layout, cache, body.model_dump(exclude={"id"}), body.id
+            )
+        except (ValueError, FileNotFoundError) as error:
+            raise HTTPException(422, str(error)) from error
+
+    @router.post("/layouts/shuffle")
+    async def shuffle_table(body: LayoutRequest):
+        from .layouts import shuffle_layout
+
+        try:
+            return await asyncio.to_thread(
+                shuffle_layout, cache, body.model_dump(exclude={"id"}), body.seed
+            )
+        except (ValueError, FileNotFoundError) as error:
+            raise HTTPException(422, str(error)) from error
+
+    @router.post("/layouts/apply")
+    async def apply_table(body: LayoutRequest):
+        return await call("apply_layout", definition=body.model_dump(exclude={"id"}))
+
+    @router.post("/layouts/shuffle-live")
+    async def shuffle_live_table(body: ResetRequest):
+        return await call("shuffle_layout", **body.model_dump())
 
     @router.post("/objects/import/preview")
     async def preview_import(
