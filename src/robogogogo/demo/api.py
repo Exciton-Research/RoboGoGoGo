@@ -273,6 +273,14 @@ def create_demo_router(cache, *, legacy_workspace=False, recordings=None):
     async def find_named_object(body: FindRequest):
         return await call("find", **body.model_dump())
 
+    @router.get("/verification/image")
+    async def verification_image(episode_id: str, revision: int):
+        return Response(
+            await call("verification_image", episode_id=episode_id, revision=revision),
+            media_type="image/png",
+            headers={"Cache-Control": "no-store"},
+        )
+
     @router.post("/collect")
     async def collect_remaining(body: CollectRequest):
         return await call("collect_remaining", **body.model_dump())

@@ -177,16 +177,17 @@ class PretrainedDetector:
                 detections.append({"box": box, "score": score, "query": query})
         return detections
 
-    def find_target(self, query, capture):
+    def find_target(self, query, capture, *, workspace=None):
         """Inspect fixed RGB-D views; the sensor callback supplies no object state."""
         from .vision import workspace_crop
 
         started = time.perf_counter()
+        region = {"workspace": workspace} if workspace is not None else {}
         for view, focused in (("side", False), ("front", True)):
             sensor = capture(view=view)
             try:
-                crop = workspace_crop(**sensor) if focused else None
-                result = self.find(query, **sensor, crop=crop)
+                crop = workspace_crop(**sensor, **region) if focused else None
+                result = self.find(query, **sensor, crop=crop, **region)
                 if result["position"] is None:
                     raise DetectionRejected(result["pickup_error"])
                 result["camera_view"] = view
@@ -199,7 +200,7 @@ class PretrainedDetector:
         confirmed = []
         for view in ("side", "diagonal", "front", "left"):
             try:
-                result = self.inspect(query, **capture(view=view, detail=True))
+                result = self.inspect(query, **capture(view=view, detail=True), **region)
                 if result["position"] is None:
                     raise DetectionRejected(result["pickup_error"])
                 result["camera_view"] = view
@@ -219,7 +220,7 @@ class PretrainedDetector:
             f"OWLv2 could not confirm '{query}' from two inspection views. No motion started."
         )
 
-    def inspect(self, query, *, rgb, depth, position, rotation, fovy):
+    def inspect(self, query, *, rgb, depth, position, rotation, fovy, workspace=None):
         """Compare close-ups of all visible depth regions using the user's words."""
         from .vision import proposals
 
@@ -232,7 +233,9 @@ class PretrainedDetector:
         match = re.fullmatch(r"(.+) (box|carton|can|tin)", query, re.IGNORECASE)
         prompt = f"a {match[2]} of {match[1]}" if match else query
         candidates = []
-        for region in proposals(rgb, depth, position, rotation, fovy, with_appearance=False):
+        for region in proposals(
+            rgb, depth, position, rotation, fovy, with_appearance=False, workspace=workspace
+        ):
             left, top, right, bottom = region["box"]
             pad = max(12, int(max(right - left, bottom - top) * 0.15))
             left, top = max(0, left - pad), max(0, top - pad)
@@ -247,7 +250,14 @@ class PretrainedDetector:
                     break
         candidates.sort(key=lambda item: item["score"], reverse=True)
         result = self._localize(
-            query, candidates, rgb=rgb, depth=depth, position=position, rotation=rotation, fovy=fovy
+            query,
+            candidates,
+            rgb=rgb,
+            depth=depth,
+            position=position,
+            rotation=rotation,
+            fovy=fovy,
+            workspace=workspace,
         )
         result.update(
             inspection="object close-ups",
@@ -256,7 +266,7 @@ class PretrainedDetector:
         )
         return result
 
-    def find(self, query, *, rgb, depth, position, rotation, fovy, crop=None):
+    def find(self, query, *, rgb, depth, position, rotation, fovy, crop=None, workspace=None):
         """Locate one text detection with depth; never accepts catalog IDs or dimensions."""
         started = time.perf_counter()
         # Keep weak competitors for the ambiguity check, even if they fall just
@@ -273,12 +283,19 @@ class PretrainedDetector:
                 for item in detections
             ]
         result = self._localize(
-            query, detections, rgb=rgb, depth=depth, position=position, rotation=rotation, fovy=fovy
+            query,
+            detections,
+            rgb=rgb,
+            depth=depth,
+            position=position,
+            rotation=rotation,
+            fovy=fovy,
+            workspace=workspace,
         )
         result["inference_seconds"] = time.perf_counter() - started
         return result
 
-    def _localize(self, query, detections, *, rgb, depth, position, rotation, fovy):
+    def _localize(self, query, detections, *, rgb, depth, position, rotation, fovy, workspace=None):
         from .vision import localize_box
 
         if not detections or detections[0]["score"] < 0.2:
@@ -294,7 +311,13 @@ class PretrainedDetector:
             )
         try:
             pick, region, grasp = localize_box(
-                best["box"], rgb=rgb, depth=depth, position=position, rotation=rotation, fovy=fovy
+                best["box"],
+                rgb=rgb,
+                depth=depth,
+                position=position,
+                rotation=rotation,
+                fovy=fovy,
+                **({"workspace": workspace} if workspace is not None else {}),
             )
             pickup_error = None
         except ValueError as error:

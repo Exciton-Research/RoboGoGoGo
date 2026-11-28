@@ -1,6 +1,23 @@
 export type PerceptionMode = "vlm" | "camera" | "simulator";
 
 export type TaskState = {
+  verification: {
+    attempt: number;
+    max_attempts: number;
+    stage: string;
+    lift_verified: boolean;
+    placement_verified: boolean;
+    image_revision: number;
+    evaluation_success?: boolean;
+    events: {
+      event: string;
+      attempt: number;
+      step: number;
+      reason?: string;
+      views?: string[];
+      score?: number;
+    }[];
+  } | null;
   custom_layout: boolean;
   table_layout: TableLayout;
   object: LibraryObject;

@@ -26,6 +26,11 @@ objects in the scene editor. Drag their footprints, choose the collection target
 apply the scene, and save layouts locally to reopen later. Custom tables support
 repeatable shuffling, reset, manual control, OWLv2 collection, and episode replay.
 
+OWLv2 collection checks the named object after lifting and after release using
+RGB-D from multiple cameras and gripper feedback. A missed grasp or slipped
+object gets one fresh inspection and retry, without resetting the scene. The
+browser and recordings show the checks and recovery history.
+
 The controller is scripted. This is a working simulation demonstration, with
 no learned-policy or real-robot performance claim. Start with the
 [demo guide](docs/demo.md).

@@ -14,6 +14,7 @@ import {
 import { request } from "../api";
 import TaskScene from "./TaskScene";
 import ObjectLibrary from "./ObjectLibrary";
+import VerificationPanel from "./VerificationPanel";
 import {
   ManualControls,
   RecordingControls,
@@ -341,9 +342,11 @@ export default function PickPlaceDemo() {
             {state?.replay
               ? "Replay · read only"
               : state?.status === "complete"
-                ? state.layout === "clutter"
-                  ? "Target collected"
-                  : "Placement complete"
+                ? state.verification?.placement_verified
+                  ? "Camera-verified placement"
+                  : state.layout === "clutter"
+                    ? "Target collected"
+                    : "Placement complete"
                 : state?.status === "failed"
                   ? "Task stopped"
                   : state?.status === "running"
@@ -426,6 +429,7 @@ export default function PickPlaceDemo() {
               Connection interrupted. Reconnecting…
             </p>
           )}
+          {state && <VerificationPanel state={state} />}
           {state && (
             <>
               {!state.replay && (

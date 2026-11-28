@@ -19,6 +19,7 @@ from .environment import PandaEnv
 from .objects import catalog, clutter_objects
 from .pretrained import PretrainedDetector, model_ready
 from .recording import Episode, Recording
+from .recovery import ClosedLoopController, RecoveryStopped, robot_sensors
 
 
 class PandaSession:
@@ -64,14 +65,7 @@ class PandaSession:
                     try:
                         self._tick()
                     except Exception as error:
-                        self.status, self.message, self.playing = "failed", str(error), False
-                        if self.collecting:
-                            self.collecting, self.collection_queue = False, []
-                            if self.recording is not None and self.recording.actions:
-                                try:
-                                    self._finish_recording("collection_failed")
-                                except Exception as save_error:
-                                    self.message += f" Recording could not be saved: {save_error}"
+                        self._halt(error)
                     self.next_tick = max(self.next_tick + self.env.dt, time.perf_counter())
                     continue
                 try:
@@ -93,6 +87,8 @@ class PandaSession:
                 # Preserve any finished transitions on ordinary shutdown.
                 try:
                     if self.recording.actions:
+                        if isinstance(self.controller, ClosedLoopController):
+                            self.recording.manifest["verification"] = self.controller.feedback
                         self.recording.save(self.env, "shutdown")
                 except Exception as error:
                     self.shutdown_error = error
@@ -108,6 +104,18 @@ class PandaSession:
 
     def _snapshot(self):
         controller = self.controller
+        verification = (
+            self.replay.manifest.get("verification")
+            if self.replay
+            else controller.feedback
+            if isinstance(controller, ClosedLoopController)
+            else None
+        )
+        if not self.replay and isinstance(controller, ClosedLoopController) and controller.done:
+            verification = {
+                **verification,
+                "evaluation_success": self.env.info()["evaluation_success"],
+            }
         return {
             **self.env.snapshot(),
             "revision": self.revision,
@@ -130,6 +138,7 @@ class PandaSession:
                 "remaining": len(self.collection_queue),
             },
             "message": self.message,
+            "verification": verification,
             "vision": None
             if self.detection is None or self.replay
             else {
@@ -169,6 +178,19 @@ class PandaSession:
                 "outcome": self.replay.manifest["outcome"],
             },
         }
+
+    def _halt(self, error):
+        self.status, self.message, self.playing = "failed", str(error), False
+        self.collecting, self.collection_queue = False, []
+        if self.recording is not None and self.recording.actions:
+            try:
+                self._finish_recording(
+                    "verification_failed"
+                    if isinstance(self.controller, ClosedLoopController)
+                    else "collection_failed"
+                )
+            except Exception as save_error:
+                self.message += f" Recording could not be saved: {save_error}"
 
     def _scene(self):
         return {**self.env.geometry(), "objects": catalog(self.assets), "state": self._snapshot()}
@@ -216,6 +238,18 @@ class PandaSession:
         if detection_id is not None and detection_id != self.detection["id"]:
             raise ValueError("Camera detection changed; request its latest image")
         return base64.b64decode(self.detection["image"].split(",", 1)[1])
+
+    def _verification_image(self, episode_id, revision):
+        if (
+            self.replay is not None
+            or episode_id != self.episode_id
+            or not isinstance(self.controller, ClosedLoopController)
+        ):
+            raise ValueError("No camera verification image for this episode")
+        verifier = self.controller.verifier
+        if verifier.last_image is None or revision != verifier.image_revision:
+            raise ValueError("Camera verification image changed; request the latest state")
+        return base64.b64decode(verifier.last_image)
 
     def _find(self, query, expected_revision=None):
         self._guard_live(expected_revision)
@@ -338,7 +372,11 @@ class PandaSession:
             self.playing = False
             self.status = "complete" if result[4]["success"] else "failed"
             self.message = (
-                "Object placed, released, and settled."
+                (
+                    "Camera confirmed named-object placement after release."
+                    if self.env.external_termination
+                    else "Object placed, released, and settled."
+                )
                 if result[4]["success"]
                 else "Episode ended: " + str(result[4]["reason"])
             )
@@ -352,6 +390,7 @@ class PandaSession:
         if not self.env.action_space.contains(action):
             raise ValueError("Action must contain seven joint targets in rad and opening in m")
         self.controller, self.mode, self.status = None, "manual", "paused"
+        self.env.external_termination = False
         self.detection = None
         self._advance(action, "api")
         return self._snapshot()
@@ -374,6 +413,7 @@ class PandaSession:
         start = self.env.data.qpos[:7].copy()
         goal = self.env.solve(target, start)
         self.controller, self.mode, self.status = None, "manual", "paused"
+        self.env.external_termination = False
         self.detection = None
         self.message = "Manual control · simulation advances only when you act."
         count = 10 if opening is not None else 6
@@ -419,12 +459,14 @@ class PandaSession:
                     self._find(query or self.env.object["name"])
                     if self.detection["position"] is None:
                         raise ValueError(self.detection["pickup_error"])
-                    self.controller = ReferenceController(
-                        self.env,
-                        camera_pick=self.detection["position"],
-                        camera_grasp=self.detection.get("grasp_position"),
+                    self.controller = ClosedLoopController(
+                        robot_sensors(self.env, center_z=self.detection["position"][2]),
+                        query=query or self.env.object["name"],
+                        detection=self.detection,
+                        detector=self.pretrained_detector,
+                        capture=self.env.capture_rgbd,
                     )
-                    self.controller.perception = "vlm"
+                    self.env.external_termination, self.env.external_success = True, None
                 elif camera_based:
                     from .vision import CatalogVision
 
@@ -485,23 +527,48 @@ class PandaSession:
         self._record("start", images=self.collection_images)
 
     def _tick(self):
+        try:
+            self._tick_motion()
+        except RecoveryStopped as error:
+            self._halt(error)
+
+    def _tick_motion(self):
         if self.replay is not None:
             if self.frame < self.replay.count:
                 self._seek(self.frame + 1)
             else:
                 self.playing, self.status = False, "paused"
             return
-        action = self.controller.action(self.env)
+        closed_loop = isinstance(self.controller, ClosedLoopController)
+        robot = (
+            robot_sensors(self.env, center_z=self.controller.pick[2]) if closed_loop else self.env
+        )
+        action = self.controller.action(robot)
         self._advance(
             action,
-            {
+            "vlm_recovery"
+            if closed_loop and self.controller.retreat is not None
+            else "vlm_verification"
+            if closed_loop and self.controller.phase == 8
+            else {
                 "camera": "camera_scripted",
                 "vlm": "vlm_scripted",
                 "simulator": "scripted",
             }[self.controller.perception],
         )
         if not self.env.terminated and not self.env.truncated:
-            self.controller.advance(self.env)
+            self.controller.advance(robot)
+            if closed_loop:
+                if self.detection is not self.controller.detection:
+                    self.detection = {**self.controller.detection, "id": str(uuid4())}
+                    self.controller.detection = self.detection
+                    self._record_detection()
+                if self.controller.done:
+                    self.env.external_success = True
+                    self._advance(np.r_[self.env.data.qpos[:7], 0.08], "vlm_verified")
+                    if self.collecting:
+                        self._next_collection()
+                    return
             self.message = self.controller.labels[self.controller.phase]
         elif self.collecting:
             if self.env.info()["success"]:
@@ -539,6 +606,8 @@ class PandaSession:
     def _finish_recording(self, reason):
         if self.recording is None:
             raise ValueError("No recording is active")
+        if isinstance(self.controller, ClosedLoopController):
+            self.recording.manifest["verification"] = self.controller.feedback
         self.last_saved = self.recording.save(self.env, reason)
         self.recording = None
         self.library = self._list_episodes()

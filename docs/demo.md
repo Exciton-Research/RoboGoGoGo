@@ -431,6 +431,64 @@ cause misses or wrong detections. A confident wrong prediction can still cause a
 wrong grasp. The pickup estimator assumes upright resting objects and calibrated,
 ideal simulated depth; this is not real-camera validation or a trained VLA policy.
 
+### Camera verification and one automatic retry
+
+**Find & collect target** with **Pretrained OWLv2** now checks the task during
+execution. The catalog-image and simulator reference controllers retain their
+existing behavior. This remains scripted control with a frozen detector.
+
+After lifting, the system looks for the named object near the hand from fixed
+inspection cameras. A confident RGB detection must have supporting depth above
+the tabletop and agree with another view; the measured finger opening must
+also support a hold. Expected hand location comes from robot proprioception
+and the original camera estimate, without reading object poses or contacts.
+The destination's XY is a commanded task goal; placement height is inferred
+from the camera pickup rather than supplied from the object library.
+
+After releasing and withdrawing, it looks for the same description at the
+destination. It checks that the fingers are open, the hand has withdrawn, and
+the observed object lies within the cell near the table surface. Three observations
+separated by 0.5 seconds of simulation time must agree within 8 mm before declaring
+camera-verified completion. It allows a bounded settling window of roughly four
+simulated seconds for movement to stop or a clearer observation.
+Inference pauses simulation stepping; two views alone are not treated as a
+measurement of motion over time.
+
+If a grasp misses, finger feedback indicates a slip, or a visual checkpoint
+fails, the system permits **one recovery attempt**. It retreats and opens the
+gripper; if finger feedback still indicates a hold, it first returns the held
+item to its original camera-estimated pickup location and releases it. It then
+returns above the workspace, lets released objects settle, and runs a fresh
+OWLv2 search. That search covers the pickup and collection areas, so a displaced
+upright object can be found away from its original spot. Other objects are not
+reset or teleported. The new camera estimate drives the second pickup.
+
+An uncertain fresh inspection or a failed second attempt stops automatic motion
+with an explanation. The live table remains available for manual control. Any
+active recording containing steps is saved automatically, including unsuccessful
+attempts. Resume does not grant another retry; reset or a new selected task starts
+a new episode. Fallen, occluded, ambiguous, tipped or unreachable objects may
+remain unrecoverable with the current upright grasp estimator.
+
+The **Camera verification and recovery** panel shows the attempt count, lift
+and placement checks, latest annotated inspection image, and event history.
+Replay displays the saved history. Episode metadata includes `verification`
+events with transition offsets and the `success_source`. Recorded action sources
+distinguish `vlm_scripted`, `vlm_recovery`, `vlm_verification`, and `vlm_verified`.
+
+Camera-driven completion is separate from simulator evaluation. During an OWLv2
+run, hidden object poses, contact labels, velocities, or the simulator's success
+flag do not decide retries or completion. `evaluation_success` in saved episode
+metadata reports the independent simulator check; the ordinary `outcome` reports
+the camera-driven result. These can disagree. RGB and ideal simulated depth can
+still produce false positives; this is not real-robot validation or a general
+failure-recovery policy.
+
+`GET /api/demo/state` includes `verification`; the latest live inspection is
+available at `GET /api/demo/verification/image` with the current `episode_id`
+and `revision` from `verification.image_revision`. The existing command API
+enables this flow with `{"command": "run", "perception": "vlm", "query": "Mustard bottle"}`.
+
 ### Policy / future VLA interface
 
 `PandaPolicy.act(observation, *, instruction)` returns an action with the existing

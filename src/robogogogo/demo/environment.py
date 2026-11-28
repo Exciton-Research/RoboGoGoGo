@@ -174,6 +174,7 @@ class PandaEnv(gym.Env):
         self.pick = self.data.xpos[self.block].copy()
         self.max_height, self.settled_steps, self.steps = float(self.pick[2]), 0, 0
         self.terminated = self.truncated = False
+        self.external_termination, self.external_success = False, None
 
     def reset(self, *, seed=None, options=None):
         super().reset(seed=seed)
@@ -245,6 +246,7 @@ class PandaEnv(gym.Env):
         self.max_height, self.settled_steps, self.steps = float(self.pick[2]), 0, 0
         self.previous_action = np.r_[HOME, 0.08]
         self.terminated = self.truncated = False
+        self.external_termination, self.external_success = False, None
         return self.observe(), self.info()
 
     def step(self, action):
@@ -271,7 +273,11 @@ class PandaEnv(gym.Env):
         placed = self._placed()
         self.settled_steps = self.settled_steps + 1 if placed else 0
         fallen = bool(self.data.xpos[self.block, 2] < TABLE_Z - 0.08)
-        self.terminated = self.settled_steps >= 6 or fallen
+        self.terminated = (
+            self.external_success is True
+            if self.external_termination
+            else self.settled_steps >= 6 or fallen
+        )
         self.truncated = self.steps >= self.max_steps and not self.terminated
         info = self.info()
         return self.observe(), float(info["success"]), self.terminated, self.truncated, info
@@ -307,8 +313,19 @@ class PandaEnv(gym.Env):
         return {
             "step_index": self.steps,
             "time": self.steps * self.dt,
-            "success": self.settled_steps >= 6,
-            "reason": "placed"
+            "success": self.external_success is True
+            if self.external_termination
+            else self.settled_steps >= 6,
+            "evaluation_success": self.settled_steps >= 6,
+            "reason": (
+                "visually_verified"
+                if self.external_success is True
+                else "time_limit"
+                if self.truncated
+                else None
+            )
+            if self.external_termination
+            else "placed"
             if self.settled_steps >= 6
             else "fallen"
             if self.terminated

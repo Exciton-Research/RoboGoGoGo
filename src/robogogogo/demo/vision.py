@@ -62,19 +62,27 @@ def descriptor(rgb, mask):
     return hist
 
 
-def proposals(rgb, depth, position, rotation, fovy, *, with_appearance=True):
+def proposals(rgb, depth, position, rotation, fovy, *, with_appearance=True, workspace=None):
     points = point_cloud(depth, position, rotation, fovy)
     x, y, z = points.transpose(2, 0, 1)
+    xmin, xmax, ymin, ymax, zmin, zmax = workspace or (
+        0.19,
+        0.84,
+        -0.39,
+        0.025,
+        TABLE_Z + 0.008,
+        TABLE_Z + 0.23,
+    )
     # A calibrated pickup workspace, not slots or object-specific locations.
     mask = (
         np.isfinite(depth)
         & (depth > 0)
-        & (x > 0.19)
-        & (x < 0.84)
-        & (y > -0.39)
-        & (y < 0.025)
-        & (z > TABLE_Z + 0.008)
-        & (z < TABLE_Z + 0.23)
+        & (x > xmin)
+        & (x < xmax)
+        & (y > ymin)
+        & (y < ymax)
+        & (z > zmin)
+        & (z < zmax)
     )
     # Separate touching silhouettes where their observed surface heights jump.
     jumps = np.zeros(mask.shape, dtype=bool)
@@ -108,9 +116,11 @@ def proposals(rgb, depth, position, rotation, fovy, *, with_appearance=True):
     return result
 
 
-def workspace_crop(*, rgb, depth, position, rotation, fovy):
+def workspace_crop(*, rgb, depth, position, rotation, fovy, workspace=None):
     """Pixel bounds of visible pickup geometry, without object IDs or templates."""
-    regions = proposals(rgb, depth, position, rotation, fovy, with_appearance=False)
+    regions = proposals(
+        rgb, depth, position, rotation, fovy, with_appearance=False, workspace=workspace
+    )
     if not regions:
         raise ValueError("No visible objects in the calibrated pickup workspace")
     boxes = np.asarray([region["box"] for region in regions])
@@ -119,11 +129,13 @@ def workspace_crop(*, rgb, depth, position, rotation, fovy):
     return [int(value) for value in np.r_[low, high]]
 
 
-def localize_box(box, *, rgb, depth, position, rotation, fovy):
+def localize_box(box, *, rgb, depth, position, rotation, fovy, workspace=None):
     """Refine a text detector's pixel box using depth geometry, without object priors."""
     from .pretrained import box_iou
 
-    regions = proposals(rgb, depth, position, rotation, fovy, with_appearance=False)
+    regions = proposals(
+        rgb, depth, position, rotation, fovy, with_appearance=False, workspace=workspace
+    )
     ranked = sorted(
         ((box_iou(box, region["box"]), region) for region in regions),
         key=lambda item: item[0],

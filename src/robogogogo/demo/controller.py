@@ -5,6 +5,10 @@ import numpy as np
 from .task import HOME
 
 
+class PickupFailure(ValueError):
+    """Measured finger opening no longer supports a stable grasp."""
+
+
 class ReferenceController:
     labels = (
         "Approach",
@@ -114,7 +118,7 @@ class ReferenceController:
                 self.slip_seconds + env.dt if sum(env.data.qpos[7:9]) < 0.008 else 0.0
             )
             if self.slip_seconds >= 0.15:
-                raise ValueError("Gripper closed empty during transport; collection stopped")
+                raise PickupFailure("Gripper closed empty during transport")
         grasped = (
             0.008 < sum(env.data.qpos[7:9]) < 0.078
             if self.camera_based
@@ -130,7 +134,7 @@ class ReferenceController:
             self.begin(env)
             return
         if self.phase == 2 and self.grasp_seconds < 0.1:
-            raise ValueError("Grasp missed: gripper did not establish a stable hold")
+            raise PickupFailure("Grasp missed: gripper did not establish a stable hold")
         if self.phase == 2 and self.camera_based:
             # Narrow rounded objects can be squeezed out by excess preload.
             # Finger opening is measured after closure; no object dimensions.

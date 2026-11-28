@@ -1212,3 +1212,31 @@
   grid-template-columns: 1fr 1fr;
   gap: 8px;
 }
+
+.verificationPanel {
+  padding: 12px;
+  margin: 12px 0;
+  border: 1px solid #c6d5bd;
+  border-radius: 4px;
+  background: #eef4e8;
+  color: #455344;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.verificationPanel p {
+  margin: 6px 0;
+}
+.verificationPanel summary {
+  cursor: pointer;
+}
+.verificationPanel img {
+  width: 100%;
+  height: auto;
+  display: block;
+  margin: 8px 0;
+  border-radius: 3px;
+}
+.verificationPanel ol {
+  padding-left: 18px;
+  font-size: 10px;
+}

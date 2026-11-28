@@ -147,6 +147,21 @@ class Recording:
             if self.frames[-1]["ended"][0]
             else "incomplete",
         )
+        if env.external_termination:
+            self.manifest.update(
+                success_source="RGB-D target verification and gripper proprioception",
+                evaluation_success=env.info()["evaluation_success"],
+                outcome="success"
+                if env.external_success is True
+                else "failed"
+                if reason in ("verification_failed", "environment_ended")
+                else "incomplete",
+            )
+            if "verification" in self.manifest:
+                self.manifest["verification"] = {
+                    **self.manifest["verification"],
+                    "evaluation_success": self.manifest["evaluation_success"],
+                }
         target = self.directory / f"{self.id}.zip"
         pending = target.with_suffix(".pending")
         with zipfile.ZipFile(
