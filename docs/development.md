@@ -71,6 +71,8 @@ intended to include Studio must be built after packaging the UI.
 ## Checks
 
 ```sh
+python3 scripts/check_publication.py
+python3 -m unittest discover -s tests -p test_publication.py
 .venv/bin/ruff check src tests examples scripts
 .venv/bin/ruff format --check src tests examples scripts
 .venv/bin/pytest -q
@@ -79,6 +81,13 @@ npm run format:check --prefix studio
 npm run typecheck --prefix studio
 npm run build --prefix studio
 ```
+
+The publication check scans tracked content and embedded ZIP files for personal
+paths, recognizable credentials, and unreviewed GitHub repository links. Review
+new repository destinations before adding them to the public allowlist in
+`scripts/check_publication.py`. Diagnostics withhold matched values. CI runs this
+check without installing the simulation dependencies. It checks current files;
+it does not inspect or rewrite Git history.
 
 The Python suite enables JAX float64 in `tests/conftest.py`. Cold compilation and
 long numerical recovery scenarios can take several minutes; there can be long
