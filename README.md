@@ -57,12 +57,6 @@ baseline is rule-based. Training, learned checkpoint inference, physical command
 execution, and real-robot evaluation still require integration. The mechanical
 design is illustrative; physical hardware has not been commissioned.
 
-## Research
-
-Manuscripts, research code, experiments, and results are maintained separately
-in [excitonresearch-papers](https://github.com/raugen-ai/excitonresearch-papers/tree/main/robogogogo).
-This repository provides the interactive simulation demo and its reusable interfaces.
-
 ## Install and run
 
 The standard CPU setup targets **Apple Silicon macOS** and **Linux x86_64/ARM64**.

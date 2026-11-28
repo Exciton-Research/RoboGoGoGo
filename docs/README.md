@@ -48,6 +48,3 @@ Launch `robogogogo-studio` and use `/simulation/` or `/workflow/` for these guid
 
 Object data and recordings stay in ignored local caches. Training, learned VLA
 inference, room imports, and physical robot execution require further work.
-
-Research papers, experiment code, and results live in the separate
-[excitonresearch-papers repository](https://github.com/raugen-ai/excitonresearch-papers/tree/main/robogogogo).
