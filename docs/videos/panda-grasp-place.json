@@ -1,0 +1,78 @@
+{
+  "description": "Complete scripted lemon collection from an eight-object tabletop",
+  "origin": "simulation",
+  "controller": "ReferenceController; simulator-pose reference",
+  "seed": 0,
+  "mujoco": "3.3.7",
+  "model_sha256": "bc523a930e233175f0a5ee30775922401fee26dcded4b2791c48d86da4288c1f",
+  "dimensions": [
+    1280,
+    720
+  ],
+  "fps": 20,
+  "frames": 286,
+  "playback_seconds": 14.3,
+  "simulation_seconds": 11.3,
+  "playback_speed": 1,
+  "success": true,
+  "phases": [
+    {
+      "phase": 0,
+      "label": "Approach",
+      "simulation_seconds": 0.0
+    },
+    {
+      "phase": 1,
+      "label": "Align",
+      "simulation_seconds": 1.8
+    },
+    {
+      "phase": 2,
+      "label": "Grasp",
+      "simulation_seconds": 3.2
+    },
+    {
+      "phase": 3,
+      "label": "Lift",
+      "simulation_seconds": 4.1000000000000005
+    },
+    {
+      "phase": 4,
+      "label": "Carry",
+      "simulation_seconds": 5.7
+    },
+    {
+      "phase": 5,
+      "label": "Lower",
+      "simulation_seconds": 7.7
+    },
+    {
+      "phase": 6,
+      "label": "Release",
+      "simulation_seconds": 9.200000000000001
+    },
+    {
+      "phase": 7,
+      "label": "Withdraw",
+      "simulation_seconds": 10.100000000000001
+    }
+  ],
+  "objects": [
+    "soup-can",
+    "rubiks-cube",
+    "pudding-box",
+    "gelatin-box",
+    "meat-can",
+    "strawberry",
+    "lemon",
+    "orange"
+  ],
+  "asset_credit": "YCB Object and Model Set \u2014 Calli et al.; Google 16k scans",
+  "asset_source": "https://ycb-benchmarks.s3.amazonaws.com/index.html",
+  "asset_license": "https://creativecommons.org/licenses/by/4.0/",
+  "note": "One demonstration, not a benchmark or learned-policy performance claim. Includes one-second initial and two-second final holds. Camera feeds are simultaneous.",
+  "sha256": {
+    "panda-grasp-place.mp4": "37fb12bcff99df2ba574b78b4e298312c4f77651b30dcaebde1a6ff591703c62",
+    "panda-grasp-place.gif": "0129ca787e3df88d364c50d8cae57315d0429edcd10ea929e4afd757b6287ad5"
+  }
+}

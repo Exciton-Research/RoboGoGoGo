@@ -6,7 +6,10 @@ manual control, recording/replay, and the policy interface for a future VLA.
 The current collector uses known scene identities and poses; camera-based
 recognition and learned control are not implemented.
 
-![Recorded lemon collection among the other scanned objects](images/panda-grasp-place.jpg)
+[![Watch the Panda collection simulation](videos/panda-grasp-place.gif)](videos/panda-grasp-place.mp4)
+
+[Watch the full simulation video (MP4)](videos/panda-grasp-place.mp4): pickup
+through release and withdrawal, with overhead and wrist views.
 
 ## Start here
 

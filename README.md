@@ -35,7 +35,11 @@ The controller is scripted. This is a working simulation demonstration, with
 no learned-policy or real-robot performance claim. Start with the
 [demo guide](docs/demo.md).
 
-![Panda collecting a lemon from an eight-object tabletop, with recorded RGB](docs/images/panda-grasp-place.jpg)
+[![Watch the Panda collect a lemon: animated simulation preview](docs/videos/panda-grasp-place.gif)](docs/videos/panda-grasp-place.mp4)
+
+**[Watch the full simulation video (MP4)](docs/videos/panda-grasp-place.mp4)** —
+normal-speed pickup, lift, carry, release, and withdrawal, with synchronized
+overhead and wrist views. [Recording details and regeneration](docs/videos/README.md).
 
 The original browser Studio provides a local workbench for **RG Mobile Duo**:
 a wheeled robot concept with a folding torso, two seven-joint arms, head stereo

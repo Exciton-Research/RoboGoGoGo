@@ -11,7 +11,11 @@ It is not a learned policy or a real-robot result. The selected object has a fre
 throughout the task; it is never attached or welded to the hand. Only reset
 writes its initial position.
 
-![Recorded lemon collection from an eight-object table with overhead and wrist RGB](images/panda-grasp-place.jpg)
+[![Watch the complete lemon collection simulation](videos/panda-grasp-place.gif)](videos/panda-grasp-place.mp4)
+
+**[Watch the full simulation video (MP4)](videos/panda-grasp-place.mp4)** —
+a complete scripted collection at normal speed, with simultaneous overhead and
+wrist camera views. [Video details and regeneration](videos/README.md).
 
 ## Start
 
