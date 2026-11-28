@@ -1,5 +1,7 @@
 # Historical optional simulation-error protocol
 
+For the current proposed direction, see the [RSS 2027 research plan](rss-2027-plan.md).
+
 This document preserves an earlier, unvalidated robosuite study proposal. It is
 separate from the current Panda object-collection workbench and its policy
 interface. Start with the [Panda workbench guide](demo.md) and the updated

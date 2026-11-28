@@ -55,6 +55,10 @@ design is illustrative; physical hardware has not been commissioned.
 
 ## Paper
 
+The [RSS 2027 research plan](docs/rss-2027-plan.md) proposes studying active
+verification and its effects on manipulation outcomes. It is an unvalidated
+research direction, separate from the current workbench paper and demo.
+
 **[Read the paper (PDF)](paper/robogogogo.pdf)**:
 *Robogogogo: A Tabletop Simulation Workbench for Object Collection and Policy
 Integration*, by the Robo Team.
